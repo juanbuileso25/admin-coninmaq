@@ -70,7 +70,7 @@ export default function LoginPage() {
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <img src="/logo-yellow.png" alt="Coninmaq" className="h-10 w-auto mb-6 opacity-90" />
+            <img src={`${import.meta.env.BASE_URL}logo-yellow.png`} alt="Coninmaq" className="h-10 w-auto mb-6 opacity-90" />
             <div className="text-center">
               <h1 className="text-white text-xl font-semibold tracking-wide">Panel Administrativo</h1>
               <p className="text-zinc-500 text-xs mt-1 tracking-wider uppercase">Acceso restringido</p>

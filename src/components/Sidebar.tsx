@@ -99,8 +99,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-center px-4 py-5 border-b border-border min-h-[64px]">
         {collapsed
-          ? <img src="/logo-icon.png" alt="Coninmaq" className="h-8 w-8 object-contain" />
-          : <img src="/logo-yellow.png" alt="Coninmaq" className="h-8 w-auto object-contain animate-fade-in" />
+          ? <img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Coninmaq" className="h-8 w-8 object-contain" />
+          : <img src={`${import.meta.env.BASE_URL}logo-yellow.png`} alt="Coninmaq" className="h-8 w-auto object-contain animate-fade-in" />
         }
       </div>
 
