@@ -1,0 +1,35 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import LoginPage            from "./pages/LoginPage";
+import DashboardPage        from "./pages/DashboardPage";
+import PlaceholderPage      from "./pages/PlaceholderPage";
+import AdminLayout          from "./layouts/AdminLayout";
+import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
+
+export default function App() {
+  return (
+    <Routes>
+      {/* Public */}
+      <Route path="/" element={<LoginPage />} />
+
+      {/* Protected */}
+      <Route element={<AdminLayout />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+
+        {/* Inventario */}
+        <Route path="/inventario" element={<Navigate to="/inventario/maquinaria-nueva" replace />} />
+        <Route path="/inventario/maquinaria-nueva" element={<MaquinariaNuevaPage />} />
+        <Route path="/inventario/maquinaria-usada" element={<PlaceholderPage title="Maquinaria Usada" />} />
+        <Route path="/inventario/repuestos"        element={<PlaceholderPage title="Repuestos" />} />
+        <Route path="/inventario/renta"            element={<PlaceholderPage title="Renta" />} />
+
+        <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
+        <Route path="/agente"       element={<PlaceholderPage title="Agente IA" />} />
+        <Route path="/usuarios"     element={<PlaceholderPage title="Usuarios" />} />
+        <Route path="/ajustes"      element={<PlaceholderPage title="Ajustes" />} />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

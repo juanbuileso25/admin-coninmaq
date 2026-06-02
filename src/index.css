@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #0a0a0c;
+    color: #f4f4f5;
+    font-family: 'Poppins', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #111115;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a34;
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #FFC837;
+  }
+}
+
+@layer utilities {
+  .text-gradient-accent {
+    background: linear-gradient(135deg, #FFC837 0%, #FFD55C 50%, #E6A800 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .border-accent-glow {
+    border-color: rgba(255, 200, 55, 0.35);
+    box-shadow: 0 0 0 1px rgba(255, 200, 55, 0.10), inset 0 0 20px rgba(255, 200, 55, 0.03);
+  }
+
+  .input-dark {
+    @apply w-full bg-surface-3 border border-border-light text-zinc-100 rounded-sm px-4 py-3 text-sm
+           placeholder:text-zinc-600 outline-none transition-all duration-200
+           focus:border-accent focus:shadow-glow-xs;
+  }
+}
