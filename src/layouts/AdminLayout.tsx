@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
-import { Menu, X, Bell } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../context/ThemeContext";
 
 export default function AdminLayout() {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed]     = useState(false);
   const [mobileOpen, setMobileOpen]   = useState(false);
 
@@ -42,7 +44,7 @@ export default function AdminLayout() {
             <button
               onClick={() => setCollapsed((v) => !v)}
               className="hidden lg:flex items-center justify-center w-8 h-8
-                         text-zinc-500 hover:text-zinc-200 hover:bg-surface-4
+                         text-fg-5 hover:text-fg-2 hover:bg-surface-4
                          transition-all duration-150 rounded-sm"
             >
               <Menu size={18} />
@@ -52,23 +54,32 @@ export default function AdminLayout() {
             <button
               onClick={() => setMobileOpen((v) => !v)}
               className="lg:hidden flex items-center justify-center w-8 h-8
-                         text-zinc-500 hover:text-zinc-200 hover:bg-surface-4
+                         text-fg-5 hover:text-fg-2 hover:bg-surface-4
                          transition-all duration-150 rounded-sm"
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
 
-            {/* Breadcrumb / page title rendered by children via context later */}
             <div className="h-4 w-px bg-border-light hidden lg:block" />
-            <span className="hidden lg:block text-zinc-600 text-xs uppercase tracking-wider">
+            <span className="hidden lg:block text-fg-6 text-xs uppercase tracking-wider">
               Panel de Control
             </span>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              className="w-8 h-8 flex items-center justify-center text-fg-5
+                         hover:text-fg-2 hover:bg-surface-4 transition-all duration-150 rounded-sm"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
             {/* Notification bell */}
-            <button className="relative w-8 h-8 flex items-center justify-center text-zinc-500
-                               hover:text-zinc-200 hover:bg-surface-4 transition-all duration-150 rounded-sm">
+            <button className="relative w-8 h-8 flex items-center justify-center text-fg-5
+                               hover:text-fg-2 hover:bg-surface-4 transition-all duration-150 rounded-sm">
               <Bell size={16} />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-accent rounded-full" />
             </button>
@@ -78,7 +89,7 @@ export default function AdminLayout() {
               <div className="w-5 h-5 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center">
                 <span className="text-accent font-bold text-[9px]">{user.avatar}</span>
               </div>
-              <span className="text-zinc-300 text-xs font-medium hidden sm:block">{user.name}</span>
+              <span className="text-fg-3 text-xs font-medium hidden sm:block">{user.name}</span>
             </div>
           </div>
         </header>

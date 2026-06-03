@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -11,13 +12,22 @@ export default {
         "accent-light":  "#FFD55C",
         "accent-dark":   "#E6A800",
         "accent-muted":  "rgba(255,200,55,0.12)",
-        surface:         "#0a0a0c",
-        "surface-2":     "#111115",
-        "surface-3":     "#17171c",
-        "surface-4":     "#1e1e25",
-        "surface-5":     "#25252e",
-        border:          "#1f1f26",
-        "border-light":  "#2a2a34",
+        surface:         "var(--surface)",
+        "surface-2":     "var(--surface-2)",
+        "surface-3":     "var(--surface-3)",
+        "surface-4":     "var(--surface-4)",
+        "surface-5":     "var(--surface-5)",
+        border:          "var(--border)",
+        "border-light":  "var(--border-light)",
+        fg: {
+          DEFAULT: "var(--fg)",
+          2: "var(--fg-2)",
+          3: "var(--fg-3)",
+          4: "var(--fg-4)",
+          5: "var(--fg-5)",
+          6: "var(--fg-6)",
+          7: "var(--fg-7)",
+        },
       },
       boxShadow: {
         glow:      "0 0 32px rgba(255,200,55,0.20)",

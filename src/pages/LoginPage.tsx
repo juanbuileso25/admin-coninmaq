@@ -72,15 +72,15 @@ export default function LoginPage() {
           <div className="flex flex-col items-center mb-8">
             <img src={`${import.meta.env.BASE_URL}logo-yellow.png`} alt="Coninmaq" className="h-10 w-auto mb-6 opacity-90" />
             <div className="text-center">
-              <h1 className="text-white text-xl font-semibold tracking-wide">Panel Administrativo</h1>
-              <p className="text-zinc-500 text-xs mt-1 tracking-wider uppercase">Acceso restringido</p>
+              <h1 className="text-fg text-xl font-semibold tracking-wide">Panel Administrativo</h1>
+              <p className="text-fg-5 text-xs mt-1 tracking-wider uppercase">Acceso restringido</p>
             </div>
           </div>
 
           {/* Divider */}
           <div className="flex items-center gap-3 mb-7">
             <div className="flex-1 h-px bg-border-light" />
-            <span className="text-zinc-600 text-[10px] uppercase tracking-[0.2em]">Iniciar sesión</span>
+            <span className="text-fg-6 text-[10px] uppercase tracking-[0.2em]">Iniciar sesión</span>
             <div className="flex-1 h-px bg-border-light" />
           </div>
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wider">
+              <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">
                 Correo electrónico
               </label>
               <input
@@ -109,7 +109,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wider">
+              <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">
                 Contraseña
               </label>
               <div className="relative">
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-5 hover:text-fg-3 transition-colors"
                 >
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   </svg>
                 </div>
               </div>
-              <span className="text-zinc-400 text-xs group-hover:text-zinc-300 transition-colors select-none">
+              <span className="text-fg-4 text-xs group-hover:text-fg-3 transition-colors select-none">
                 Recordar sesión
               </span>
             </label>
@@ -190,7 +190,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-zinc-600 text-[11px] mt-6">
+          <p className="text-center text-fg-6 text-[11px] mt-6">
             Solo personal autorizado de Coninmaq
           </p>
         </div>

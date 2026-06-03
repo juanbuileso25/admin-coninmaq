@@ -27,7 +27,7 @@ export default function StatCard({
 
       {/* Header */}
       <div className="flex items-start justify-between">
-        <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider">{label}</p>
+        <p className="text-fg-5 text-xs font-medium uppercase tracking-wider">{label}</p>
         <div
           className={`w-9 h-9 flex items-center justify-center rounded-sm flex-shrink-0
                       ${accent
@@ -35,17 +35,17 @@ export default function StatCard({
                         : "bg-surface-4 border border-border-light"
                       }`}
         >
-          <Icon size={16} className={accent ? "text-accent" : "text-zinc-400"} />
+          <Icon size={16} className={accent ? "text-accent" : "text-fg-4"} />
         </div>
       </div>
 
       {/* Value */}
       <div>
-        <p className={`text-2xl font-bold tracking-tight ${accent ? "text-gradient-accent" : "text-white"}`}>
+        <p className={`text-2xl font-bold tracking-tight ${accent ? "text-gradient-accent" : "text-fg"}`}>
           {value}
         </p>
         {sub && (
-          <p className="text-zinc-600 text-xs mt-0.5">{sub}</p>
+          <p className="text-fg-6 text-xs mt-0.5">{sub}</p>
         )}
       </div>
 

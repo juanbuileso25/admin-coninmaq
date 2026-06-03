@@ -11,8 +11,8 @@ export default function PlaceholderPage({ title }: Props) {
         <Construction size={22} className="text-accent/60" />
       </div>
       <div className="text-center">
-        <h2 className="text-white text-lg font-semibold">{title}</h2>
-        <p className="text-zinc-500 text-sm mt-1">Módulo en desarrollo</p>
+        <h2 className="text-fg text-lg font-semibold">{title}</h2>
+        <p className="text-fg-5 text-sm mt-1">Módulo en desarrollo</p>
       </div>
       <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
     </div>

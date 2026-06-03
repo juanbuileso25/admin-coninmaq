@@ -46,17 +46,17 @@ export default function DashboardPage() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 animate-fade-up">
         <div>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">
+          <p className="text-fg-5 text-xs uppercase tracking-wider mb-1">
             {now.toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
-          <h1 className="text-white text-2xl font-semibold">
+          <h1 className="text-fg text-2xl font-semibold">
             {greeting},{" "}
             <span className="text-gradient-accent">{user?.name}</span>
           </h1>
         </div>
         <div className="flex items-center gap-2 bg-surface-2 border border-border px-4 py-2 flex-shrink-0">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-zinc-400 text-xs">Sistema activo</span>
+          <span className="text-fg-4 text-xs">Sistema activo</span>
         </div>
       </div>
 
@@ -107,8 +107,8 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div>
-              <h2 className="text-white text-sm font-semibold">Cotizaciones recientes</h2>
-              <p className="text-zinc-600 text-xs mt-0.5">Generadas por Coni (agente IA)</p>
+              <h2 className="text-fg text-sm font-semibold">Cotizaciones recientes</h2>
+              <p className="text-fg-6 text-xs mt-0.5">Generadas por Coni (agente IA)</p>
             </div>
             <button className="flex items-center gap-1 text-accent text-xs hover:text-accent-light transition-colors">
               Ver todas <ArrowRight size={12} />
@@ -126,15 +126,15 @@ export default function DashboardPage() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-zinc-500 text-[10px] font-mono">{q.id}</span>
-                      <span className="text-zinc-700 text-[10px]">·</span>
-                      <span className="text-zinc-500 text-[10px]">{q.time}</span>
+                      <span className="text-fg-5 text-[10px] font-mono">{q.id}</span>
+                      <span className="text-fg-7 text-[10px]">·</span>
+                      <span className="text-fg-5 text-[10px]">{q.time}</span>
                     </div>
-                    <p className="text-zinc-200 text-sm font-medium truncate">{q.client}</p>
-                    <p className="text-zinc-500 text-xs truncate">{q.product}</p>
+                    <p className="text-fg-2 text-sm font-medium truncate">{q.client}</p>
+                    <p className="text-fg-5 text-xs truncate">{q.product}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-white text-sm font-semibold">{q.value}</p>
+                    <p className="text-fg text-sm font-semibold">{q.value}</p>
                     <span
                       className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 mt-1
                                   border rounded-full ${cfg.bg} ${cfg.text} ${cfg.border}`}
@@ -155,8 +155,8 @@ export default function DashboardPage() {
           style={{ animationDelay: "380ms", animationFillMode: "both" }}
         >
           <div className="px-5 py-4 border-b border-border">
-            <h2 className="text-white text-sm font-semibold">Productos más consultados</h2>
-            <p className="text-zinc-600 text-xs mt-0.5">Últimos 30 días</p>
+            <h2 className="text-fg text-sm font-semibold">Productos más consultados</h2>
+            <p className="text-fg-6 text-xs mt-0.5">Últimos 30 días</p>
           </div>
 
           <div className="p-5 space-y-4">
@@ -164,10 +164,10 @@ export default function DashboardPage() {
               <div key={p.name}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-zinc-700 text-[10px] font-mono w-4">{i + 1}</span>
-                    <span className="text-zinc-300 text-xs font-medium">{p.name}</span>
+                    <span className="text-fg-7 text-[10px] font-mono w-4">{i + 1}</span>
+                    <span className="text-fg-3 text-xs font-medium">{p.name}</span>
                   </div>
-                  <span className="text-zinc-500 text-[10px]">{p.queries} consultas</span>
+                  <span className="text-fg-5 text-[10px]">{p.queries} consultas</span>
                 </div>
                 <div className="h-1 bg-surface-4 rounded-full overflow-hidden">
                   <div
@@ -184,11 +184,11 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-zinc-400 text-[11px]">Agente Coni</span>
+                <span className="text-fg-4 text-[11px]">Agente Coni</span>
               </div>
               <span className="text-emerald-400 text-[10px] font-medium">En línea</span>
             </div>
-            <p className="text-zinc-600 text-[10px] mt-1 ml-3.5">
+            <p className="text-fg-6 text-[10px] mt-1 ml-3.5">
               14 conversaciones activas hoy
             </p>
           </div>

@@ -77,7 +77,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const navigate  = useNavigate();
   const location  = useLocation();
 
-  // Inicia abierto si estamos en alguna ruta de inventario
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => ({
     Inventario: location.pathname.startsWith("/inventario"),
   }));
@@ -109,7 +108,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         {NAV.map((group) => (
           <div key={group.section}>
             {!collapsed && (
-              <p className="px-4 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-zinc-600 font-medium">
+              <p className="px-4 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-fg-6 font-medium">
                 {group.section}
               </p>
             )}
@@ -129,13 +128,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                                     transition-all duration-150 group
                                     ${isSubActive
                                       ? "text-accent"
-                                      : "text-zinc-400 hover:text-zinc-100 hover:bg-surface-3"
+                                      : "text-fg-4 hover:text-fg hover:bg-surface-3"
                                     }`}
                       >
                         <Icon
                           size={17}
                           className={`flex-shrink-0 transition-colors ${
-                            isSubActive ? "text-accent" : "text-zinc-500 group-hover:text-zinc-300"
+                            isSubActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
                           }`}
                         />
                         {!collapsed && (
@@ -146,7 +145,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                             <ChevronDown
                               size={13}
                               className={`flex-shrink-0 transition-transform duration-200 ${
-                                isOpen ? "rotate-180 text-accent" : "text-zinc-600"
+                                isOpen ? "rotate-180 text-accent" : "text-fg-6"
                               }`}
                             />
                           </>
@@ -172,7 +171,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                                        transition-all duration-150 border-l-2 -ml-px
                                        ${isActive
                                          ? "text-accent border-accent bg-accent-muted"
-                                         : "text-zinc-500 border-transparent hover:text-zinc-200 hover:border-zinc-600"
+                                         : "text-fg-5 border-transparent hover:text-fg-2 hover:border-fg-6"
                                        }`
                                     }
                                   >
@@ -181,7 +180,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                                         {SubIcon && (
                                           <SubIcon
                                             size={13}
-                                            className={isActive ? "text-accent" : "text-zinc-600"}
+                                            className={isActive ? "text-accent" : "text-fg-6"}
                                           />
                                         )}
                                         <span className="truncate">{sub.label}</span>
@@ -208,7 +207,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                          transition-all duration-150 group
                          ${isActive
                            ? "text-accent bg-accent-muted border-r-2 border-accent"
-                           : "text-zinc-400 hover:text-zinc-100 hover:bg-surface-3"
+                           : "text-fg-4 hover:text-fg hover:bg-surface-3"
                          }`
                       }
                     >
@@ -217,7 +216,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                           <Icon
                             size={17}
                             className={`flex-shrink-0 transition-colors ${
-                              isActive ? "text-accent" : "text-zinc-500 group-hover:text-zinc-300"
+                              isActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
                             }`}
                           />
                           {!collapsed && (
@@ -242,14 +241,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <span className="text-accent font-bold text-xs">{user.avatar}</span>
             </div>
             <div className="overflow-hidden">
-              <p className="text-zinc-200 text-xs font-semibold truncate">{user.name}</p>
-              <p className="text-zinc-500 text-[10px] truncate">{user.role}</p>
+              <p className="text-fg-2 text-xs font-semibold truncate">{user.name}</p>
+              <p className="text-fg-5 text-[10px] truncate">{user.role}</p>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-500
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-fg-5
                      hover:text-red-400 hover:bg-red-950/20 transition-all duration-150 rounded-sm"
         >
           <LogOut size={16} className="flex-shrink-0" />

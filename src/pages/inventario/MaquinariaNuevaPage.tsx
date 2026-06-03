@@ -55,13 +55,13 @@ export default function MaquinariaNuevaPage() {
   }, [machines, search, catFilter]);
 
   /* Stats */
-  const total     = machines.length;
-  const visibles  = machines.filter((m) => m.visible_web).length;
+  const total      = machines.length;
+  const visibles   = machines.filter((m) => m.visible_web).length;
   const destacados = machines.filter((m) => m.destacado).length;
 
   /* Handlers */
-  const openCreate = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit   = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
+  const openCreate  = () => { setEditing(null); setDrawerOpen(true); };
+  const openEdit    = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleSave = (data: Omit<Machine, "id" | "created_at" | "updated_at">) => {
@@ -81,8 +81,8 @@ export default function MaquinariaNuevaPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 animate-fade-up">
         <div>
-          <p className="text-zinc-600 text-xs uppercase tracking-wider mb-1">Inventario</p>
-          <h1 className="text-white text-xl font-semibold">Maquinaria Nueva</h1>
+          <p className="text-fg-6 text-xs uppercase tracking-wider mb-1">Inventario</p>
+          <h1 className="text-fg text-xl font-semibold">Maquinaria Nueva</h1>
         </div>
         <button
           onClick={openCreate}
@@ -96,12 +96,12 @@ export default function MaquinariaNuevaPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "60ms", animationFillMode: "both" }}>
         {[
-          { label: "Total",       value: total,      color: "text-white" },
+          { label: "Total",       value: total,      color: "text-fg" },
           { label: "Visibles",    value: visibles,   color: "text-emerald-400" },
           { label: "Destacados",  value: destacados, color: "text-accent" },
         ].map((s) => (
           <div key={s.label} className="bg-surface-2 border border-border px-4 py-3 flex items-center justify-between">
-            <span className="text-zinc-500 text-xs">{s.label}</span>
+            <span className="text-fg-5 text-xs">{s.label}</span>
             <span className={`text-lg font-bold ${s.color}`}>{s.value}</span>
           </div>
         ))}
@@ -113,19 +113,19 @@ export default function MaquinariaNuevaPage() {
         style={{ animationDelay: "100ms", animationFillMode: "both" }}
       >
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-5" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por modelo, código o marca..."
-            className="w-full bg-surface-2 border border-border text-sm text-zinc-200 pl-9 pr-4 py-2.5
-                       placeholder:text-zinc-600 outline-none focus:border-accent transition-all"
+            className="w-full bg-surface-2 border border-border text-sm text-fg-2 pl-9 pr-4 py-2.5
+                       placeholder:text-fg-6 outline-none focus:border-accent transition-all"
           />
         </div>
         <div className="relative">
-          <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+          <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
           <select
             value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
-            className="bg-surface-2 border border-border text-sm text-zinc-300 pl-8 pr-8 py-2.5
+            className="bg-surface-2 border border-border text-sm text-fg-3 pl-8 pr-8 py-2.5
                        outline-none focus:border-accent transition-all appearance-none cursor-pointer"
           >
             <option value="">Todas las categorías</option>
@@ -143,20 +143,20 @@ export default function MaquinariaNuevaPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium w-14">Img</th>
-                <th className="text-left px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Código</th>
-                <th className="text-left px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Modelo</th>
-                <th className="text-left px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Categoría</th>
-                <th className="text-left px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Precio</th>
-                <th className="text-center px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Web</th>
-                <th className="text-center px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Destacado</th>
-                <th className="text-right px-4 py-3 text-zinc-500 text-[11px] uppercase tracking-wider font-medium">Acciones</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium w-14">Img</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Código</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Modelo</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Categoría</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Precio</th>
+                <th className="text-center px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Web</th>
+                <th className="text-center px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Destacado</th>
+                <th className="text-right px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-zinc-600 text-sm">
+                  <td colSpan={8} className="text-center py-12 text-fg-6 text-sm">
                     No se encontraron productos
                   </td>
                 </tr>
@@ -178,22 +178,22 @@ export default function MaquinariaNuevaPage() {
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                           />
                         ) : (
-                          <ImageOff size={14} className="text-zinc-600" />
+                          <ImageOff size={14} className="text-fg-6" />
                         )}
                       </div>
                     </td>
 
                     {/* Código */}
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-zinc-400 bg-surface-4 border border-border px-2 py-0.5">
+                      <span className="font-mono text-xs text-fg-4 bg-surface-4 border border-border px-2 py-0.5">
                         {m.codigo}
                       </span>
                     </td>
 
                     {/* Modelo */}
                     <td className="px-4 py-3">
-                      <p className="text-zinc-200 font-medium text-sm">{m.modelo}</p>
-                      <p className="text-zinc-600 text-[11px]">{m.marca}</p>
+                      <p className="text-fg-2 font-medium text-sm">{m.modelo}</p>
+                      <p className="text-fg-6 text-[11px]">{m.marca}</p>
                     </td>
 
                     {/* Categoría */}
@@ -205,7 +205,7 @@ export default function MaquinariaNuevaPage() {
 
                     {/* Precio */}
                     <td className="px-4 py-3">
-                      <p className={`text-sm font-semibold ${m.precio === 0 ? "text-zinc-500 italic" : "text-white"}`}>
+                      <p className={`text-sm font-semibold ${m.precio === 0 ? "text-fg-5 italic" : "text-fg"}`}>
                         {formatCOP(m.precio)}
                       </p>
                       {m.mostrar_precio && m.precio > 0 && (
@@ -219,7 +219,7 @@ export default function MaquinariaNuevaPage() {
                         <ToggleSwitch checked={m.visible_web} onChange={() => toggleField(m.id, "visible_web")} />
                         {m.visible_web
                           ? <Eye size={13} className="text-emerald-400" />
-                          : <EyeOff size={13} className="text-zinc-600" />}
+                          : <EyeOff size={13} className="text-fg-6" />}
                       </div>
                     </td>
 
@@ -229,7 +229,7 @@ export default function MaquinariaNuevaPage() {
                         <ToggleSwitch checked={m.destacado} onChange={() => toggleField(m.id, "destacado")} />
                         {m.destacado
                           ? <Star size={13} className="text-accent fill-accent" />
-                          : <StarOff size={13} className="text-zinc-600" />}
+                          : <StarOff size={13} className="text-fg-6" />}
                       </div>
                     </td>
 
@@ -238,13 +238,13 @@ export default function MaquinariaNuevaPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openEdit(m)}
-                          className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-accent hover:bg-surface-4 transition-all"
+                          className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-accent hover:bg-surface-4 transition-all"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
                           onClick={() => setDeletingId(m.id)}
-                          className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-all"
+                          className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-red-400 hover:bg-red-950/20 transition-all"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -266,7 +266,7 @@ export default function MaquinariaNuevaPage() {
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                               onClick={() => setDeletingId(null)}
-                              className="px-4 py-1.5 text-xs text-zinc-400 border border-border hover:border-border-light transition-all"
+                              className="px-4 py-1.5 text-xs text-fg-4 border border-border hover:border-border-light transition-all"
                             >
                               Cancelar
                             </button>
@@ -289,9 +289,9 @@ export default function MaquinariaNuevaPage() {
 
         {/* Footer count */}
         <div className="px-4 py-3 border-t border-border bg-surface-3">
-          <p className="text-zinc-600 text-xs">
-            Mostrando <span className="text-zinc-400">{filtered.length}</span> de{" "}
-            <span className="text-zinc-400">{total}</span> productos
+          <p className="text-fg-6 text-xs">
+            Mostrando <span className="text-fg-4">{filtered.length}</span> de{" "}
+            <span className="text-fg-4">{total}</span> productos
           </p>
         </div>
       </div>

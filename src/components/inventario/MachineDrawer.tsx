@@ -41,15 +41,15 @@ interface Props {
 
 /* ── Helpers ── */
 const FIELD_CLASS =
-  "w-full bg-surface-3 border border-border-light text-zinc-100 px-3.5 py-2.5 text-sm " +
-  "placeholder:text-zinc-600 outline-none transition-all duration-150 " +
+  "w-full bg-surface-3 border border-border-light text-fg px-3.5 py-2.5 text-sm " +
+  "placeholder:text-fg-6 outline-none transition-all duration-150 " +
   "focus:border-accent focus:shadow-glow-xs";
 
 const ERROR_CLASS = "border-red-700 focus:border-red-600 focus:shadow-none";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-zinc-400 text-[11px] font-medium uppercase tracking-wider mb-1.5">
+    <p className="text-fg-4 text-[11px] font-medium uppercase tracking-wider mb-1.5">
       {children}
     </p>
   );
@@ -58,7 +58,7 @@ function Label({ children }: { children: React.ReactNode }) {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 pt-2 pb-1">
-      <span className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{children}</span>
+      <span className="text-fg-3 text-xs font-semibold uppercase tracking-wider">{children}</span>
       <div className="flex-1 h-px bg-border" />
     </div>
   );
@@ -70,7 +70,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
       <div className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${checked ? "bg-accent" : "bg-surface-5"}`}>
         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${checked ? "left-4" : "left-0.5"}`} />
       </div>
-      <span className={`text-xs transition-colors ${checked ? "text-zinc-200" : "text-zinc-500"} group-hover:text-zinc-300`}>
+      <span className={`text-xs transition-colors ${checked ? "text-fg-2" : "text-fg-5"} group-hover:text-fg-3`}>
         {label}
       </span>
     </button>
@@ -167,14 +167,14 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <div>
-            <h2 className="text-white font-semibold text-base">
+            <h2 className="text-fg font-semibold text-base">
               {isEditing ? "Editar máquina" : "Nueva máquina"}
             </h2>
-            <p className="text-zinc-500 text-xs mt-0.5">
+            <p className="text-fg-5 text-xs mt-0.5">
               {isEditing ? machine.modelo : "Completa los campos del producto"}
             </p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-surface-4 transition-all">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-fg-2 hover:bg-surface-4 transition-all">
             <X size={18} />
           </button>
         </div>
@@ -199,7 +199,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                <div className="flex flex-col items-center gap-2 text-fg-6 group-hover:text-fg-4 transition-colors">
                   <ImageOff size={28} />
                   <span className="text-xs">Click para subir imagen</span>
                 </div>
@@ -234,7 +234,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
                 <option value="">Seleccionar categoría...</option>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
             </div>
             {errors.categoria && <p className="text-red-400 text-[10px] mt-1">{errors.categoria.message}</p>}
           </div>
@@ -292,7 +292,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
           <div className="space-y-2">
             {specFields.map((field, i) => (
               <div key={field.id} className="flex items-start gap-2 bg-surface-3 border border-border p-2.5">
-                <GripVertical size={14} className="text-zinc-600 mt-2.5 flex-shrink-0" />
+                <GripVertical size={14} className="text-fg-6 mt-2.5 flex-shrink-0" />
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <input
                     {...register(`specs.${i}.label`)} placeholder="Etiqueta (ej: Motor)"
@@ -304,7 +304,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
                   />
                 </div>
                 <button type="button" onClick={() => removeSpec(i)}
-                  className="mt-1.5 text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0">
+                  className="mt-1.5 text-fg-6 hover:text-red-400 transition-colors flex-shrink-0">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -314,7 +314,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
               type="button"
               onClick={() => addSpec({ label: "", value: "", icon: "" })}
               className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-border-light
-                         text-zinc-500 hover:text-accent hover:border-accent/40 text-xs transition-all"
+                         text-fg-5 hover:text-accent hover:border-accent/40 text-xs transition-all"
             >
               <Plus size={13} /> Agregar especificación
             </button>
@@ -333,7 +333,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
                   className={`${FIELD_CLASS} flex-1 text-xs py-2`}
                 />
                 <button type="button" onClick={() => removeHl(i)}
-                  className="text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0">
+                  className="text-fg-6 hover:text-red-400 transition-colors flex-shrink-0">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -343,7 +343,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
               type="button"
               onClick={() => addHl({ text: "" })}
               className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-border-light
-                         text-zinc-500 hover:text-accent hover:border-accent/40 text-xs transition-all"
+                         text-fg-5 hover:text-accent hover:border-accent/40 text-xs transition-all"
             >
               <Plus size={13} /> Agregar característica
             </button>
@@ -371,7 +371,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0 bg-surface-2">
           <button
             type="button" onClick={onClose}
-            className="px-5 py-2.5 text-sm text-zinc-400 hover:text-zinc-200 border border-border hover:border-border-light transition-all"
+            className="px-5 py-2.5 text-sm text-fg-4 hover:text-fg-2 border border-border hover:border-border-light transition-all"
           >
             Cancelar
           </button>
