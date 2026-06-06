@@ -6,12 +6,16 @@ import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
 import HorometroPage        from "./pages/renta/HorometroPage";
 import ChangePasswordPage   from "./pages/ChangePasswordPage";
+import ForgotPasswordPage   from "./pages/ForgotPasswordPage";
+import ResetPasswordPage    from "./pages/ResetPasswordPage";
 
 export default function App() {
   return (
     <Routes>
       {/* Public */}
       <Route path="/" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
       {/* Protected */}
       <Route element={<AdminLayout />}>

@@ -56,4 +56,16 @@ export const api = {
         body: JSON.stringify({ current_password, new_password }),
       }),
   },
+  passwordReset: {
+    forgot: (email: string) =>
+      request<void>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    reset: (token: string, new_password: string) =>
+      request<void>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, new_password }),
+      }),
+  },
 };

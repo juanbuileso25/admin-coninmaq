@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -135,7 +135,8 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Remember me */}
+            {/* Remember me + forgot password */}
+            <div className="flex items-center justify-between">
             <label className="flex items-center gap-3 cursor-pointer group w-fit">
               <div className="relative flex-shrink-0">
                 <input
@@ -158,6 +159,10 @@ export default function LoginPage() {
                 Recordar sesión
               </span>
             </label>
+            <Link to="/forgot-password" className="text-fg-5 hover:text-accent text-xs transition-colors">
+              ¿Olvidaste tu contraseña?
+            </Link>
+            </div>
 
             {/* Auth error */}
             {authError && (
