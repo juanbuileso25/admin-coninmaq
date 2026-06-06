@@ -4,6 +4,8 @@ import DashboardPage        from "./pages/DashboardPage";
 import PlaceholderPage      from "./pages/PlaceholderPage";
 import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
+import HorometroPage        from "./pages/renta/HorometroPage";
+import ChangePasswordPage   from "./pages/ChangePasswordPage";
 
 export default function App() {
   return (
@@ -22,10 +24,15 @@ export default function App() {
         <Route path="/inventario/repuestos"        element={<PlaceholderPage title="Repuestos" />} />
         <Route path="/inventario/renta"            element={<PlaceholderPage title="Renta" />} />
 
+        {/* Renta */}
+        <Route path="/renta" element={<Navigate to="/renta/horometro" replace />} />
+        <Route path="/renta/horometro" element={<HorometroPage />} />
+
         <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
         <Route path="/agente"       element={<PlaceholderPage title="Agente IA" />} />
         <Route path="/usuarios"     element={<PlaceholderPage title="Usuarios" />} />
-        <Route path="/ajustes"      element={<PlaceholderPage title="Ajustes" />} />
+        <Route path="/ajustes"               element={<PlaceholderPage title="Ajustes" />} />
+        <Route path="/ajustes/contrasena"    element={<ChangePasswordPage />} />
       </Route>
 
       {/* Fallback */}

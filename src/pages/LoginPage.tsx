@@ -37,8 +37,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormValues) => {
     setAuthError("");
-    await new Promise((r) => setTimeout(r, 900));
-    const ok = login(data.email, data.password, data.remember ?? false);
+    const ok = await login(data.email, data.password, data.remember ?? false);
     if (ok) {
       navigate("/dashboard");
     } else {

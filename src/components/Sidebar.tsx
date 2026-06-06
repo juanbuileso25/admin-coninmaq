@@ -13,6 +13,7 @@ import {
   Wrench,
   Key,
   HardHat,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -49,6 +50,13 @@ const NAV: NavGroup[] = [
         ],
       },
       { label: "Cotizaciones", to: "/cotizaciones", icon: FileText },
+      {
+        label: "Renta",
+        icon:  DollarSign,
+        sub: [
+          { label: "Horómetro", to: "/renta/horometro" },
+        ],
+      },
     ],
   },
   {
@@ -56,7 +64,14 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Agente IA", to: "/agente",   icon: Bot      },
       { label: "Usuarios",  to: "/usuarios", icon: Users    },
-      { label: "Ajustes",   to: "/ajustes",  icon: Settings },
+      {
+        label: "Ajustes",
+        icon: Settings,
+        sub: [
+          { label: "General",           to: "/ajustes"              },
+          { label: "Cambiar contraseña", to: "/ajustes/contrasena"  },
+        ],
+      },
     ],
   },
 ];
@@ -66,6 +81,8 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/inventario/maquinaria-usada": Truck,
   "/inventario/repuestos":        Wrench,
   "/inventario/renta":            Key,
+  "/renta/horometro":             Key,
+  "/ajustes/contrasena":          Key,
 };
 
 interface SidebarProps {
@@ -79,6 +96,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => ({
     Inventario: location.pathname.startsWith("/inventario"),
+    Renta:      location.pathname.startsWith("/renta"),
   }));
 
   const toggleMenu = (label: string) =>
