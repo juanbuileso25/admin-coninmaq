@@ -14,6 +14,8 @@ import {
   Key,
   HardHat,
   DollarSign,
+  ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -62,14 +64,14 @@ const NAV: NavGroup[] = [
   {
     section: "Sistema",
     items: [
-      { label: "Agente IA", to: "/agente",   icon: Bot      },
-      { label: "Usuarios",  to: "/usuarios", icon: Users    },
+      { label: "Agente IA", to: "/agente",   icon: Bot   },
+      { label: "Usuarios",  to: "/usuarios", icon: Users },
       {
         label: "Ajustes",
         icon: Settings,
         sub: [
-          { label: "General",           to: "/ajustes"              },
-          { label: "Cambiar contraseña", to: "/ajustes/contrasena"  },
+          { label: "Roles", to: "/ajustes/roles" },
+          { label: "Áreas", to: "/ajustes/areas" },
         ],
       },
     ],
@@ -82,7 +84,8 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/inventario/repuestos":        Wrench,
   "/inventario/renta":            Key,
   "/renta/horometro":             Key,
-  "/ajustes/contrasena":          Key,
+  "/ajustes/roles":               ShieldCheck,
+  "/ajustes/areas":               Building2,
 };
 
 interface SidebarProps {

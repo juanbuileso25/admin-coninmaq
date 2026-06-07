@@ -5,7 +5,9 @@ import PlaceholderPage      from "./pages/PlaceholderPage";
 import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
 import HorometroPage        from "./pages/renta/HorometroPage";
-import ChangePasswordPage   from "./pages/ChangePasswordPage";
+import UsersPage            from "./pages/usuarios/UsersPage";
+import RolesPage            from "./pages/ajustes/RolesPage";
+import AreasPage            from "./pages/ajustes/AreasPage";
 import ForgotPasswordPage   from "./pages/ForgotPasswordPage";
 import ResetPasswordPage    from "./pages/ResetPasswordPage";
 
@@ -34,9 +36,10 @@ export default function App() {
 
         <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
         <Route path="/agente"       element={<PlaceholderPage title="Agente IA" />} />
-        <Route path="/usuarios"     element={<PlaceholderPage title="Usuarios" />} />
-        <Route path="/ajustes"               element={<PlaceholderPage title="Ajustes" />} />
-        <Route path="/ajustes/contrasena"    element={<ChangePasswordPage />} />
+        <Route path="/usuarios"     element={<UsersPage />} />
+        <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
+        <Route path="/ajustes/roles"  element={<RolesPage />} />
+        <Route path="/ajustes/areas"  element={<AreasPage />} />
       </Route>
 
       {/* Fallback */}
