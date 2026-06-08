@@ -10,15 +10,15 @@ import { CATEGORIES } from "../../types/machine";
 
 /* ── Schema ── */
 const schema = yup.object({
-  codigo:         yup.string().required("Campo obligatorio"),
-  marca:          yup.string().required("Campo obligatorio"),
-  categoria:      yup.string().oneOf([...CATEGORIES]).required("Selecciona una categoría"),
-  modelo:         yup.string().required("Campo obligatorio"),
-  descripcion:    yup.string().required("Campo obligatorio"),
-  precio:         yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
-  mostrar_precio: yup.boolean().default(false),
-  garantia:       yup.string().default(""),
-  tiempo_entrega: yup.string().default(""),
+  code:          yup.string().required("Campo obligatorio"),
+  brand:         yup.string().required("Campo obligatorio"),
+  category:      yup.string().oneOf([...CATEGORIES]).required("Selecciona una categoría"),
+  model:         yup.string().required("Campo obligatorio"),
+  description:   yup.string().required("Campo obligatorio"),
+  price:         yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
+  show_price:    yup.boolean().default(false),
+  warranty:      yup.string().default(""),
+  delivery_time: yup.string().default(""),
   specs: yup.array().of(
     yup.object({ label: yup.string().required(""), value: yup.string().required(""), icon: yup.string().default("") })
   ).default([]),
@@ -26,7 +26,7 @@ const schema = yup.object({
     yup.object({ text: yup.string().required("") })
   ).default([]),
   visible_web: yup.boolean().default(true),
-  destacado:   yup.boolean().default(false),
+  featured:    yup.boolean().default(false),
 });
 
 type FormValues = yup.InferType<typeof schema>;
@@ -36,7 +36,7 @@ interface Props {
   open:    boolean;
   machine: Machine | null;
   onClose: () => void;
-  onSave:  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => void;
+  onSave:  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<void>;
 }
 
 /* ── Helpers ── */
@@ -80,6 +80,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 /* ── Component ── */
 export default function MachineDrawer({ open, machine, onClose, onSave }: Props) {
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [saving,       setSaving]       = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!machine;
@@ -91,10 +92,10 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
     watch,
     setValue,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormValues>({
     resolver: yupResolver(schema) as never,
-    defaultValues: { specs: [], highlights: [], visible_web: true, destacado: false },
+    defaultValues: { specs: [], highlights: [], visible_web: true, featured: false },
   });
 
   const { fields: specFields, append: addSpec, remove: removeSpec } = useFieldArray({ control, name: "specs" });
@@ -104,23 +105,23 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
   useEffect(() => {
     if (open && machine) {
       reset({
-        codigo:         machine.codigo,
-        marca:          machine.marca,
-        categoria:      machine.categoria,
-        modelo:         machine.modelo,
-        descripcion:    machine.descripcion,
-        precio:         machine.precio,
-        mostrar_precio: machine.mostrar_precio,
-        garantia:       machine.garantia,
-        tiempo_entrega: machine.tiempo_entrega,
-        specs:          machine.specs,
-        highlights:     machine.highlights.map((t) => ({ text: t })),
-        visible_web:    machine.visible_web,
-        destacado:      machine.destacado,
+        code:          machine.code,
+        brand:         machine.brand,
+        category:      machine.category,
+        model:         machine.model,
+        description:   machine.description,
+        price:         machine.price,
+        show_price:    machine.show_price,
+        warranty:      machine.warranty,
+        delivery_time: machine.delivery_time,
+        specs:         machine.specs.map(({ label, value, icon }) => ({ label, value, icon: icon ?? "" })),
+        highlights:    machine.highlights.map(({ text }) => ({ text })),
+        visible_web:   machine.visible_web,
+        featured:      machine.featured,
       });
-      setImagePreview(machine.imagen_url);
+      setImagePreview(machine.image_url);
     } else if (open && !machine) {
-      reset({ specs: [], highlights: [], visible_web: true, destacado: false, precio: 0 });
+      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0 });
       setImagePreview("");
     }
   }, [open, machine, reset]);
@@ -134,18 +135,23 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
 
   /* Submit */
   const onSubmit = async (data: FormValues) => {
-    const slug = data.modelo.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    onSave({
-      ...data,
-      categoria:   data.categoria as Machine["categoria"],
-      precio:      data.precio ?? 0,
-      specs:       data.specs ?? [],
-      highlights:  (data.highlights ?? []).map((h) => h.text),
-      imagen_url:  imagePreview || machine?.imagen_url || "",
-      pdf_url:     machine?.pdf_url || "",
-      slug:        machine?.slug || slug,
-    });
-    onClose();
+    const slug = data.model.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    setSaving(true);
+    try {
+      await onSave({
+        ...data,
+        category:      data.category as Machine["category"],
+        price:         data.price ?? 0,
+        specs:         data.specs ?? [],
+        highlights:    (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
+        image_url:     imagePreview || machine?.image_url || "",
+        pdf_url:       machine?.pdf_url || "",
+        slug:          machine?.slug || slug,
+        is_new:        machine?.is_new ?? true,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* Prevent background scroll */
@@ -171,7 +177,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
               {isEditing ? "Editar máquina" : "Nueva máquina"}
             </h2>
             <p className="text-fg-5 text-xs mt-0.5">
-              {isEditing ? machine.modelo : "Completa los campos del producto"}
+              {isEditing ? machine.model : "Completa los campos del producto"}
             </p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-fg-2 hover:bg-surface-4 transition-all">
@@ -217,42 +223,42 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Código / SKU *</Label>
-              <input {...register("codigo")} placeholder="CDM6225" className={`${FIELD_CLASS} ${errors.codigo ? ERROR_CLASS : ""}`} />
-              {errors.codigo && <p className="text-red-400 text-[10px] mt-1">{errors.codigo.message}</p>}
+              <input {...register("code")} placeholder="CDM6225" className={`${FIELD_CLASS} ${errors.code ? ERROR_CLASS : ""}`} />
+              {errors.code && <p className="text-red-400 text-[10px] mt-1">{errors.code.message}</p>}
             </div>
             <div>
               <Label>Marca *</Label>
-              <input {...register("marca")} placeholder="LONKING" className={`${FIELD_CLASS} ${errors.marca ? ERROR_CLASS : ""}`} />
-              {errors.marca && <p className="text-red-400 text-[10px] mt-1">{errors.marca.message}</p>}
+              <input {...register("brand")} placeholder="LONKING" className={`${FIELD_CLASS} ${errors.brand ? ERROR_CLASS : ""}`} />
+              {errors.brand && <p className="text-red-400 text-[10px] mt-1">{errors.brand.message}</p>}
             </div>
           </div>
 
           <div>
             <Label>Categoría *</Label>
             <div className="relative">
-              <select {...register("categoria")} className={`${FIELD_CLASS} appearance-none pr-8 ${errors.categoria ? ERROR_CLASS : ""}`}>
+              <select {...register("category")} className={`${FIELD_CLASS} appearance-none pr-8 ${errors.category ? ERROR_CLASS : ""}`}>
                 <option value="">Seleccionar categoría...</option>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
             </div>
-            {errors.categoria && <p className="text-red-400 text-[10px] mt-1">{errors.categoria.message}</p>}
+            {errors.category && <p className="text-red-400 text-[10px] mt-1">{errors.category.message}</p>}
           </div>
 
           <div>
             <Label>Nombre del modelo *</Label>
-            <input {...register("modelo")} placeholder="Excavadora CDM6225" className={`${FIELD_CLASS} ${errors.modelo ? ERROR_CLASS : ""}`} />
-            {errors.modelo && <p className="text-red-400 text-[10px] mt-1">{errors.modelo.message}</p>}
+            <input {...register("model")} placeholder="Excavadora CDM6225" className={`${FIELD_CLASS} ${errors.model ? ERROR_CLASS : ""}`} />
+            {errors.model && <p className="text-red-400 text-[10px] mt-1">{errors.model.message}</p>}
           </div>
 
           <div>
             <Label>Descripción corta *</Label>
             <textarea
-              {...register("descripcion")} rows={3}
+              {...register("description")} rows={3}
               placeholder="Motor Cummins B6.7 de 129 kW (173 HP), peso operativo 21.8 ton..."
-              className={`${FIELD_CLASS} resize-none ${errors.descripcion ? ERROR_CLASS : ""}`}
+              className={`${FIELD_CLASS} resize-none ${errors.description ? ERROR_CLASS : ""}`}
             />
-            {errors.descripcion && <p className="text-red-400 text-[10px] mt-1">{errors.descripcion.message}</p>}
+            {errors.description && <p className="text-red-400 text-[10px] mt-1">{errors.description.message}</p>}
           </div>
 
           {/* ── COMERCIAL ── */}
@@ -262,26 +268,26 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
             <div>
               <Label>Precio (COP)</Label>
               <input
-                type="number" {...register("precio")} placeholder="0"
-                className={`${FIELD_CLASS} ${errors.precio ? ERROR_CLASS : ""}`}
+                type="number" {...register("price")} placeholder="0"
+                className={`${FIELD_CLASS} ${errors.price ? ERROR_CLASS : ""}`}
               />
-              {errors.precio && <p className="text-red-400 text-[10px] mt-1">{errors.precio.message}</p>}
+              {errors.price && <p className="text-red-400 text-[10px] mt-1">{errors.price.message}</p>}
             </div>
             <div>
               <Label>Garantía</Label>
-              <input {...register("garantia")} placeholder="12 meses o 2.000 horas" className={FIELD_CLASS} />
+              <input {...register("warranty")} placeholder="12 meses o 2.000 horas" className={FIELD_CLASS} />
             </div>
           </div>
 
           <div>
             <Label>Tiempo de entrega</Label>
-            <input {...register("tiempo_entrega")} placeholder="30 – 45 días hábiles" className={FIELD_CLASS} />
+            <input {...register("delivery_time")} placeholder="30 – 45 días hábiles" className={FIELD_CLASS} />
           </div>
 
           <div className="flex items-center gap-6">
             <Toggle
-              checked={!!watch("mostrar_precio")}
-              onChange={() => setValue("mostrar_precio", !watch("mostrar_precio"))}
+              checked={!!watch("show_price")}
+              onChange={() => setValue("show_price", !watch("show_price"))}
               label="Mostrar precio en la web"
             />
           </div>
@@ -359,8 +365,8 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
               label="Visible en la página web"
             />
             <Toggle
-              checked={!!watch("destacado")}
-              onChange={() => setValue("destacado", !watch("destacado"))}
+              checked={!!watch("featured")}
+              onChange={() => setValue("featured", !watch("featured"))}
               label="Producto destacado (aparece en inicio)"
             />
           </div>
@@ -376,12 +382,12 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
             Cancelar
           </button>
           <button
-            type="submit" form="machine-form" disabled={isSubmitting}
+            type="submit" disabled={saving}
             onClick={handleSubmit(onSubmit)}
             className="px-6 py-2.5 text-sm font-semibold bg-accent hover:bg-accent-light text-zinc-900
                        hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear producto"}
+            {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear producto"}
           </button>
         </div>
       </div>

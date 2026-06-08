@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2,
 } from "lucide-react";
 import { useMachines } from "../../hooks/useMachines";
 import MachineDrawer from "../../components/inventario/MachineDrawer";
@@ -36,44 +36,70 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 
 /* ── Main page ── */
 export default function MaquinariaNuevaPage() {
-  const { machines, addMachine, updateMachine, removeMachine, toggleField } = useMachines();
+  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField } = useMachines(true);
 
-  const [search,    setSearch]    = useState("");
-  const [catFilter, setCatFilter] = useState<string>("");
+  const [search,     setSearch]     = useState("");
+  const [catFilter,  setCatFilter]  = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing,    setEditing]    = useState<Machine | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   /* Filtered list */
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return machines.filter((m) => {
-      const matchSearch = !q || m.modelo.toLowerCase().includes(q) || m.codigo.toLowerCase().includes(q) || m.marca.toLowerCase().includes(q);
-      const matchCat    = !catFilter || m.categoria === catFilter;
+      const matchSearch = !q || m.model.toLowerCase().includes(q) || m.code.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q);
+      const matchCat    = !catFilter || m.category === catFilter;
       return matchSearch && matchCat;
     });
   }, [machines, search, catFilter]);
 
   /* Stats */
-  const total      = machines.length;
-  const visibles   = machines.filter((m) => m.visible_web).length;
-  const destacados = machines.filter((m) => m.destacado).length;
+  const total    = machines.length;
+  const visibles = machines.filter((m) => m.visible_web).length;
+  const featured = machines.filter((m) => m.featured).length;
 
   /* Handlers */
   const openCreate  = () => { setEditing(null); setDrawerOpen(true); };
   const openEdit    = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
-  const handleSave = (data: Omit<Machine, "id" | "created_at" | "updated_at">) => {
-    if (editing) {
-      updateMachine(editing.id, data);
-    } else {
-      addMachine(data);
+  const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">) => {
+    try {
+      setActionError(null);
+      if (editing) {
+        await updateMachine(editing.id, data);
+      } else {
+        await addMachine(data);
+      }
+      closeDrawer();
+    } catch (e: unknown) {
+      const err = e as { detail?: string };
+      setActionError(err.detail ?? "Error al guardar");
     }
-    closeDrawer();
   };
 
-  const confirmDelete = (id: string) => { removeMachine(id); setDeletingId(null); };
+  const confirmDelete = async (id: string) => {
+    try {
+      setActionError(null);
+      await removeMachine(id);
+      setDeletingId(null);
+    } catch (e: unknown) {
+      const err = e as { detail?: string };
+      setActionError(err.detail ?? "Error al eliminar");
+    }
+  };
+
+  /* ── Loading state ── */
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 gap-3 text-fg-5">
+        <Loader2 size={20} className="animate-spin" />
+        <span className="text-sm">Cargando inventario...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 max-w-[1200px]">
@@ -93,12 +119,20 @@ export default function MaquinariaNuevaPage() {
         </button>
       </div>
 
+      {/* Error banner */}
+      {(error || actionError) && (
+        <div className="flex items-center gap-2.5 bg-red-950/30 border border-red-900/40 px-4 py-3 text-red-300 text-sm">
+          <AlertTriangle size={15} className="flex-shrink-0" />
+          {error ?? actionError}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "60ms", animationFillMode: "both" }}>
         {[
-          { label: "Total",       value: total,      color: "text-fg" },
-          { label: "Visibles",    value: visibles,   color: "text-emerald-400" },
-          { label: "Destacados",  value: destacados, color: "text-accent" },
+          { label: "Total",      value: total,    color: "text-fg" },
+          { label: "Visibles",   value: visibles, color: "text-emerald-400" },
+          { label: "Destacados", value: featured, color: "text-accent" },
         ].map((s) => (
           <div key={s.label} className="bg-surface-2 border border-border px-4 py-3 flex items-center justify-between">
             <span className="text-fg-5 text-xs">{s.label}</span>
@@ -171,9 +205,9 @@ export default function MaquinariaNuevaPage() {
                     {/* Imagen */}
                     <td className="px-4 py-3">
                       <div className="w-10 h-10 bg-surface-4 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {m.imagen_url ? (
+                        {m.image_url ? (
                           <img
-                            src={m.imagen_url} alt={m.modelo}
+                            src={m.image_url} alt={m.model}
                             className="w-full h-full object-contain p-0.5"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                           />
@@ -186,29 +220,29 @@ export default function MaquinariaNuevaPage() {
                     {/* Código */}
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-fg-4 bg-surface-4 border border-border px-2 py-0.5">
-                        {m.codigo}
+                        {m.code}
                       </span>
                     </td>
 
                     {/* Modelo */}
                     <td className="px-4 py-3">
-                      <p className="text-fg-2 font-medium text-sm">{m.modelo}</p>
-                      <p className="text-fg-6 text-[11px]">{m.marca}</p>
+                      <p className="text-fg-2 font-medium text-sm">{m.model}</p>
+                      <p className="text-fg-6 text-[11px]">{m.brand}</p>
                     </td>
 
                     {/* Categoría */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium border ${CAT_COLORS[m.categoria] ?? ""}`}>
-                        {m.categoria}
+                      <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium border ${CAT_COLORS[m.category] ?? ""}`}>
+                        {m.category}
                       </span>
                     </td>
 
                     {/* Precio */}
                     <td className="px-4 py-3">
-                      <p className={`text-sm font-semibold ${m.precio === 0 ? "text-fg-5 italic" : "text-fg"}`}>
-                        {formatCOP(m.precio)}
+                      <p className={`text-sm font-semibold ${m.price === 0 ? "text-fg-5 italic" : "text-fg"}`}>
+                        {formatCOP(m.price)}
                       </p>
-                      {m.mostrar_precio && m.precio > 0 && (
+                      {m.show_price && m.price > 0 && (
                         <p className="text-emerald-500 text-[10px]">Visible en web</p>
                       )}
                     </td>
@@ -226,8 +260,8 @@ export default function MaquinariaNuevaPage() {
                     {/* Destacado */}
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1.5">
-                        <ToggleSwitch checked={m.destacado} onChange={() => toggleField(m.id, "destacado")} />
-                        {m.destacado
+                        <ToggleSwitch checked={m.featured} onChange={() => toggleField(m.id, "featured")} />
+                        {m.featured
                           ? <Star size={13} className="text-accent fill-accent" />
                           : <StarOff size={13} className="text-fg-6" />}
                       </div>
@@ -260,7 +294,7 @@ export default function MaquinariaNuevaPage() {
                           <div className="flex items-center gap-2.5 text-red-300">
                             <AlertTriangle size={15} />
                             <span className="text-sm">
-                              ¿Eliminar <strong>{m.modelo}</strong>? Esta acción no se puede deshacer.
+                              ¿Eliminar <strong>{m.model}</strong>? Esta acción no se puede deshacer.
                             </span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
