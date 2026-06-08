@@ -41,9 +41,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export type UserRoleResponse = { role: { id: string; name: string }; area_id: string | null; area_name: string | null };
-export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[] };
+export type UserPermissionResponse = { id: string; action: string; subject: string };
+export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[]; permissions: UserPermissionResponse[] };
 export type RoleResponse = { id: string; name: string; description: string | null };
 export type AreaResponse = { id: string; name: string; description: string | null };
+export type PermissionResponse = { id: string; action: string; subject: string; description: string | null };
 
 export const api = {
   auth: {
@@ -86,6 +88,14 @@ export const api = {
     update: (id: string, data: { name?: string; description?: string }) =>
       request<AreaResponse>(`/areas/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     remove: (id: string) => request<void>(`/areas/${id}`, { method: "DELETE" }),
+  },
+  permissions: {
+    list: () => request<PermissionResponse[]>("/permissions/"),
+    setUserPermissions: (userId: string, permissionIds: string[]) =>
+      request<void>(`/permissions/users/${userId}/permissions`, {
+        method: "PUT",
+        body: JSON.stringify(permissionIds),
+      }),
   },
   passwordReset: {
     forgot: (email: string) =>

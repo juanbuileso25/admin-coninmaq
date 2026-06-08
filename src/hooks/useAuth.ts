@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { api, setTokens, clearTokens, getToken } from "../services/api";
+import { buildAbility, type AppAbility, type PermissionDef } from "../ability";
+import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 
 interface User {
   id: string;
@@ -7,6 +9,7 @@ interface User {
   email: string;
   role: string;
   avatar: string;
+  permissions: PermissionDef[];
 }
 
 const USER_KEY = "coninmaq_admin_user";
@@ -22,6 +25,16 @@ export function useAuth() {
     return storedUser();
   });
 
+  const ability: AppAbility = (() => {
+    if (!user) return createMongoAbility();
+    if (user.role === "admin") {
+      const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+      can("manage", "all");
+      return build();
+    }
+    return buildAbility(user.permissions ?? []);
+  })();
+
   const login = async (email: string, password: string, remember: boolean): Promise<boolean> => {
     try {
       const { access_token, refresh_token } = await api.auth.login(email, password);
@@ -29,12 +42,18 @@ export function useAuth() {
 
       const me = await api.users.me();
       const roles = me.role_assignments?.map((a) => a.role.name) ?? [];
+      const permissions: PermissionDef[] = me.permissions.map((p) => ({
+        action: p.action,
+        subject: p.subject,
+      }));
+
       const u: User = {
         id: me.id,
         name: `${me.first_name} ${me.last_name}`,
         email: me.email,
         role: roles[0] ?? "Usuario",
         avatar: me.first_name[0].toUpperCase(),
+        permissions,
       };
 
       const storage = remember ? localStorage : sessionStorage;
@@ -53,5 +72,5 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { user, login, logout };
+  return { user, ability, login, logout };
 }

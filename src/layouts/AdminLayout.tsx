@@ -4,9 +4,10 @@ import { Menu, X, Bell, Sun, Moon } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
+import { AbilityContext } from "../context/AbilityContext";
 
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { user, ability } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed]     = useState(false);
   const [mobileOpen, setMobileOpen]   = useState(false);
@@ -14,6 +15,7 @@ export default function AdminLayout() {
   if (!user) return <Navigate to="/" replace />;
 
   return (
+    <AbilityContext.Provider value={ability}>
     <div className="flex h-screen bg-surface overflow-hidden">
 
       {/* Sidebar — desktop */}
@@ -100,5 +102,6 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+    </AbilityContext.Provider>
   );
 }
