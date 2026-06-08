@@ -7,7 +7,6 @@ import {
   Users,
   Settings,
   LogOut,
-  Bot,
   ChevronDown,
   Truck,
   Wrench,
