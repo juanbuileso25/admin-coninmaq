@@ -3,6 +3,7 @@ import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
   Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
 import MachineDrawer from "../../components/inventario/MachineDrawer";
 import type { Machine } from "../../types/machine";
@@ -43,7 +44,6 @@ export default function MaquinariaNuevaPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing,    setEditing]    = useState<Machine | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   /* Filtered list */
   const filtered = useMemo(() => {
@@ -67,7 +67,6 @@ export default function MaquinariaNuevaPage() {
 
   const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine | undefined> => {
     try {
-      setActionError(null);
       let saved: Machine | undefined;
       if (editing) {
         await updateMachine(editing.id, data);
@@ -79,19 +78,19 @@ export default function MaquinariaNuevaPage() {
       return saved;
     } catch (e: unknown) {
       const err = e as { detail?: string };
-      setActionError(err.detail ?? "Error al guardar");
+      toast.error(err.detail ?? "Error al guardar");
       return undefined;
     }
   };
 
   const confirmDelete = async (id: string) => {
     try {
-      setActionError(null);
       await removeMachine(id);
       setDeletingId(null);
+      toast.success("Máquina eliminada");
     } catch (e: unknown) {
       const err = e as { detail?: string };
-      setActionError(err.detail ?? "Error al eliminar");
+      toast.error(err.detail ?? "Error al eliminar");
     }
   };
 
@@ -123,11 +122,11 @@ export default function MaquinariaNuevaPage() {
         </button>
       </div>
 
-      {/* Error banner */}
-      {(error || actionError) && (
+      {/* Error de carga inicial */}
+      {error && (
         <div className="flex items-center gap-2.5 bg-red-950/30 border border-red-900/40 px-4 py-3 text-red-300 text-sm">
           <AlertTriangle size={15} className="flex-shrink-0" />
-          {error ?? actionError}
+          {error}
         </div>
       )}
 
@@ -254,7 +253,10 @@ export default function MaquinariaNuevaPage() {
                     {/* Visible web */}
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1.5">
-                        <ToggleSwitch checked={m.visible_web} onChange={() => toggleField(m.id, "visible_web")} />
+                        <ToggleSwitch checked={m.visible_web} onChange={async () => {
+                          try { await toggleField(m.id, "visible_web"); }
+                          catch { toast.error("Error al actualizar visibilidad"); }
+                        }} />
                         {m.visible_web
                           ? <Eye size={13} className="text-emerald-400" />
                           : <EyeOff size={13} className="text-fg-6" />}
@@ -264,7 +266,10 @@ export default function MaquinariaNuevaPage() {
                     {/* Destacado */}
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1.5">
-                        <ToggleSwitch checked={m.featured} onChange={() => toggleField(m.id, "featured")} />
+                        <ToggleSwitch checked={m.featured} onChange={async () => {
+                          try { await toggleField(m.id, "featured"); }
+                          catch { toast.error("Error al actualizar destacado"); }
+                        }} />
                         {m.featured
                           ? <Star size={13} className="text-accent fill-accent" />
                           : <StarOff size={13} className="text-fg-6" />}

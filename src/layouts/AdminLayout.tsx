@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import { Menu, X, Bell, Sun, Moon } from "lucide-react";
+import { Toaster } from "sonner";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
@@ -101,6 +102,18 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--surface-3)",
+            border: "1px solid var(--border-light)",
+            color: "var(--fg-2)",
+            fontSize: "13px",
+          },
+        }}
+      />
     </div>
     </AbilityContext.Provider>
   );

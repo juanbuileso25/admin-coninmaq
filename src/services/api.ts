@@ -180,10 +180,10 @@ export const api = {
         headers: {},  // let browser set Content-Type with boundary
       });
     },
-    uploadPdf: (id: string, file: File) => {
+    uploadDocument: (id: string, file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return request<MachineResponse>(`/machines/${id}/upload-pdf`, {
+      return request<MachineResponse>(`/machines/${id}/upload-document`, {
         method: "POST",
         body: form,
         headers: {},

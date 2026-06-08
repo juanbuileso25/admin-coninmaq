@@ -5,6 +5,7 @@ import * as yup from "yup";
 import {
   X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown, FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Machine } from "../../types/machine";
 import { CATEGORIES } from "../../types/machine";
 import { api } from "../../services/api";
@@ -167,9 +168,32 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
 
       // Upload files after we have the machine ID
       if (saved?.id) {
-        if (pendingImage) await api.machines.uploadImage(saved.id, pendingImage);
-        if (pendingPdf)   await api.machines.uploadPdf(saved.id, pendingPdf);
+        if (pendingImage) {
+          try {
+            await api.machines.uploadImage(saved.id, pendingImage);
+            toast.success("Imagen subida correctamente");
+          } catch {
+            toast.error("Error al subir la imagen");
+          }
+        }
+        if (pendingPdf) {
+          try {
+            await api.machines.uploadDocument(saved.id, pendingPdf);
+            toast.success("PDF subido correctamente");
+          } catch (e: unknown) {
+            const err = e as { status?: number };
+            if (err.status === 413) {
+              toast.error("El archivo es demasiado grande (máx. 20 MB)");
+            } else {
+              toast.error("Error al subir el PDF");
+            }
+          }
+        }
       }
+      toast.success(isEditing ? "Máquina actualizada" : "Máquina creada");
+    } catch (e: unknown) {
+      const err = e as { detail?: string };
+      toast.error(err.detail ?? "Error al guardar");
     } finally {
       setSaving(false);
     }
