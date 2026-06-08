@@ -47,10 +47,12 @@ async function tryRefresh(): Promise<string | null> {
 }
 
 async function doFetch(path: string, options: RequestInit, token: string | null): Promise<Response> {
+  const isFormData = options.body instanceof FormData;
   return fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      // Omit Content-Type for FormData — browser sets it with boundary automatically
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -169,6 +171,24 @@ export const api = {
     remove: (id: string) => request<void>(`/machines/${id}`, { method: "DELETE" }),
     toggleVisibility: (id: string) => request<MachineResponse>(`/machines/${id}/toggle-visibility`, { method: "PATCH" }),
     toggleFeatured:   (id: string) => request<MachineResponse>(`/machines/${id}/toggle-featured`,   { method: "PATCH" }),
+    uploadImage: (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<MachineResponse>(`/machines/${id}/upload-image`, {
+        method: "POST",
+        body: form,
+        headers: {},  // let browser set Content-Type with boundary
+      });
+    },
+    uploadPdf: (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<MachineResponse>(`/machines/${id}/upload-pdf`, {
+        method: "POST",
+        body: form,
+        headers: {},
+      });
+    },
   },
   passwordReset: {
     forgot: (email: string) =>

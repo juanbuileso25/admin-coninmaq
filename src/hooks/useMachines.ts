@@ -6,7 +6,7 @@ interface UseMachinesReturn {
   machines:     Machine[];
   loading:      boolean;
   error:        string | null;
-  addMachine:   (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<void>;
+  addMachine:   (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine>;
   updateMachine:(id: string, data: Partial<Omit<Machine, "id" | "created_at">>) => Promise<void>;
   removeMachine:(id: string) => Promise<void>;
   toggleField:  (id: string, field: "visible_web" | "featured") => Promise<void>;
@@ -34,9 +34,11 @@ export function useMachines(isNew = true): UseMachinesReturn {
 
   useEffect(() => { load(); }, [load]);
 
-  const addMachine = async (data: Omit<Machine, "id" | "created_at" | "updated_at">) => {
+  const addMachine = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine> => {
     const created = await api.machines.create({ ...data, is_new: isNew });
-    setMachines((prev) => [created as unknown as Machine, ...prev]);
+    const machine = created as unknown as Machine;
+    setMachines((prev) => [machine, ...prev]);
+    return machine;
   };
 
   const updateMachine = async (id: string, data: Partial<Omit<Machine, "id" | "created_at">>) => {

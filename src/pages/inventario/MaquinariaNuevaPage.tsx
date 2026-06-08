@@ -65,18 +65,22 @@ export default function MaquinariaNuevaPage() {
   const openEdit    = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
-  const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">) => {
+  const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine | undefined> => {
     try {
       setActionError(null);
+      let saved: Machine | undefined;
       if (editing) {
         await updateMachine(editing.id, data);
+        saved = { ...editing, ...data };
       } else {
-        await addMachine(data);
+        saved = await addMachine(data);
       }
       closeDrawer();
+      return saved;
     } catch (e: unknown) {
       const err = e as { detail?: string };
       setActionError(err.detail ?? "Error al guardar");
+      return undefined;
     }
   };
 

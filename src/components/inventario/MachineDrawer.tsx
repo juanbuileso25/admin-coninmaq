@@ -3,10 +3,11 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
-  X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown,
+  X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown, FileText,
 } from "lucide-react";
 import type { Machine } from "../../types/machine";
 import { CATEGORIES } from "../../types/machine";
+import { api } from "../../services/api";
 
 /* ── Schema ── */
 const schema = yup.object({
@@ -36,7 +37,7 @@ interface Props {
   open:    boolean;
   machine: Machine | null;
   onClose: () => void;
-  onSave:  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<void>;
+  onSave:  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
 }
 
 /* ── Helpers ── */
@@ -79,9 +80,13 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 
 /* ── Component ── */
 export default function MachineDrawer({ open, machine, onClose, onSave }: Props) {
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const [saving,       setSaving]       = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview,   setImagePreview]   = useState<string>("");
+  const [pendingImage,   setPendingImage]   = useState<File | null>(null);
+  const [pendingPdf,     setPendingPdf]     = useState<File | null>(null);
+  const [pdfName,        setPdfName]        = useState<string>("");
+  const [saving,         setSaving]         = useState(false);
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const pdfInputRef     = useRef<HTMLInputElement>(null);
 
   const isEditing = !!machine;
 
@@ -120,35 +125,51 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         featured:      machine.featured,
       });
       setImagePreview(machine.image_url);
+      setPdfName(machine.pdf_url ? machine.pdf_url.split("/").pop() ?? "" : "");
     } else if (open && !machine) {
       reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0 });
       setImagePreview("");
+      setPdfName("");
     }
+    setPendingImage(null);
+    setPendingPdf(null);
   }, [open, machine, reset]);
 
-  /* Image file handler */
+  /* Local preview + keep file pending for upload after save */
   const handleImageFile = (file: File) => {
+    setPendingImage(file);
     const reader = new FileReader();
     reader.onload = (e) => setImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
   };
 
-  /* Submit */
+  const handlePdfFile = (file: File) => {
+    setPendingPdf(file);
+    setPdfName(file.name);
+  };
+
+  /* Submit: 1) save machine data  2) upload pending files if any */
   const onSubmit = async (data: FormValues) => {
     const slug = data.model.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     setSaving(true);
     try {
-      await onSave({
+      const saved = await onSave({
         ...data,
         category:      data.category as Machine["category"],
         price:         data.price ?? 0,
         specs:         data.specs ?? [],
         highlights:    (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
-        image_url:     imagePreview || machine?.image_url || "",
+        image_url:     machine?.image_url || "",
         pdf_url:       machine?.pdf_url || "",
         slug:          machine?.slug || slug,
         is_new:        machine?.is_new ?? true,
       });
+
+      // Upload files after we have the machine ID
+      if (saved?.id) {
+        if (pendingImage) await api.machines.uploadImage(saved.id, pendingImage);
+        if (pendingPdf)   await api.machines.uploadPdf(saved.id, pendingPdf);
+      }
     } finally {
       setSaving(false);
     }
@@ -214,6 +235,41 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
             <input
               ref={fileInputRef} type="file" accept="image/*" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) handleImageFile(e.target.files[0]); }}
+            />
+          </div>
+
+          {/* ── PDF / FICHA TÉCNICA ── */}
+          <div>
+            <Label>Ficha técnica (PDF)</Label>
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-3 bg-surface-3 border border-border-light px-4 py-3 cursor-pointer
+                           hover:border-accent/50 transition-colors group flex-1 min-w-0"
+                onClick={() => pdfInputRef.current?.click()}
+              >
+                <FileText size={18} className={pdfName ? "text-accent" : "text-fg-6 group-hover:text-fg-4"} />
+                <span className={`text-sm truncate flex-1 ${pdfName ? "text-fg-2" : "text-fg-6 group-hover:text-fg-4"}`}>
+                  {pdfName || "Click para subir PDF"}
+                </span>
+                <Upload size={14} className="text-fg-6 group-hover:text-fg-4 flex-shrink-0" />
+              </div>
+              {machine?.pdf_url && (
+                <a
+                  href={machine.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-10 h-10 flex items-center justify-center bg-surface-3 border border-border-light
+                             text-fg-5 hover:text-accent hover:border-accent/50 transition-all flex-shrink-0"
+                  title="Ver PDF"
+                >
+                  <FileText size={16} />
+                </a>
+              )}
+            </div>
+            <input
+              ref={pdfInputRef} type="file" accept="application/pdf" className="hidden"
+              onChange={(e) => { if (e.target.files?.[0]) handlePdfFile(e.target.files[0]); }}
             />
           </div>
 
