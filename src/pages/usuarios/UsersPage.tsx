@@ -103,7 +103,7 @@ function UserModal({ user, roles, areas, allPermissions, onClose, onSaved }: Mod
         const currentRole = user.role_assignments[0];
         const roleChanged = currentRole?.role.id !== roleId || currentRole?.area_id !== (areaId || null);
         if (roleChanged) {
-          if (currentRole) await api.users.removeRole(user.id, currentRole.role.id);
+          if (currentRole) await api.users.removeRole(user.id, currentRole.role.id, currentRole.area_id);
           if (roleId) await api.users.assignRole(user.id, roleId, areaId || undefined);
         }
 

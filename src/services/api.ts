@@ -65,8 +65,10 @@ export const api = {
     remove: (id: string) => request<void>(`/users/${id}`, { method: "DELETE" }),
     assignRole: (id: string, role_id: string, area_id?: string) =>
       request<void>(`/users/${id}/roles`, { method: "POST", body: JSON.stringify({ role_id, area_id }) }),
-    removeRole: (id: string, role_id: string) =>
-      request<void>(`/users/${id}/roles/${role_id}`, { method: "DELETE" }),
+    removeRole: (id: string, role_id: string, area_id?: string | null) => {
+      const params = area_id ? `?area_id=${area_id}` : "";
+      return request<void>(`/users/${id}/roles/${role_id}${params}`, { method: "DELETE" });
+    },
     changePassword: (current_password: string, new_password: string) =>
       request<void>("/users/me/change-password", {
         method: "PATCH",
