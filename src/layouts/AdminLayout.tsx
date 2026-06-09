@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import { Menu, X, Bell, Sun, Moon } from "lucide-react";
+import { Toaster } from "sonner";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
+import { AbilityContext } from "../context/AbilityContext";
 
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { user, ability } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed]     = useState(false);
   const [mobileOpen, setMobileOpen]   = useState(false);
@@ -14,6 +16,7 @@ export default function AdminLayout() {
   if (!user) return <Navigate to="/" replace />;
 
   return (
+    <AbilityContext.Provider value={ability}>
     <div className="flex h-screen bg-surface overflow-hidden">
 
       {/* Sidebar — desktop */}
@@ -99,6 +102,19 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--surface-3)",
+            border: "1px solid var(--border-light)",
+            color: "var(--fg-2)",
+            fontSize: "13px",
+          },
+        }}
+      />
     </div>
+    </AbilityContext.Provider>
   );
 }

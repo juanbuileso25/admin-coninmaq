@@ -7,15 +7,18 @@ import {
   Users,
   Settings,
   LogOut,
-  Bot,
   ChevronDown,
   Truck,
   Wrench,
   Key,
   HardHat,
   DollarSign,
+  ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useAbility } from "../context/AbilityContext";
+import type { Subjects } from "../ability";
 
 interface SubItem {
   label: string;
@@ -26,6 +29,7 @@ interface NavItem {
   label:    string;
   to?:      string;
   icon:     React.ElementType;
+  subject?: Subjects;
   sub?:     SubItem[];
 }
 
@@ -38,10 +42,11 @@ const NAV: NavGroup[] = [
   {
     section: "Principal",
     items: [
-      { label: "Dashboard",    to: "/dashboard",    icon: LayoutDashboard },
+      { label: "Dashboard",    to: "/dashboard",    icon: LayoutDashboard, subject: "Dashboard"    },
       {
         label: "Inventario",
         icon:  Package,
+        subject: "Inventory",
         sub: [
           { label: "Maquinaria nueva", to: "/inventario/maquinaria-nueva" },
           { label: "Maquinaria usada", to: "/inventario/maquinaria-usada" },
@@ -49,10 +54,11 @@ const NAV: NavGroup[] = [
           { label: "Renta",            to: "/inventario/renta"            },
         ],
       },
-      { label: "Cotizaciones", to: "/cotizaciones", icon: FileText },
+      { label: "Cotizaciones", to: "/cotizaciones", icon: FileText,   subject: "Quote"        },
       {
         label: "Renta",
         icon:  DollarSign,
+        subject: "RentalRecord",
         sub: [
           { label: "Horómetro", to: "/renta/horometro" },
         ],
@@ -62,14 +68,15 @@ const NAV: NavGroup[] = [
   {
     section: "Sistema",
     items: [
-      { label: "Agente IA", to: "/agente",   icon: Bot      },
-      { label: "Usuarios",  to: "/usuarios", icon: Users    },
+      // { label: "Agente IA", to: "/agente",   icon: Bot,      subject: "Agent"    },
+      { label: "Usuarios",  to: "/usuarios", icon: Users,    subject: "User"     },
       {
         label: "Ajustes",
         icon: Settings,
+        subject: "Settings",
         sub: [
-          { label: "General",           to: "/ajustes"              },
-          { label: "Cambiar contraseña", to: "/ajustes/contrasena"  },
+          { label: "Roles", to: "/ajustes/roles" },
+          { label: "Áreas", to: "/ajustes/areas" },
         ],
       },
     ],
@@ -82,7 +89,8 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/inventario/repuestos":        Wrench,
   "/inventario/renta":            Key,
   "/renta/horometro":             Key,
-  "/ajustes/contrasena":          Key,
+  "/ajustes/roles":               ShieldCheck,
+  "/ajustes/areas":               Building2,
 };
 
 interface SidebarProps {
@@ -91,6 +99,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed }: SidebarProps) {
   const { user, logout } = useAuth();
+  const ability = useAbility();
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -131,7 +140,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               </p>
             )}
             <ul className="space-y-0.5">
-              {group.items.map((item) => {
+              {group.items.filter((item) => !item.subject || ability.can("read", item.subject)).map((item) => {
                 const Icon        = item.icon;
                 const isOpen      = !!openMenus[item.label];
                 const isSubActive = item.sub?.some((s) => location.pathname.startsWith(s.to));
