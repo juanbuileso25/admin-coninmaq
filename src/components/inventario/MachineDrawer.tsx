@@ -166,8 +166,10 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         is_new:        machine?.is_new ?? true,
       });
 
+      if (!saved) return; // handleSave mostró el error, no cerramos
+
       // Upload files after we have the machine ID
-      if (saved?.id) {
+      if (saved.id) {
         if (pendingImage) {
           try {
             await api.machines.uploadImage(saved.id, pendingImage);
@@ -191,6 +193,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         }
       }
       toast.success(isEditing ? "Máquina actualizada" : "Máquina creada");
+      onClose();
     } catch (e: unknown) {
       const err = e as { detail?: string };
       toast.error(err.detail ?? "Error al guardar");

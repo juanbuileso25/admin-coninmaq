@@ -63,7 +63,7 @@ export default function MaquinariaNuevaPage() {
   /* Handlers */
   const openCreate  = () => { setEditing(null); setDrawerOpen(true); };
   const openEdit    = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
-  const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+  const closeDrawer = () => { setDrawerOpen(false); setEditing(null); refresh(); };
 
   const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine | undefined> => {
     try {
@@ -74,7 +74,6 @@ export default function MaquinariaNuevaPage() {
       } else {
         saved = await addMachine(data);
       }
-      closeDrawer();
       return saved;
     } catch (e: unknown) {
       const err = e as { detail?: string };
