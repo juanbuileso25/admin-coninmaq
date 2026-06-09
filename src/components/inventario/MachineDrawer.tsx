@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
-  X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown, FileText, Star, Loader2,
+  X, Plus, Trash2, Upload, GripVertical, ChevronDown, FileText, Star, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Machine, MachineImage } from "../../types/machine";
@@ -31,7 +31,7 @@ const schema = yup.object({
   featured:      yup.boolean().default(false),
   is_new:        yup.boolean().default(true),
   // Used machinery fields
-  year:          yup.number().nullable().transform((v, o) => (o === "" || o === null ? null : Number(o))).optional(),
+  year:          yup.number().nullable().transform((_v, o) => (o === "" || o === null ? null : Number(o))).optional(),
   hours_used:    yup.string().default("").optional(),
   condition:     yup.string().default("").optional(),
   inspection:    yup.string().default("").optional(),
@@ -238,6 +238,7 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
         highlights:    (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
         image_url:     machine?.image_url || "",
         pdf_url:       machine?.pdf_url || "",
+        images:        machine?.images || [],
         slug:          machine?.slug || slug,
         is_new:        data.is_new ?? defaultIsNew,
         year:          data.year ?? null,
