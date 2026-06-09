@@ -37,7 +37,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 
 /* ── Main page ── */
 export default function MaquinariaNuevaPage() {
-  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField } = useMachines(true);
+  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField, refresh } = useMachines(true);
 
   const [search,     setSearch]     = useState("");
   const [catFilter,  setCatFilter]  = useState<string>("");
