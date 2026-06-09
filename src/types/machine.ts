@@ -8,6 +8,9 @@ export const CATEGORIES = [
 
 export type MachineCategory = (typeof CATEGORIES)[number];
 
+export const CONDITIONS = ["Excelente", "Muy bueno", "Bueno"] as const;
+export type MachineCondition = (typeof CONDITIONS)[number];
+
 export interface MachineSpec {
   id?:    string;
   label:  string;
@@ -20,6 +23,13 @@ export interface MachineHighlight {
   id?:    string;
   text:   string;
   order?: number;
+}
+
+export interface MachineImage {
+  id:         string;
+  url:        string;
+  is_primary: boolean;
+  order:      number;
 }
 
 export interface Machine {
@@ -36,11 +46,17 @@ export interface Machine {
   delivery_time: string;
   specs:         MachineSpec[];
   highlights:    MachineHighlight[];
+  images:        MachineImage[];
   image_url:     string;
   pdf_url:       string;
   visible_web:   boolean;
   featured:      boolean;
   is_new:        boolean;
+  // Used machinery fields
+  year:          number | null;
+  hours_used:    string | null;
+  condition:     string | null;
+  inspection:    string | null;
   created_at:    string;
   updated_at:    string;
 }

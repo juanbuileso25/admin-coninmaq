@@ -85,13 +85,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-export type MachineSpecResponse    = { id: string; label: string; value: string; icon: string; order: number };
+export type MachineSpecResponse      = { id: string; label: string; value: string; icon: string; order: number };
 export type MachineHighlightResponse = { id: string; text: string; order: number };
+export type MachineImageResponse     = { id: string; url: string; is_primary: boolean; order: number };
 export type MachineResponse = {
   id: string; code: string; brand: string; category: string; model: string; slug: string;
   description: string; price: number; show_price: boolean; warranty: string; delivery_time: string;
   image_url: string; pdf_url: string; visible_web: boolean; featured: boolean; is_new: boolean;
-  specs: MachineSpecResponse[]; highlights: MachineHighlightResponse[];
+  specs: MachineSpecResponse[]; highlights: MachineHighlightResponse[]; images: MachineImageResponse[];
+  year: number | null; hours_used: string | null; condition: string | null; inspection: string | null;
   created_at: string; updated_at: string;
 };
 export type MachineFilters = { is_new?: boolean; category?: string; featured?: boolean; visible_web?: boolean };
@@ -189,6 +191,20 @@ export const api = {
         headers: {},
       });
     },
+    addImage: (id: string, file: File, setPrimary = false) => {
+      const form = new FormData();
+      form.append("file", file);
+      const qs = setPrimary ? "?set_primary=true" : "";
+      return request<MachineResponse>(`/machines/${id}/images${qs}`, {
+        method: "POST",
+        body: form,
+        headers: {},
+      });
+    },
+    setPrimaryImage: (machineId: string, imageId: string) =>
+      request<MachineResponse>(`/machines/${machineId}/images/${imageId}/set-primary`, { method: "PATCH" }),
+    deleteImage: (machineId: string, imageId: string) =>
+      request<MachineResponse>(`/machines/${machineId}/images/${imageId}`, { method: "DELETE" }),
   },
   passwordReset: {
     forgot: (email: string) =>

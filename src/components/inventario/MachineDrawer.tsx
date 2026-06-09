@@ -3,11 +3,11 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
-  X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown, FileText,
+  X, Plus, Trash2, Upload, ImageOff, GripVertical, ChevronDown, FileText, Star, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Machine } from "../../types/machine";
-import { CATEGORIES } from "../../types/machine";
+import type { Machine, MachineImage } from "../../types/machine";
+import { CATEGORIES, CONDITIONS } from "../../types/machine";
 import { api } from "../../services/api";
 
 /* ── Schema ── */
@@ -27,18 +27,25 @@ const schema = yup.object({
   highlights: yup.array().of(
     yup.object({ text: yup.string().required("") })
   ).default([]),
-  visible_web: yup.boolean().default(true),
-  featured:    yup.boolean().default(false),
+  visible_web:   yup.boolean().default(true),
+  featured:      yup.boolean().default(false),
+  is_new:        yup.boolean().default(true),
+  // Used machinery fields
+  year:          yup.number().nullable().transform((v, o) => (o === "" || o === null ? null : Number(o))).optional(),
+  hours_used:    yup.string().default("").optional(),
+  condition:     yup.string().default("").optional(),
+  inspection:    yup.string().default("").optional(),
 });
 
 type FormValues = yup.InferType<typeof schema>;
 
 /* ── Props ── */
 interface Props {
-  open:    boolean;
-  machine: Machine | null;
-  onClose: () => void;
-  onSave:  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
+  open:         boolean;
+  machine:      Machine | null;
+  defaultIsNew?: boolean;
+  onClose:      (changed: boolean) => void;
+  onSave:       (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
 }
 
 /* ── Helpers ── */
@@ -80,14 +87,17 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 }
 
 /* ── Component ── */
-export default function MachineDrawer({ open, machine, onClose, onSave }: Props) {
-  const [imagePreview,   setImagePreview]   = useState<string>("");
-  const [pendingImage,   setPendingImage]   = useState<File | null>(null);
+export default function MachineDrawer({ open, machine, defaultIsNew = true, onClose, onSave }: Props) {
+  const [images,         setImages]         = useState<MachineImage[]>([]);
+  const [pendingImages,  setPendingImages]  = useState<File[]>([]);
   const [pendingPdf,     setPendingPdf]     = useState<File | null>(null);
   const [pdfName,        setPdfName]        = useState<string>("");
-  const [saving,         setSaving]         = useState(false);
+  const [saving,           setSaving]           = useState(false);
+  const [uploadingIdx,     setUploadingIdx]     = useState<number | null>(null);
+  const [processingImgId,  setProcessingImgId]  = useState<string | null>(null);
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const pdfInputRef     = useRef<HTMLInputElement>(null);
+  const changedRef      = useRef(false);
 
   const isEditing = !!machine;
 
@@ -124,24 +134,90 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         highlights:    machine.highlights.map(({ text }) => ({ text })),
         visible_web:   machine.visible_web,
         featured:      machine.featured,
+        is_new:        machine.is_new,
+        year:          machine.year ?? undefined,
+        hours_used:    machine.hours_used ?? "",
+        condition:     machine.condition ?? "",
+        inspection:    machine.inspection ?? "",
       });
-      setImagePreview(machine.image_url);
+      setImages(machine.images ?? []);
       setPdfName(machine.pdf_url ? machine.pdf_url.split("/").pop() ?? "" : "");
     } else if (open && !machine) {
-      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0 });
-      setImagePreview("");
+      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0, is_new: defaultIsNew });
+      setImages([]);
       setPdfName("");
     }
-    setPendingImage(null);
+    setPendingImages([]);
     setPendingPdf(null);
+    changedRef.current = false;
   }, [open, machine, reset]);
 
-  /* Local preview + keep file pending for upload after save */
-  const handleImageFile = (file: File) => {
-    setPendingImage(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+  /* Queue files for upload after save */
+  const handleImageFiles = (files: File[]) => {
+    setPendingImages((prev) => [...prev, ...files]);
+  };
+
+  /* Upload immediately if machine already exists (editing) */
+  const handleUploadNow = async (files: File[]) => {
+    if (!files.length || !machine) return;
+    let uploaded = 0;
+    for (let i = 0; i < files.length; i++) {
+      setUploadingIdx(i);
+      try {
+        await api.machines.addImage(machine.id, files[i], images.length === 0 && i === 0);
+        uploaded++;
+      } catch {
+        toast.error(`Error al subir imagen ${files[i].name}`);
+      }
+    }
+    // Fetch fresco para reflejar el estado real del servidor
+    if (uploaded > 0) {
+      try {
+        const fresh = await api.machines.get(machine.id);
+        setImages(fresh.images ?? []);
+      } catch { /* silencioso — las imágenes se verán al reabrir */ }
+      changedRef.current = true;
+      toast.success(uploaded === 1 ? "Imagen subida correctamente" : `${uploaded} imágenes subidas correctamente`);
+    }
+    setUploadingIdx(null);
+  };
+
+  const handleSetPrimary = async (imageId: string) => {
+    if (!machine) return;
+    setProcessingImgId(imageId);
+    try {
+      await api.machines.setPrimaryImage(machine.id, imageId);
+      setImages((prev) => prev.map((img) => ({ ...img, is_primary: img.id === imageId })));
+      changedRef.current = true;
+      toast.success("Imagen principal actualizada");
+    } catch {
+      toast.error("Error al cambiar imagen principal");
+    } finally {
+      setProcessingImgId(null);
+    }
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    if (!machine) return;
+    setProcessingImgId(imageId);
+    try {
+      await api.machines.deleteImage(machine.id, imageId);
+      setImages((prev) => {
+        const remaining = prev.filter((img) => img.id !== imageId);
+        // Si era la principal, asignar principal a la primera restante (igual que el backend)
+        const wasPrimary = prev.find((img) => img.id === imageId)?.is_primary ?? false;
+        if (wasPrimary && remaining.length > 0) {
+          remaining[0] = { ...remaining[0], is_primary: true };
+        }
+        return remaining;
+      });
+      changedRef.current = true;
+      toast.success("Imagen eliminada");
+    } catch {
+      toast.error("Error al eliminar imagen");
+    } finally {
+      setProcessingImgId(null);
+    }
   };
 
   const handlePdfFile = (file: File) => {
@@ -163,21 +239,27 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         image_url:     machine?.image_url || "",
         pdf_url:       machine?.pdf_url || "",
         slug:          machine?.slug || slug,
-        is_new:        machine?.is_new ?? true,
+        is_new:        data.is_new ?? defaultIsNew,
+        year:          data.year ?? null,
+        hours_used:    data.hours_used || null,
+        condition:     data.condition || null,
+        inspection:    data.inspection || null,
       });
 
       if (!saved) return; // handleSave mostró el error, no cerramos
 
-      // Upload files after we have the machine ID
+      // Upload pending files after we have the machine ID
       if (saved.id) {
-        if (pendingImage) {
+        for (let i = 0; i < pendingImages.length; i++) {
           try {
-            await api.machines.uploadImage(saved.id, pendingImage);
-            toast.success("Imagen subida correctamente");
+            const isFirst = images.length === 0 && i === 0;
+            await api.machines.addImage(saved.id, pendingImages[i], isFirst);
           } catch {
-            toast.error("Error al subir la imagen");
+            toast.error(`Error al subir imagen ${pendingImages[i].name}`);
           }
         }
+        if (pendingImages.length > 0) toast.success("Imágenes subidas correctamente");
+
         if (pendingPdf) {
           try {
             await api.machines.uploadDocument(saved.id, pendingPdf);
@@ -193,7 +275,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         }
       }
       toast.success(isEditing ? "Máquina actualizada" : "Máquina creada");
-      onClose();
+      onClose(true);
     } catch (e: unknown) {
       const err = e as { detail?: string };
       toast.error(err.detail ?? "Error al guardar");
@@ -213,7 +295,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Overlay */}
-      <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => onClose(changedRef.current)} />
 
       {/* Panel */}
       <div className="w-full max-w-xl bg-surface-2 border-l border-border flex flex-col h-full shadow-[−8px_0_40px_rgba(0,0,0,0.5)] animate-slide-in">
@@ -228,7 +310,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
               {isEditing ? machine.model : "Completa los campos del producto"}
             </p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-fg-2 hover:bg-surface-4 transition-all">
+          <button onClick={() => onClose(changedRef.current)} className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-fg-2 hover:bg-surface-4 transition-all">
             <X size={18} />
           </button>
         </div>
@@ -236,32 +318,103 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         {/* Form — scrollable */}
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-          {/* ── IMAGEN ── */}
+          {/* ── GALERÍA DE IMÁGENES ── */}
           <div>
-            <Label>Imagen del producto</Label>
-            <div
-              className="relative h-40 bg-surface-3 border border-border-light flex items-center justify-center cursor-pointer
-                         hover:border-accent/50 transition-colors group overflow-hidden"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {imagePreview ? (
-                <>
-                  <img src={imagePreview} alt="preview" className="h-full w-full object-contain p-2" onError={() => setImagePreview("")} />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Upload size={18} className="text-white" />
-                    <span className="text-white text-sm font-medium">Cambiar imagen</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-fg-6 group-hover:text-fg-4 transition-colors">
-                  <ImageOff size={28} />
-                  <span className="text-xs">Click para subir imagen</span>
-                </div>
-              )}
+            <div className="flex items-center justify-between mb-1.5">
+              <Label>Imágenes del producto</Label>
+              <span className="text-fg-6 text-[10px]">{images.length} cargada{images.length !== 1 ? "s" : ""}</span>
             </div>
+
+            {/* Grid de imágenes existentes */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {images.map((img) => (
+                  <div key={img.id} className="relative group aspect-square bg-surface-3 border border-border overflow-hidden">
+                    <img src={img.url} alt="" className="w-full h-full object-contain p-1" />
+
+                    {/* Badge principal */}
+                    {img.is_primary && processingImgId !== img.id && (
+                      <span className="absolute top-1 left-1 bg-accent text-zinc-900 text-[9px] font-bold px-1.5 py-0.5 flex items-center gap-0.5">
+                        <Star size={8} className="fill-zinc-900" /> Principal
+                      </span>
+                    )}
+
+                    {/* Overlay — spinner si está procesando, acciones si no */}
+                    {processingImgId === img.id ? (
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                        <Loader2 size={20} className="animate-spin text-white" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
+                        {!img.is_primary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimary(img.id)}
+                            className="text-[10px] font-semibold text-white bg-accent/80 hover:bg-accent px-2 py-1 transition-colors"
+                          >
+                            Hacer principal
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          className="text-[10px] font-semibold text-white bg-red-700/80 hover:bg-red-600 px-2 py-1 transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Imágenes pendientes (nueva máquina) */}
+            {pendingImages.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {pendingImages.map((f, i) => (
+                  <div key={i} className="relative aspect-square bg-surface-3 border border-border overflow-hidden group">
+                    <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-contain p-1" />
+                    {i === 0 && images.length === 0 && (
+                      <span className="absolute top-1 left-1 bg-accent text-zinc-900 text-[9px] font-bold px-1.5 py-0.5">
+                        Principal
+                      </span>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-[10px] font-semibold text-white bg-red-700/80 hover:bg-red-600 px-2 py-1"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Botón subir */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingIdx !== null}
+              className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border-light
+                         text-fg-5 hover:text-accent hover:border-accent/40 text-xs transition-all disabled:opacity-50"
+            >
+              {uploadingIdx !== null
+                ? <><Loader2 size={13} className="animate-spin" /> Subiendo...</>
+                : <><Upload size={13} /> Agregar imágenes</>
+              }
+            </button>
             <input
-              ref={fileInputRef} type="file" accept="image/*" className="hidden"
-              onChange={(e) => { if (e.target.files?.[0]) handleImageFile(e.target.files[0]); }}
+              ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                if (isEditing) handleUploadNow(files);
+                else handleImageFiles(files);
+              }}
             />
           </div>
 
@@ -375,6 +528,50 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
             />
           </div>
 
+          {/* ── ESTADO DEL EQUIPO (solo maquinaria usada) ── */}
+          {!watch("is_new") && (
+            <>
+              <SectionTitle>Estado del equipo</SectionTitle>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Año de fabricación</Label>
+                  <input
+                    type="number" {...register("year")} placeholder="2019"
+                    className={FIELD_CLASS}
+                  />
+                </div>
+                <div>
+                  <Label>Horas de uso</Label>
+                  <input
+                    {...register("hours_used")} placeholder="4.200 hrs"
+                    className={FIELD_CLASS}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Condición</Label>
+                <div className="relative">
+                  <select {...register("condition")} className={`${FIELD_CLASS} appearance-none pr-8`}>
+                    <option value="">Seleccionar condición...</option>
+                    {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <Label>Inspección técnica</Label>
+                <input
+                  {...register("inspection")}
+                  placeholder="Inspección técnica certificada — Abril 2025"
+                  className={FIELD_CLASS}
+                />
+              </div>
+            </>
+          )}
+
           {/* ── ESPECIFICACIONES TÉCNICAS ── */}
           <SectionTitle>Especificaciones técnicas</SectionTitle>
 
@@ -459,7 +656,7 @@ export default function MachineDrawer({ open, machine, onClose, onSave }: Props)
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0 bg-surface-2">
           <button
-            type="button" onClick={onClose}
+            type="button" onClick={() => onClose(changedRef.current)}
             className="px-5 py-2.5 text-sm text-fg-4 hover:text-fg-2 border border-border hover:border-border-light transition-all"
           >
             Cancelar

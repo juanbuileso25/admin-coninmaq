@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Clock, Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
@@ -16,6 +16,12 @@ const CAT_COLORS: Record<string, string> = {
   "Cargador de Ruedas": "bg-orange-950/60 text-orange-300 border-orange-800/40",
   "Minicargador":       "bg-teal-950/60   text-teal-300   border-teal-800/40",
   "Retrocargadora":     "bg-amber-950/60  text-amber-300  border-amber-800/40",
+};
+
+const CONDITION_COLORS: Record<string, string> = {
+  "Excelente": "bg-emerald-950/60 text-emerald-300 border-emerald-800/40",
+  "Muy bueno": "bg-blue-950/60   text-blue-300   border-blue-800/40",
+  "Bueno":     "bg-amber-950/60  text-amber-300  border-amber-800/40",
 };
 
 const formatCOP = (n: number) =>
@@ -36,8 +42,8 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 }
 
 /* ── Main page ── */
-export default function MaquinariaNuevaPage() {
-  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField, refresh } = useMachines(true);
+export default function MaquinariaUsadaPage() {
+  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField, refresh } = useMachines(false);
 
   const [search,     setSearch]     = useState("");
   const [catFilter,  setCatFilter]  = useState<string>("");
@@ -110,7 +116,7 @@ export default function MaquinariaNuevaPage() {
       <div className="flex items-start justify-between gap-4 animate-fade-up">
         <div>
           <p className="text-fg-6 text-xs uppercase tracking-wider mb-1">Inventario</p>
-          <h1 className="text-fg text-xl font-semibold">Maquinaria Nueva</h1>
+          <h1 className="text-fg text-xl font-semibold">Maquinaria Usada</h1>
         </div>
         <button
           onClick={openCreate}
@@ -121,7 +127,7 @@ export default function MaquinariaNuevaPage() {
         </button>
       </div>
 
-      {/* Error de carga inicial */}
+      {/* Error */}
       {error && (
         <div className="flex items-center gap-2.5 bg-red-950/30 border border-red-900/40 px-4 py-3 text-red-300 text-sm">
           <AlertTriangle size={15} className="flex-shrink-0" />
@@ -183,16 +189,18 @@ export default function MaquinariaNuevaPage() {
                 <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Código</th>
                 <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Modelo</th>
                 <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Categoría</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Año / Horas</th>
+                <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Condición</th>
                 <th className="text-left px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Precio</th>
                 <th className="text-center px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Web</th>
-                <th className="text-center px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Destacado</th>
+                <th className="text-center px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Dest.</th>
                 <th className="text-right px-4 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-fg-6 text-sm">
+                  <td colSpan={10} className="text-center py-12 text-fg-6 text-sm">
                     No se encontraron productos
                   </td>
                 </tr>
@@ -239,14 +247,40 @@ export default function MaquinariaNuevaPage() {
                       </span>
                     </td>
 
+                    {/* Año / Horas */}
+                    <td className="px-4 py-3">
+                      <div className="space-y-0.5">
+                        {m.year ? (
+                          <div className="flex items-center gap-1 text-fg-3 text-xs">
+                            <Calendar size={11} className="text-fg-5" /> {m.year}
+                          </div>
+                        ) : (
+                          <span className="text-fg-6 text-xs">—</span>
+                        )}
+                        {m.hours_used && (
+                          <div className="flex items-center gap-1 text-fg-4 text-[11px]">
+                            <Clock size={10} className="text-fg-6" /> {m.hours_used}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Condición */}
+                    <td className="px-4 py-3">
+                      {m.condition ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium border ${CONDITION_COLORS[m.condition] ?? "bg-surface-4 text-fg-4 border-border"}`}>
+                          {m.condition}
+                        </span>
+                      ) : (
+                        <span className="text-fg-6 text-xs">—</span>
+                      )}
+                    </td>
+
                     {/* Precio */}
                     <td className="px-4 py-3">
                       <p className={`text-sm font-semibold ${m.price === 0 ? "text-fg-5 italic" : "text-fg"}`}>
                         {formatCOP(m.price)}
                       </p>
-                      {m.show_price && m.price > 0 && (
-                        <p className="text-emerald-500 text-[10px]">Visible en web</p>
-                      )}
                     </td>
 
                     {/* Visible web */}
@@ -297,7 +331,7 @@ export default function MaquinariaNuevaPage() {
                   {/* Delete confirmation row */}
                   {deletingId === m.id && (
                     <tr key={`del-${m.id}`} className="bg-red-950/20 border-b border-red-900/30">
-                      <td colSpan={8} className="px-4 py-3">
+                      <td colSpan={10} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2.5 text-red-300">
                             <AlertTriangle size={15} />
@@ -342,6 +376,7 @@ export default function MaquinariaNuevaPage() {
       <MachineDrawer
         open={drawerOpen}
         machine={editing}
+        defaultIsNew={false}
         onClose={closeDrawer}
         onSave={handleSave}
       />
