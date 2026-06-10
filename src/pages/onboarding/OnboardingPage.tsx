@@ -220,13 +220,13 @@ function ContactRow({ label, contact, mobile, email, onChange }: {
         <span className="font-semibold text-sm text-gray-700">{label}</span>
       </div>
       <Field label="Nombre">
-        <input className={INPUT} value={contact} onChange={e => onChange("c", e.target.value)} />
+        <input className={INPUT} value={contact} onChange={e => onChange("c", e.target.value)} maxLength={100} />
       </Field>
       <Field label="Teléfono / Celular">
-        <input className={INPUT} value={mobile} onChange={e => onChange("m", e.target.value)} />
+        <input className={INPUT} value={mobile} onChange={e => onChange("m", e.target.value)} maxLength={20} />
       </Field>
       <Field label="Correo">
-        <input className={INPUT} type="email" value={email} onChange={e => onChange("e", e.target.value)} />
+        <input className={INPUT} type="email" value={email} onChange={e => onChange("e", e.target.value)} maxLength={100} />
       </Field>
     </div>
   );
@@ -487,7 +487,7 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <Field label="Nombre o razón social" required>
-                    <input className={INPUT} value={name} onChange={e => setName(e.target.value)} />
+                    <input className={INPUT} value={name} onChange={e => setName(e.target.value)} maxLength={200} />
                   </Field>
                 </div>
                 <Field label="Tipo de identificación">
@@ -499,7 +499,7 @@ export default function OnboardingPage() {
                   </select>
                 </Field>
                 <Field label="Número de identificación" required>
-                  <input className={INPUT} value={doc} onChange={e => setDoc(e.target.value)} />
+                  <input className={INPUT} value={doc} onChange={e => setDoc(e.target.value)} maxLength={30} />
                 </Field>
                 <Field label="Actividad económica (CIIU)">
                   <SearchSelect
@@ -521,20 +521,20 @@ export default function OnboardingPage() {
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Dirección">
-                    <input className={INPUT} value={address} onChange={e => setAddress(e.target.value)} />
+                    <input className={INPUT} value={address} onChange={e => setAddress(e.target.value)} maxLength={300} />
                   </Field>
                 </div>
                 <Field label="Teléfono empresa">
-                  <input className={INPUT} value={phone} onChange={e => setPhone(e.target.value)} />
+                  <input className={INPUT} value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} />
                 </Field>
                 <Field label="Celular">
-                  <input className={INPUT} value={mobile} onChange={e => setMobile(e.target.value)} />
+                  <input className={INPUT} value={mobile} onChange={e => setMobile(e.target.value)} maxLength={20} />
                 </Field>
                 <Field label="Correo facturación">
-                  <input className={INPUT} type="email" value={billingEmail} onChange={e => setBillingEmail(e.target.value)} />
+                  <input className={INPUT} type="email" value={billingEmail} onChange={e => setBillingEmail(e.target.value)} maxLength={100} />
                 </Field>
                 <Field label="Correo información">
-                  <input className={INPUT} type="email" value={infoEmail} onChange={e => setInfoEmail(e.target.value)} />
+                  <input className={INPUT} type="email" value={infoEmail} onChange={e => setInfoEmail(e.target.value)} maxLength={100} />
                 </Field>
               </div>
             </Section>
@@ -562,16 +562,16 @@ export default function OnboardingPage() {
               {refs.map((r, i) => (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
                   <Field label={`Empresa ${i + 1}`}>
-                    <input className={INPUT} value={r.name} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+                    <input className={INPUT} value={r.name} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} maxLength={200} />
                   </Field>
                   <Field label="Teléfono">
-                    <input className={INPUT} value={r.phone} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} />
+                    <input className={INPUT} value={r.phone} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} maxLength={20} />
                   </Field>
                   <Field label="Dirección">
-                    <input className={INPUT} value={r.address} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, address: e.target.value } : x))} />
+                    <input className={INPUT} value={r.address} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, address: e.target.value } : x))} maxLength={300} />
                   </Field>
                   <Field label="Correo">
-                    <input className={INPUT} value={r.email} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} />
+                    <input className={INPUT} type="email" value={r.email} onChange={e => setRefs(p => p.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} maxLength={100} />
                   </Field>
                   {refs.length > 1 && (
                     <button type="button" className={BTN_GHOST} onClick={() => setRefs(p => p.filter((_, j) => j !== i))}>
@@ -597,16 +597,16 @@ export default function OnboardingPage() {
             >
               {reps.map((r, i) => (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                  <Field label="Nombres"><input className={INPUT} value={r.first_name} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} /></Field>
-                  <Field label="Apellidos"><input className={INPUT} value={r.last_name} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} /></Field>
+                  <Field label="Nombres"><input className={INPUT} value={r.first_name} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} maxLength={100} /></Field>
+                  <Field label="Apellidos"><input className={INPUT} value={r.last_name} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} maxLength={100} /></Field>
                   <Field label="Tipo de documento">
                     <select className={SELECT} value={r.document_type} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, document_type: e.target.value } : x))}>
                       <option value="CC">CC</option><option value="CE">CE</option><option value="PAS">Pasaporte</option>
                     </select>
                   </Field>
-                  <Field label="No. de identificación"><input className={INPUT} value={r.document_number} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} /></Field>
-                  <Field label="Teléfono"><input className={INPUT} value={r.phone} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} /></Field>
-                  <Field label="Correo"><input className={INPUT} value={r.email} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} /></Field>
+                  <Field label="No. de identificación"><input className={INPUT} value={r.document_number} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} maxLength={30} /></Field>
+                  <Field label="Teléfono"><input className={INPUT} value={r.phone} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} maxLength={20} /></Field>
+                  <Field label="Correo"><input className={INPUT} type="email" value={r.email} onChange={e => setReps(p => p.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} maxLength={100} /></Field>
                   {reps.length > 1 && (
                     <button type="button" className={BTN_GHOST} onClick={() => setReps(p => p.filter((_, j) => j !== i))}>
                       <Trash2 size={12} /> Eliminar representante
@@ -633,15 +633,15 @@ export default function OnboardingPage() {
                 <p className="text-sm text-gray-400 py-1">Sin socios registrados</p>
               ) : partners.map((p, i) => (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                  <Field label="Nombres"><input className={INPUT} value={p.first_name} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} /></Field>
-                  <Field label="Apellidos"><input className={INPUT} value={p.last_name} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} /></Field>
+                  <Field label="Nombres"><input className={INPUT} value={p.first_name} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} maxLength={100} /></Field>
+                  <Field label="Apellidos"><input className={INPUT} value={p.last_name} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} maxLength={100} /></Field>
                   <Field label="Tipo de documento">
                     <select className={SELECT} value={p.document_type} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, document_type: e.target.value } : x))}>
                       <option value="CC">CC</option><option value="CE">CE</option><option value="PAS">Pasaporte</option>
                     </select>
                   </Field>
-                  <Field label="No. de identificación"><input className={INPUT} value={p.document_number} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} /></Field>
-                  <Field label="Teléfono"><input className={INPUT} value={p.phone} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} /></Field>
+                  <Field label="No. de identificación"><input className={INPUT} value={p.document_number} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} maxLength={30} /></Field>
+                  <Field label="Teléfono"><input className={INPUT} value={p.phone} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} maxLength={20} /></Field>
                   <Field label="% Participación"><input className={INPUT} type="number" min="0" max="100" value={p.participation_percentage} onChange={e => setPartners(prev => prev.map((x, j) => j === i ? { ...x, participation_percentage: e.target.value } : x))} /></Field>
                   <button type="button" className={BTN_GHOST} onClick={() => setPartners(prev => prev.filter((_, j) => j !== i))}>
                     <Trash2 size={12} /> Eliminar socio
@@ -667,16 +667,16 @@ export default function OnboardingPage() {
                 <p className="text-sm text-gray-400 py-1">Sin PEP registradas</p>
               ) : peps.map((p, i) => (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                  <Field label="Nombres"><input className={INPUT} value={p.first_name} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} /></Field>
-                  <Field label="Apellidos"><input className={INPUT} value={p.last_name} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} /></Field>
+                  <Field label="Nombres"><input className={INPUT} value={p.first_name} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, first_name: e.target.value } : x))} maxLength={100} /></Field>
+                  <Field label="Apellidos"><input className={INPUT} value={p.last_name} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, last_name: e.target.value } : x))} maxLength={100} /></Field>
                   <Field label="Tipo de documento">
                     <select className={SELECT} value={p.document_type} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, document_type: e.target.value } : x))}>
                       <option value="CC">CC</option><option value="CE">CE</option><option value="PAS">Pasaporte</option>
                     </select>
                   </Field>
-                  <Field label="No. de identificación"><input className={INPUT} value={p.document_number} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} /></Field>
-                  <Field label="Teléfono"><input className={INPUT} value={p.phone} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} /></Field>
-                  <Field label="Cargo / Posición"><input className={INPUT} value={p.position} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, position: e.target.value } : x))} /></Field>
+                  <Field label="No. de identificación"><input className={INPUT} value={p.document_number} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, document_number: e.target.value } : x))} maxLength={30} /></Field>
+                  <Field label="Teléfono"><input className={INPUT} value={p.phone} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} maxLength={20} /></Field>
+                  <Field label="Cargo / Posición"><input className={INPUT} value={p.position} onChange={e => setPeps(prev => prev.map((x, j) => j === i ? { ...x, position: e.target.value } : x))} maxLength={100} /></Field>
                   <button type="button" className={BTN_GHOST} onClick={() => setPeps(prev => prev.filter((_, j) => j !== i))}>
                     <Trash2 size={12} /> Eliminar PEP
                   </button>
@@ -739,6 +739,7 @@ export default function OnboardingPage() {
                   rows={5}
                   value={origenFondos}
                   onChange={e => setOrigenFondos(e.target.value)}
+                  maxLength={2000}
                   placeholder="Describa detalladamente la actividad económica, profesión, oficio o negocio del que provienen los recursos..."
                 />
               </Field>
@@ -772,10 +773,11 @@ export default function OnboardingPage() {
                     value={signerName}
                     onChange={e => setSignerName(e.target.value)}
                     placeholder="Como aparece en el documento"
+                    maxLength={200}
                   />
                 </Field>
                 <Field label="Número de documento" required>
-                  <input className={INPUT} value={signerDocument} onChange={e => setSignerDocument(e.target.value)} />
+                  <input className={INPUT} value={signerDocument} onChange={e => setSignerDocument(e.target.value)} maxLength={30} />
                 </Field>
               </div>
             </Section>
