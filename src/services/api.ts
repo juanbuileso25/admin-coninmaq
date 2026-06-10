@@ -98,6 +98,66 @@ export type MachineResponse = {
 };
 export type MachineFilters = { is_new?: boolean; category?: string; featured?: boolean; visible_web?: boolean };
 
+// ── Locations & Economic Activities ──────────────────────────────────────────
+export type CityResponse             = { id: number; state_id: number; name: string; is_capital: boolean };
+export type StateResponse            = { id: number; country_id: number; code: string; name: string };
+export type CountryResponse          = { id: number; iso2: string; name: string; indicative: string };
+export type EconomicActivityResponse = { id: number; code: string; description: string };
+export type DocumentTypeResponse     = { id: number; code: string; description: string; is_active: boolean };
+
+// ── Clients ───────────────────────────────────────────────────────────────────
+export type CommercialReferenceResponse    = { id: string; name: string; address: string | null; phone: string | null; email: string | null; is_active: boolean };
+export type LegalRepresentativeResponse   = { id: string; first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; email: string | null; is_active: boolean };
+export type ClientPartnerResponse         = { id: string; first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; participation_percentage: number | null; is_active: boolean };
+export type ClientPepResponse             = { id: string; first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; position: string | null; email: string | null; is_active: boolean };
+export type ClientDocumentResponse = { id: string; label: string; file_url: string; file_name: string; is_active: boolean; uploaded_at: string };
+
+export type ClientResponse = {
+  id: string; name: string; document: string; document_type: string | null;
+  economic_activity_id: number | null;
+  economic_activity: { id: number; code: string; description: string } | null;
+  address: string | null;
+  phone: string | null; mobile: string | null; billing_email: string | null; info_email: string | null;
+  treasury_contact: string | null; treasury_mobile: string | null; treasury_email: string | null;
+  purchasing_contact: string | null; purchasing_mobile: string | null; purchasing_email: string | null;
+  obra_contact: string | null; obra_mobile: string | null; obra_email: string | null;
+  onboarding_completed_at: string | null;
+  city_id: number | null;
+  city: { id: number; name: string } | null;
+  is_active: boolean; created_at: string; updated_at: string;
+  commercial_references: CommercialReferenceResponse[];
+  legal_representatives: LegalRepresentativeResponse[];
+  partners: ClientPartnerResponse[];
+  pep: ClientPepResponse[];
+  documents: ClientDocumentResponse[];
+};
+
+// ── Onboarding ────────────────────────────────────────────────────────────────
+export type OnboardingPublicResponse = {
+  client: ClientResponse;
+  expires_at: string;
+  already_completed: boolean;
+};
+
+export type OnboardingSubmit = {
+  name: string; document: string; document_type: string | null;
+  economic_activity_id: number | null;
+  address: string | null; phone: string | null; mobile: string | null;
+  billing_email: string | null; info_email: string | null;
+  city_id: number | null;
+  treasury_contact: string | null; treasury_mobile: string | null; treasury_email: string | null;
+  purchasing_contact: string | null; purchasing_mobile: string | null; purchasing_email: string | null;
+  obra_contact: string | null; obra_mobile: string | null; obra_email: string | null;
+  commercial_references: { name: string; address: string | null; phone: string | null; email: string | null }[];
+  legal_representatives: { first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; email: string | null }[];
+  partners: { first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; participation_percentage: number | null }[];
+  pep: { first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; position: string | null; email: string | null }[];
+  origen_fondos: string;
+  signature: string; signer_name: string; signer_document: string;
+};
+
+export type SendOnboardingResponse = { message: string; expires_at: string };
+
 export type UserRoleResponse = { role: { id: string; name: string }; area_id: string | null; area_name: string | null };
 export type UserPermissionResponse = { id: string; action: string; subject: string };
 export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[]; permissions: UserPermissionResponse[] };
@@ -205,6 +265,63 @@ export const api = {
       request<MachineResponse>(`/machines/${machineId}/images/${imageId}/set-primary`, { method: "PATCH" }),
     deleteImage: (machineId: string, imageId: string) =>
       request<MachineResponse>(`/machines/${machineId}/images/${imageId}`, { method: "DELETE" }),
+  },
+  locations: {
+    countries: () => request<CountryResponse[]>("/locations/countries"),
+    states: (country_id?: number) => {
+      const qs = country_id ? `?country_id=${country_id}` : "";
+      return request<StateResponse[]>(`/locations/states${qs}`);
+    },
+    cities: (search?: string, state_id?: number, limit = 20) => {
+      const params = new URLSearchParams();
+      if (search)   params.set("search",   search);
+      if (state_id) params.set("state_id", String(state_id));
+      params.set("limit", String(limit));
+      return request<CityResponse[]>(`/locations/cities?${params}`);
+    },
+  },
+  economicActivities: {
+    search: (search?: string, limit = 20) => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("limit", String(limit));
+      return request<EconomicActivityResponse[]>(`/economic-activities/?${params}`);
+    },
+  },
+  documentTypes: {
+    list: () => request<DocumentTypeResponse[]>("/document-types/"),
+  },
+  clients: {
+    list: (params?: { is_active?: boolean; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+      if (params?.search)                  qs.set("search",    params.search);
+      return request<ClientResponse[]>(`/clients/?${qs}`);
+    },
+    get:    (id: string) => request<ClientResponse>(`/clients/${id}`),
+    create: (data: object) => request<ClientResponse>("/clients/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: object) => request<ClientResponse>(`/clients/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivate: (id: string) => request<void>(`/clients/${id}`, { method: "DELETE" }),
+    addReference:          (id: string, data: object) => request<ClientResponse>(`/clients/${id}/commercial-references`, { method: "POST", body: JSON.stringify(data) }),
+    removeReference:       (id: string, refId: string) => request<ClientResponse>(`/clients/${id}/commercial-references/${refId}`, { method: "DELETE" }),
+    addLegalRep:           (id: string, data: object) => request<ClientResponse>(`/clients/${id}/legal-representatives`, { method: "POST", body: JSON.stringify(data) }),
+    removeLegalRep:        (id: string, repId: string) => request<ClientResponse>(`/clients/${id}/legal-representatives/${repId}`, { method: "DELETE" }),
+    addPartner:            (id: string, data: object) => request<ClientResponse>(`/clients/${id}/partners`, { method: "POST", body: JSON.stringify(data) }),
+    removePartner:         (id: string, partnerId: string) => request<ClientResponse>(`/clients/${id}/partners/${partnerId}`, { method: "DELETE" }),
+    addPep:                (id: string, data: object) => request<ClientResponse>(`/clients/${id}/pep`, { method: "POST", body: JSON.stringify(data) }),
+    removePep:             (id: string, pepId: string) => request<ClientResponse>(`/clients/${id}/pep/${pepId}`, { method: "DELETE" }),
+    uploadDocument: (id: string, file: File, label: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("label", label);
+      return request<ClientResponse>(`/clients/${id}/documents`, { method: "POST", body: form, headers: {} });
+    },
+    removeDocument: (id: string, docId: string) => request<ClientResponse>(`/clients/${id}/documents/${docId}`, { method: "DELETE" }),
+  },
+  onboarding: {
+    get:    (token: string) => request<OnboardingPublicResponse>(`/onboarding/${token}`),
+    submit: (token: string, data: OnboardingSubmit) => request<ClientResponse>(`/onboarding/${token}/submit`, { method: "POST", body: JSON.stringify(data) }),
+    send:   (clientId: string) => request<SendOnboardingResponse>(`/clients/${clientId}/send-onboarding`, { method: "POST" }),
   },
   passwordReset: {
     forgot: (email: string) =>

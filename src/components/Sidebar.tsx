@@ -15,6 +15,7 @@ import {
   DollarSign,
   ShieldCheck,
   Building2,
+  ContactRound,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useAbility } from "../context/AbilityContext";
@@ -54,7 +55,8 @@ const NAV: NavGroup[] = [
           { label: "Renta",            to: "/inventario/renta"            },
         ],
       },
-      { label: "Cotizaciones", to: "/cotizaciones", icon: FileText,   subject: "Quote"        },
+      { label: "Cotizaciones", to: "/cotizaciones", icon: FileText,      subject: "Quote"   },
+      { label: "Clientes",    to: "/clientes",    icon: ContactRound,  subject: "Client"  },
       {
         label: "Renta",
         icon:  DollarSign,

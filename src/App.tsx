@@ -11,6 +11,8 @@ import RolesPage            from "./pages/ajustes/RolesPage";
 import AreasPage            from "./pages/ajustes/AreasPage";
 import ForgotPasswordPage   from "./pages/ForgotPasswordPage";
 import ResetPasswordPage    from "./pages/ResetPasswordPage";
+import ClientesPage         from "./pages/clientes/ClientesPage";
+import OnboardingPage       from "./pages/onboarding/OnboardingPage";
 
 export default function App() {
   return (
@@ -19,6 +21,7 @@ export default function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      <Route path="/onboarding/:token" element={<OnboardingPage />} />
 
       {/* Protected */}
       <Route element={<AdminLayout />}>
@@ -36,6 +39,7 @@ export default function App() {
         <Route path="/renta/horometro" element={<HorometroPage />} />
 
         <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
+        <Route path="/clientes"    element={<ClientesPage />} />
         <Route path="/agente"       element={<PlaceholderPage title="Agente IA" />} />
         <Route path="/usuarios"     element={<UsersPage />} />
         <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
