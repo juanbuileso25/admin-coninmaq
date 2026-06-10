@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { X, Loader2, Plus, Trash2, UserCheck, Briefcase, Users, ShieldAlert, FileText, Download, Upload, Send, CheckCircle2, Clock } from "lucide-react";
+import { X, Loader2, Plus, Trash2, UserCheck, Briefcase, Users, ShieldAlert, FileText, Download, Upload, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type ClientResponse, type DocumentTypeResponse, type ClientDocumentResponse } from "../../services/api";
 import SearchSelect from "../ui/SearchSelect";

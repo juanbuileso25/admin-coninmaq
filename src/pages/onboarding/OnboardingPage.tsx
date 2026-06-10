@@ -272,7 +272,7 @@ export default function OnboardingPage() {
   const [expired,    setExpired]    = useState(false);
   const [done,       setDone]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [onboarding, setOnboarding] = useState<OnboardingPublicResponse | null>(null);
+  const [, setOnboarding] = useState<OnboardingPublicResponse | null>(null);
   const [step,       setStep]       = useState<Step>(1);
 
   // Form state — Step 1
