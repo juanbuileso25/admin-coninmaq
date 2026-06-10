@@ -5,6 +5,7 @@ import PlaceholderPage      from "./pages/PlaceholderPage";
 import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
 import MaquinariaUsadaPage  from "./pages/inventario/MaquinariaUsadaPage";
+import MaquinariaRentaPage  from "./pages/inventario/MaquinariaRentaPage";
 import HorometroPage        from "./pages/renta/HorometroPage";
 import UsersPage            from "./pages/usuarios/UsersPage";
 import RolesPage            from "./pages/ajustes/RolesPage";
@@ -32,7 +33,7 @@ export default function App() {
         <Route path="/inventario/maquinaria-nueva" element={<MaquinariaNuevaPage />} />
         <Route path="/inventario/maquinaria-usada" element={<MaquinariaUsadaPage />} />
         <Route path="/inventario/repuestos"        element={<PlaceholderPage title="Repuestos" />} />
-        <Route path="/inventario/renta"            element={<PlaceholderPage title="Renta" />} />
+        <Route path="/inventario/renta"            element={<MaquinariaRentaPage />} />
 
         {/* Renta */}
         <Route path="/renta" element={<Navigate to="/renta/horometro" replace />} />

@@ -85,18 +85,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+export type MachineTypeResponse      = { id: number; name: string; slug: string; is_active: boolean };
 export type MachineSpecResponse      = { id: string; label: string; value: string; icon: string; order: number };
 export type MachineHighlightResponse = { id: string; text: string; order: number };
 export type MachineImageResponse     = { id: string; url: string; is_primary: boolean; order: number };
 export type MachineResponse = {
   id: string; code: string; brand: string; category: string; model: string; slug: string;
   description: string; price: number; show_price: boolean; warranty: string; delivery_time: string;
-  image_url: string; pdf_url: string; visible_web: boolean; featured: boolean; is_new: boolean;
+  image_url: string; pdf_url: string; visible_web: boolean; featured: boolean;
+  machine_type_id: number; machine_type: MachineTypeResponse;
   specs: MachineSpecResponse[]; highlights: MachineHighlightResponse[]; images: MachineImageResponse[];
   year: number | null; hours_used: string | null; condition: string | null; inspection: string | null;
   created_at: string; updated_at: string;
 };
-export type MachineFilters = { is_new?: boolean; category?: string; featured?: boolean; visible_web?: boolean };
+export type MachineFilters = { machine_type?: string; category?: string; featured?: boolean; visible_web?: boolean };
 
 // ── Locations & Economic Activities ──────────────────────────────────────────
 export type CityResponse             = { id: number; state_id: number; name: string; is_capital: boolean };
@@ -217,10 +219,17 @@ export const api = {
         body: JSON.stringify(permissionIds),
       }),
   },
+  machineTypes: {
+    list: () => request<MachineTypeResponse[]>("/machine-types/"),
+    create: (data: { name: string; slug: string }) =>
+      request<MachineTypeResponse>("/machine-types/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: { name?: string; is_active?: boolean }) =>
+      request<MachineTypeResponse>(`/machine-types/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  },
   machines: {
     list: (filters?: MachineFilters) => {
       const params = new URLSearchParams();
-      if (filters?.is_new     !== undefined) params.set("is_new",      String(filters.is_new));
+      if (filters?.machine_type !== undefined) params.set("machine_type", filters.machine_type);
       if (filters?.category   !== undefined) params.set("category",    filters.category);
       if (filters?.featured   !== undefined) params.set("featured",    String(filters.featured));
       if (filters?.visible_web !== undefined) params.set("visible_web", String(filters.visible_web));

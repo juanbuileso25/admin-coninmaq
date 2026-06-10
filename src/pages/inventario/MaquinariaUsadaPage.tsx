@@ -43,7 +43,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 
 /* ── Main page ── */
 export default function MaquinariaUsadaPage() {
-  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField, refresh } = useMachines(false);
+  const { machines, loading, error, addMachine, updateMachine, removeMachine, toggleField, refresh } = useMachines("used");
 
   const [search,     setSearch]     = useState("");
   const [catFilter,  setCatFilter]  = useState<string>("");
@@ -376,7 +376,7 @@ export default function MaquinariaUsadaPage() {
       <MachineDrawer
         open={drawerOpen}
         machine={editing}
-        defaultIsNew={false}
+        defaultMachineTypeSlug="used"
         onClose={closeDrawer}
         onSave={handleSave}
       />

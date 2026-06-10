@@ -6,7 +6,7 @@ import {
   X, Plus, Trash2, Upload, GripVertical, ChevronDown, FileText, Star, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Machine, MachineImage } from "../../types/machine";
+import type { Machine, MachineImage, MachineTypeOption } from "../../types/machine";
 import { CATEGORIES, CONDITIONS } from "../../types/machine";
 import { api } from "../../services/api";
 
@@ -27,10 +27,10 @@ const schema = yup.object({
   highlights: yup.array().of(
     yup.object({ text: yup.string().required("") })
   ).default([]),
-  visible_web:   yup.boolean().default(true),
-  featured:      yup.boolean().default(false),
-  is_new:        yup.boolean().default(true),
-  // Used machinery fields
+  visible_web:      yup.boolean().default(true),
+  featured:         yup.boolean().default(false),
+  machine_type_id:  yup.number().required("Selecciona un tipo"),
+  // Used/rental machinery fields
   year:          yup.number().nullable().transform((_v, o) => (o === "" || o === null ? null : Number(o))).optional(),
   hours_used:    yup.string().default("").optional(),
   condition:     yup.string().default("").optional(),
@@ -41,11 +41,11 @@ type FormValues = yup.InferType<typeof schema>;
 
 /* ── Props ── */
 interface Props {
-  open:         boolean;
-  machine:      Machine | null;
-  defaultIsNew?: boolean;
-  onClose:      (changed: boolean) => void;
-  onSave:       (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
+  open:                    boolean;
+  machine:                 Machine | null;
+  defaultMachineTypeSlug?: string;
+  onClose:                 (changed: boolean) => void;
+  onSave:                  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
 }
 
 /* ── Helpers ── */
@@ -87,7 +87,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 }
 
 /* ── Component ── */
-export default function MachineDrawer({ open, machine, defaultIsNew = true, onClose, onSave }: Props) {
+export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, onClose, onSave }: Props) {
   const [images,         setImages]         = useState<MachineImage[]>([]);
   const [pendingImages,  setPendingImages]  = useState<File[]>([]);
   const [pendingPdf,     setPendingPdf]     = useState<File | null>(null);
@@ -95,11 +95,17 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
   const [saving,           setSaving]           = useState(false);
   const [uploadingIdx,     setUploadingIdx]     = useState<number | null>(null);
   const [processingImgId,  setProcessingImgId]  = useState<string | null>(null);
+  const [machineTypes,     setMachineTypes]     = useState<MachineTypeOption[]>([]);
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const pdfInputRef     = useRef<HTMLInputElement>(null);
   const changedRef      = useRef(false);
 
   const isEditing = !!machine;
+
+  /* Load machine types once */
+  useEffect(() => {
+    api.machineTypes.list().then((types) => setMachineTypes(types as unknown as MachineTypeOption[])).catch(() => {});
+  }, []);
 
   const {
     register,
@@ -134,7 +140,7 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
         highlights:    machine.highlights.map(({ text }) => ({ text })),
         visible_web:   machine.visible_web,
         featured:      machine.featured,
-        is_new:        machine.is_new,
+        machine_type_id: machine.machine_type_id,
         year:          machine.year ?? undefined,
         hours_used:    machine.hours_used ?? "",
         condition:     machine.condition ?? "",
@@ -143,14 +149,15 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
       setImages(machine.images ?? []);
       setPdfName(machine.pdf_url ? machine.pdf_url.split("/").pop() ?? "" : "");
     } else if (open && !machine) {
-      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0, is_new: defaultIsNew });
+      const defaultId = machineTypes.find((t) => t.slug === defaultMachineTypeSlug)?.id;
+      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0, machine_type_id: defaultId });
       setImages([]);
       setPdfName("");
     }
     setPendingImages([]);
     setPendingPdf(null);
     changedRef.current = false;
-  }, [open, machine, reset]);
+  }, [open, machine, machineTypes, reset]);
 
   /* Queue files for upload after save */
   const handleImageFiles = (files: File[]) => {
@@ -230,21 +237,23 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
     const slug = data.model.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     setSaving(true);
     try {
+      const selectedType = machineTypes.find((t) => t.id === data.machine_type_id);
       const saved = await onSave({
         ...data,
-        category:      data.category as Machine["category"],
-        price:         data.price ?? 0,
-        specs:         data.specs ?? [],
-        highlights:    (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
-        image_url:     machine?.image_url || "",
-        pdf_url:       machine?.pdf_url || "",
-        images:        machine?.images || [],
-        slug:          machine?.slug || slug,
-        is_new:        data.is_new ?? defaultIsNew,
-        year:          data.year ?? null,
-        hours_used:    data.hours_used || null,
-        condition:     data.condition || null,
-        inspection:    data.inspection || null,
+        category:        data.category as Machine["category"],
+        price:           data.price ?? 0,
+        specs:           data.specs ?? [],
+        highlights:      (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
+        image_url:       machine?.image_url || "",
+        pdf_url:         machine?.pdf_url || "",
+        images:          machine?.images || [],
+        slug:            machine?.slug || slug,
+        machine_type_id: data.machine_type_id!,
+        machine_type:    selectedType ?? machine!.machine_type,
+        year:            data.year ?? null,
+        hours_used:      data.hours_used || null,
+        condition:       data.condition || null,
+        inspection:      data.inspection || null,
       });
 
       if (!saved) return; // handleSave mostró el error, no cerramos
@@ -457,6 +466,21 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
           {/* ── INFORMACIÓN GENERAL ── */}
           <SectionTitle>Información general</SectionTitle>
 
+          <div>
+            <Label>Tipo de maquinaria *</Label>
+            <div className="relative">
+              <select
+                {...register("machine_type_id", { valueAsNumber: true })}
+                className={`${FIELD_CLASS} appearance-none pr-8 ${errors.machine_type_id ? ERROR_CLASS : ""}`}
+              >
+                <option value="">Seleccionar tipo...</option>
+                {machineTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
+            </div>
+            {errors.machine_type_id && <p className="text-red-400 text-[10px] mt-1">{errors.machine_type_id.message}</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Código / SKU *</Label>
@@ -529,8 +553,8 @@ export default function MachineDrawer({ open, machine, defaultIsNew = true, onCl
             />
           </div>
 
-          {/* ── ESTADO DEL EQUIPO (solo maquinaria usada) ── */}
-          {!watch("is_new") && (
+          {/* ── ESTADO DEL EQUIPO (maquinaria usada y renta) ── */}
+          {machineTypes.find((t) => t.id === watch("machine_type_id"))?.slug !== "new" && watch("machine_type_id") && (
             <>
               <SectionTitle>Estado del equipo</SectionTitle>
 

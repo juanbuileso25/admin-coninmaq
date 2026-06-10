@@ -13,7 +13,7 @@ interface UseMachinesReturn {
   refresh:      () => Promise<void>;
 }
 
-export function useMachines(isNew = true): UseMachinesReturn {
+export function useMachines(machineType: string): UseMachinesReturn {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function useMachines(isNew = true): UseMachinesReturn {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.machines.list({ is_new: isNew });
+      const data = await api.machines.list({ machine_type: machineType });
       setMachines(data as unknown as Machine[]);
     } catch (e: unknown) {
       const err = e as { detail?: string };
@@ -30,12 +30,12 @@ export function useMachines(isNew = true): UseMachinesReturn {
     } finally {
       setLoading(false);
     }
-  }, [isNew]);
+  }, [machineType]);
 
   useEffect(() => { load(); }, [load]);
 
   const addMachine = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine> => {
-    const created = await api.machines.create({ ...data, is_new: isNew });
+    const created = await api.machines.create(data);
     const machine = created as unknown as Machine;
     setMachines((prev) => [machine, ...prev]);
     return machine;

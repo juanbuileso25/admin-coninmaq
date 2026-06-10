@@ -1,3 +1,10 @@
+export interface MachineTypeOption {
+  id:        number;
+  name:      string;
+  slug:      string;
+  is_active: boolean;
+}
+
 export const CATEGORIES = [
   "Excavadora",
   "Miniexcavadora",
@@ -51,8 +58,9 @@ export interface Machine {
   pdf_url:       string;
   visible_web:   boolean;
   featured:      boolean;
-  is_new:        boolean;
-  // Used machinery fields
+  machine_type_id: number;
+  machine_type:    MachineTypeOption;
+  // Used/rental machinery fields
   year:          number | null;
   hours_used:    string | null;
   condition:     string | null;
