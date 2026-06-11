@@ -24,12 +24,12 @@ jobs:
         env:
           VITE_API_URL: https://api-staging.coninmaqsas.com
 
-      - name: Upload to VPS
+      - name: Copy dist to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key_base64: ${{ secrets.VPS_SSH_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: dist/
           target: /var/www/admin-staging
           strip_components: 1
