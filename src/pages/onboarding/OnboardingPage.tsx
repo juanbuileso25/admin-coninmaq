@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   CheckCircle2, Loader2, ChevronRight, ChevronLeft,
   AlertTriangle, Plus, Trash2, Building2, FileText, PenLine,
-  Upload, Paperclip, X,
+  Upload, Paperclip, X, Save, UserCheck,
 } from "lucide-react";
 import { api, type OnboardingPublicResponse, type OnboardingSubmit, type RequiredDocStatus } from "../../services/api";
 import SearchSelect from "../../components/ui/SearchSelect";
@@ -274,6 +274,8 @@ export default function OnboardingPage() {
   const [expired,    setExpired]    = useState(false);
   const [done,       setDone]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [savedOk,    setSavedOk]    = useState(false);
   const [, setOnboarding] = useState<OnboardingPublicResponse | null>(null);
   const [step,       setStep]       = useState<Step>(1);
   const [requiredDocs, setRequiredDocs] = useState<RequiredDocStatus[]>([]);
@@ -306,10 +308,15 @@ export default function OnboardingPage() {
   const [partners,     setPartners]     = useState<ReturnType<typeof EMPTY_PART>[]>([]);
   const [peps,         setPeps]         = useState<ReturnType<typeof EMPTY_PEP>[]>([]);
 
-  // Form state — Step 2
+  // Form state — Step 3
   const [origenFondos, setOrigenFondos] = useState("");
 
-  // Form state — Step 3
+  // Form state — Step 4: quien diligencia (optional)
+  const [fillerName,      setFillerName]      = useState("");
+  const [fillerDocument,  setFillerDocument]  = useState("");
+  const [fillerSignature, setFillerSignature] = useState("");
+
+  // Form state — Step 4: representante legal (required to submit)
   const [signerName,     setSignerName]     = useState("");
   const [signerDocument, setSignerDocument] = useState("");
   const [signature,      setSignature]      = useState("");
@@ -362,6 +369,12 @@ export default function OnboardingPage() {
           setSignerDocument(firstRep.document_number);
         }
 
+        // Pre-fill from saved draft
+        if (data.draft_origen_fondos)    setOrigenFondos(data.draft_origen_fondos);
+        if (data.draft_filler_name)      setFillerName(data.draft_filler_name);
+        if (data.draft_filler_document)  setFillerDocument(data.draft_filler_document);
+        if (data.draft_filler_signature) setFillerSignature(data.draft_filler_signature);
+
         setRequiredDocs(data.required_docs ?? []);
         if (data.already_completed) setDone(true);
       })
@@ -372,6 +385,40 @@ export default function OnboardingPage() {
       .finally(() => setLoading(false));
   }, [token]);
 
+  // ── Shared form payload builder ─────────────────────────────────────────────
+  const buildFormData = () => ({
+    name, document: doc, document_type: docType,
+    economic_activity_id: activityId,
+    address: address || null, phone: phone || null, mobile: mobile || null,
+    billing_email: billingEmail || null, info_email: infoEmail || null,
+    city_id: cityId,
+    treasury_contact: treasuryContact || null, treasury_mobile: treasuryMobile || null, treasury_email: treasuryEmail || null,
+    purchasing_contact: purchasingContact || null, purchasing_mobile: purchasingMobile || null, purchasing_email: purchasingEmail || null,
+    obra_contact: obraContact || null, obra_mobile: obraMobile || null, obra_email: obraEmail || null,
+    commercial_references: refs.filter(r => r.name.trim()).map(r => ({ name: r.name, address: r.address || null, phone: r.phone || null, email: r.email || null })),
+    legal_representatives: reps.filter(r => r.first_name.trim()).map(r => ({ first_name: r.first_name, last_name: r.last_name, document_type: r.document_type || null, document_number: r.document_number, phone: r.phone || null, email: r.email || null })),
+    partners: partners.filter(p => p.first_name.trim()).map(p => ({ first_name: p.first_name, last_name: p.last_name, document_type: p.document_type || null, document_number: p.document_number, phone: p.phone || null, participation_percentage: p.participation_percentage ? Number(p.participation_percentage) : null })),
+    pep: peps.filter(p => p.first_name.trim()).map(p => ({ first_name: p.first_name, last_name: p.last_name, document_type: p.document_type || null, document_number: p.document_number, phone: p.phone || null, position: p.position || null, email: p.email || null })),
+    origen_fondos: origenFondos,
+    filler_name:      fillerName.trim()     || null,
+    filler_document:  fillerDocument.trim() || null,
+    filler_signature: fillerSignature       || null,
+  });
+
+  // ── Save progress ────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.onboarding.saveProgress(token!, buildFormData());
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 4000);
+    } catch (e: unknown) {
+      alert((e as { detail?: string }).detail || "Error al guardar el progreso");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!signature)           { alert("Por favor firme el documento antes de enviar"); return; }
@@ -381,19 +428,7 @@ export default function OnboardingPage() {
     setSubmitting(true);
     try {
       const payload: OnboardingSubmit = {
-        name, document: doc, document_type: docType,
-        economic_activity_id: activityId,
-        address: address || null, phone: phone || null, mobile: mobile || null,
-        billing_email: billingEmail || null, info_email: infoEmail || null,
-        city_id: cityId,
-        treasury_contact: treasuryContact || null, treasury_mobile: treasuryMobile || null, treasury_email: treasuryEmail || null,
-        purchasing_contact: purchasingContact || null, purchasing_mobile: purchasingMobile || null, purchasing_email: purchasingEmail || null,
-        obra_contact: obraContact || null, obra_mobile: obraMobile || null, obra_email: obraEmail || null,
-        commercial_references: refs.filter(r => r.name.trim()).map(r => ({ name: r.name, address: r.address || null, phone: r.phone || null, email: r.email || null })),
-        legal_representatives: reps.filter(r => r.first_name.trim()).map(r => ({ first_name: r.first_name, last_name: r.last_name, document_type: r.document_type || null, document_number: r.document_number, phone: r.phone || null, email: r.email || null })),
-        partners: partners.filter(p => p.first_name.trim()).map(p => ({ first_name: p.first_name, last_name: p.last_name, document_type: p.document_type || null, document_number: p.document_number, phone: p.phone || null, participation_percentage: p.participation_percentage ? Number(p.participation_percentage) : null })),
-        pep: peps.filter(p => p.first_name.trim()).map(p => ({ first_name: p.first_name, last_name: p.last_name, document_type: p.document_type || null, document_number: p.document_number, phone: p.phone || null, position: p.position || null, email: p.email || null })),
-        origen_fondos: origenFondos,
+        ...buildFormData(),
         signature, signer_name: signerName, signer_document: signerDocument,
       };
       await api.onboarding.submit(token!, payload);
@@ -847,13 +882,52 @@ export default function OnboardingPage() {
         {step === 4 && (
           <>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Firma digital</h2>
-              <p className="text-sm text-gray-500 mt-1">Firme los documentos para completar su vinculación</p>
+              <h2 className="text-xl font-bold text-gray-900">Firmas digitales</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Se requieren dos firmas: quien diligenció el formulario y el Representante Legal.
+                Si el Representante Legal no está disponible ahora, guarde el progreso y él podrá
+                firmar más tarde en este mismo enlace.
+              </p>
             </div>
 
-            {/* Datos del firmante */}
-            <Section title="Datos del firmante">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* ── Firmante 1: quien diligencia (opcional) ── */}
+            <Section
+              title="Firma — Quien diligencia el formulario"
+              action={
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Opcional</span>
+              }
+            >
+              <p className="text-xs text-gray-500 -mt-1 mb-2">
+                Complete esta sección si usted es diferente al Representante Legal de la empresa.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <Field label="Nombres y apellidos">
+                  <input
+                    className={INPUT}
+                    value={fillerName}
+                    onChange={e => setFillerName(e.target.value)}
+                    placeholder="Como aparece en el documento"
+                    maxLength={200}
+                  />
+                </Field>
+                <Field label="Número de documento">
+                  <input className={INPUT} value={fillerDocument} onChange={e => setFillerDocument(e.target.value)} maxLength={30} />
+                </Field>
+              </div>
+              <SignaturePad onSigned={setFillerSignature} />
+            </Section>
+
+            {/* ── Firmante 2: Representante Legal (requerido para enviar) ── */}
+            <Section
+              title="Firma — Representante Legal"
+              action={
+                <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-semibold">Requerida para enviar</span>
+              }
+            >
+              <p className="text-xs text-gray-500 -mt-1 mb-2">
+                El Representante Legal debe firmar aquí para completar la vinculación.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <Field label="Nombres y apellidos" required>
                   <input
                     className={INPUT}
@@ -867,43 +941,64 @@ export default function OnboardingPage() {
                   <input className={INPUT} value={signerDocument} onChange={e => setSignerDocument(e.target.value)} maxLength={30} />
                 </Field>
               </div>
-            </Section>
-
-            {/* Firma */}
-            <Section title="Firma del documento">
               <SignaturePad onSigned={setSignature} />
             </Section>
 
+            {/* Guardado exitoso */}
+            {savedOk && (
+              <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-3.5">
+                <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">Progreso guardado</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    El Representante Legal puede completar su firma en este mismo enlace antes de que expire.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Documentos a firmar */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Documentos a firmar</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Documentos que se generarán</p>
               <div className="space-y-2.5">
-                {[
-                  "Formato Cliente Nuevo",
-                  "Declaración de Origen de Fondos",
-                ].map(name => (
-                  <div key={name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl text-sm">
+                {["Formato Cliente Nuevo", "Declaración de Origen de Fondos"].map(n => (
+                  <div key={n} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl text-sm">
                     <div className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0" />
-                    <span className="text-gray-700">{name}</span>
+                    <span className="text-gray-700">{n}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex justify-between pt-2 pb-6">
-              <button className={BTN_SECONDARY} onClick={() => setStep(3)} disabled={submitting}>
+            <div className="flex flex-wrap justify-between gap-3 pt-2 pb-6">
+              <button className={BTN_SECONDARY} onClick={() => setStep(3)} disabled={submitting || saving}>
                 <ChevronLeft size={16} /> Anterior
               </button>
-              <button
-                className={BTN_PRIMARY}
-                onClick={handleSubmit}
-                disabled={submitting || !signature || !signerName.trim() || !signerDocument.trim()}
-              >
-                {submitting
-                  ? <><Loader2 size={16} className="animate-spin" /> Enviando...</>
-                  : <>Enviar documentos firmados <ChevronRight size={16} /></>
-                }
-              </button>
+              <div className="flex flex-wrap gap-3">
+                {/* Guardar progreso */}
+                <button
+                  className={BTN_SECONDARY}
+                  onClick={handleSave}
+                  disabled={saving || submitting}
+                  title="Guardar el progreso para que el Representante Legal pueda firmar después"
+                >
+                  {saving
+                    ? <><Loader2 size={15} className="animate-spin" /> Guardando...</>
+                    : <><Save size={15} /> Guardar y continuar después</>
+                  }
+                </button>
+                {/* Enviar (rep sig required) */}
+                <button
+                  className={BTN_PRIMARY}
+                  onClick={handleSubmit}
+                  disabled={submitting || saving || !signature || !signerName.trim() || !signerDocument.trim()}
+                >
+                  {submitting
+                    ? <><Loader2 size={16} className="animate-spin" /> Enviando...</>
+                    : <><UserCheck size={16} /> Enviar documentos firmados</>
+                  }
+                </button>
+              </div>
             </div>
           </>
         )}

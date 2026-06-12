@@ -147,9 +147,13 @@ export type OnboardingPublicResponse = {
   expires_at: string;
   already_completed: boolean;
   required_docs: RequiredDocStatus[];
+  draft_filler_name:      string | null;
+  draft_filler_document:  string | null;
+  draft_filler_signature: string | null;
+  draft_origen_fondos:    string | null;
 };
 
-export type OnboardingSubmit = {
+type OnboardingFormData = {
   name: string; document: string; document_type: string | null;
   economic_activity_id: number | null;
   address: string | null; phone: string | null; mobile: string | null;
@@ -163,6 +167,12 @@ export type OnboardingSubmit = {
   partners: { first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; participation_percentage: number | null }[];
   pep: { first_name: string; last_name: string; document_type: string | null; document_number: string; phone: string | null; position: string | null; email: string | null }[];
   origen_fondos: string;
+  filler_name: string | null; filler_document: string | null; filler_signature: string | null;
+};
+
+export type OnboardingSaveProgress = OnboardingFormData;
+
+export type OnboardingSubmit = OnboardingFormData & {
   signature: string; signer_name: string; signer_document: string;
 };
 
@@ -336,9 +346,10 @@ export const api = {
     removeDocument: (id: string, docId: string) => request<ClientResponse>(`/clients/${id}/documents/${docId}`, { method: "DELETE" }),
   },
   onboarding: {
-    get:    (token: string) => request<OnboardingPublicResponse>(`/onboarding/${token}`),
-    submit: (token: string, data: OnboardingSubmit) => request<ClientResponse>(`/onboarding/${token}/submit`, { method: "POST", body: JSON.stringify(data) }),
-    send:   (clientId: string) => request<SendOnboardingResponse>(`/clients/${clientId}/send-onboarding`, { method: "POST" }),
+    get:          (token: string) => request<OnboardingPublicResponse>(`/onboarding/${token}`),
+    saveProgress: (token: string, data: OnboardingSaveProgress) => request<{ message: string }>(`/onboarding/${token}/save-progress`, { method: "POST", body: JSON.stringify(data) }),
+    submit:       (token: string, data: OnboardingSubmit) => request<ClientResponse>(`/onboarding/${token}/submit`, { method: "POST", body: JSON.stringify(data) }),
+    send:         (clientId: string) => request<SendOnboardingResponse>(`/clients/${clientId}/send-onboarding`, { method: "POST" }),
     uploadDocument: (token: string, documentKey: string, file: File) => {
       const form = new FormData();
       form.append("document_key", documentKey);
