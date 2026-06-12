@@ -135,10 +135,18 @@ export type ClientResponse = {
 };
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
+export type RequiredDocStatus = {
+  key: string;
+  label: string;
+  uploaded: boolean;
+  file_url: string | null;
+};
+
 export type OnboardingPublicResponse = {
   client: ClientResponse;
   expires_at: string;
   already_completed: boolean;
+  required_docs: RequiredDocStatus[];
 };
 
 export type OnboardingSubmit = {
@@ -331,6 +339,12 @@ export const api = {
     get:    (token: string) => request<OnboardingPublicResponse>(`/onboarding/${token}`),
     submit: (token: string, data: OnboardingSubmit) => request<ClientResponse>(`/onboarding/${token}/submit`, { method: "POST", body: JSON.stringify(data) }),
     send:   (clientId: string) => request<SendOnboardingResponse>(`/clients/${clientId}/send-onboarding`, { method: "POST" }),
+    uploadDocument: (token: string, documentKey: string, file: File) => {
+      const form = new FormData();
+      form.append("document_key", documentKey);
+      form.append("file", file);
+      return request<{ document_key: string; file_url: string; file_name: string }>(`/onboarding/${token}/upload-document`, { method: "POST", body: form });
+    },
   },
   passwordReset: {
     forgot: (email: string) =>

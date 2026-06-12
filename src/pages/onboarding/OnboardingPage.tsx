@@ -3,8 +3,9 @@ import { useParams } from "react-router-dom";
 import {
   CheckCircle2, Loader2, ChevronRight, ChevronLeft,
   AlertTriangle, Plus, Trash2, Building2, FileText, PenLine,
+  Upload, Paperclip, X,
 } from "lucide-react";
-import { api, type OnboardingPublicResponse, type OnboardingSubmit } from "../../services/api";
+import { api, type OnboardingPublicResponse, type OnboardingSubmit, type RequiredDocStatus } from "../../services/api";
 import SearchSelect from "../../components/ui/SearchSelect";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -148,12 +149,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const STEPS = [
   { n: 1 as Step, label: "Datos", icon: Building2 },
-  { n: 2 as Step, label: "Declaración", icon: FileText },
-  { n: 3 as Step, label: "Firma", icon: PenLine },
+  { n: 2 as Step, label: "Documentos", icon: Paperclip },
+  { n: 3 as Step, label: "Declaración", icon: FileText },
+  { n: 4 as Step, label: "Firma", icon: PenLine },
 ];
 
 function StepIndicator({ current }: { current: Step }) {
@@ -274,6 +276,8 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [, setOnboarding] = useState<OnboardingPublicResponse | null>(null);
   const [step,       setStep]       = useState<Step>(1);
+  const [requiredDocs, setRequiredDocs] = useState<RequiredDocStatus[]>([]);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   // Form state — Step 1
   const [name,         setName]         = useState("");
@@ -358,6 +362,7 @@ export default function OnboardingPage() {
           setSignerDocument(firstRep.document_number);
         }
 
+        setRequiredDocs(data.required_docs ?? []);
         if (data.already_completed) setDone(true);
       })
       .catch((e) => {
@@ -692,8 +697,90 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* ── Step 2: Declaración ──────────────────────────────────────────────── */}
+        {/* ── Step 2: Documentos ───────────────────────────────────────────────── */}
         {step === 2 && (
+          <>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Documentos requeridos</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Adjunte los documentos necesarios para la solicitud de crédito. Puede continuar sin subir todos.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800">Para solicitud de crédito y/o aumento de cupo</h3>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {requiredDocs.map((doc) => (
+                  <div key={doc.key} className="flex items-center gap-4 px-5 py-3.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                      doc.uploaded ? "bg-amber-500" : "bg-gray-100"
+                    }`}>
+                      {doc.uploaded
+                        ? <CheckCircle2 size={14} className="text-black" />
+                        : <Upload size={12} className="text-gray-400" />
+                      }
+                    </div>
+                    <span className="flex-1 text-sm text-gray-700">{doc.label}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {doc.uploaded && (
+                        <span className="text-xs text-amber-600 font-medium hidden sm:block">Subido</span>
+                      )}
+                      <label className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
+                        uploadingKey === doc.key
+                          ? "bg-gray-100 text-gray-400 cursor-wait"
+                          : doc.uploaded
+                            ? "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            : "bg-amber-500 text-black hover:bg-amber-400"
+                      }`}>
+                        {uploadingKey === doc.key
+                          ? <><Loader2 size={12} className="animate-spin" /> Subiendo...</>
+                          : doc.uploaded
+                            ? <><X size={12} />Reemplazar</>
+                            : <><Upload size={12} />Subir</>
+                        }
+                        <input
+                          type="file"
+                          className="hidden"
+                          disabled={uploadingKey !== null}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file || !token) return;
+                            setUploadingKey(doc.key);
+                            try {
+                              await api.onboarding.uploadDocument(token, doc.key, file);
+                              setRequiredDocs(prev => prev.map(d =>
+                                d.key === doc.key ? { ...d, uploaded: true, file_url: null } : d
+                              ));
+                            } catch {
+                              alert("Error al subir el archivo. Intente de nuevo.");
+                            } finally {
+                              setUploadingKey(null);
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-2 pb-6">
+              <button className={BTN_SECONDARY} onClick={() => setStep(1)}>
+                <ChevronLeft size={16} /> Anterior
+              </button>
+              <button className={BTN_PRIMARY} onClick={() => setStep(3)}>
+                Continuar <ChevronRight size={16} />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 3: Declaración ──────────────────────────────────────────────── */}
+        {step === 3 && (
           <>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Declaración de origen de fondos</h2>
@@ -746,18 +833,18 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex justify-between pt-2 pb-6">
-              <button className={BTN_SECONDARY} onClick={() => setStep(1)}>
+              <button className={BTN_SECONDARY} onClick={() => setStep(2)}>
                 <ChevronLeft size={16} /> Anterior
               </button>
-              <button className={BTN_PRIMARY} onClick={() => setStep(3)} disabled={!origenFondos.trim()}>
+              <button className={BTN_PRIMARY} onClick={() => setStep(4)} disabled={!origenFondos.trim()}>
                 Continuar <ChevronRight size={16} />
               </button>
             </div>
           </>
         )}
 
-        {/* ── Step 3: Firma ────────────────────────────────────────────────────── */}
-        {step === 3 && (
+        {/* ── Step 4: Firma ────────────────────────────────────────────────────── */}
+        {step === 4 && (
           <>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Firma digital</h2>
@@ -804,7 +891,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex justify-between pt-2 pb-6">
-              <button className={BTN_SECONDARY} onClick={() => setStep(2)} disabled={submitting}>
+              <button className={BTN_SECONDARY} onClick={() => setStep(3)} disabled={submitting}>
                 <ChevronLeft size={16} /> Anterior
               </button>
               <button
