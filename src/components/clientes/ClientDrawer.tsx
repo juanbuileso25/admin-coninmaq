@@ -249,7 +249,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }: Props) 
         </header>
 
         {/* Tabs */}
-        <div className="flex border-b border-border flex-shrink-0 overflow-x-auto">
+        <div className="flex border-b border-border flex-shrink-0 overflow-x-auto md:overflow-visible md:flex-wrap">
           {TABS.map(t => (
             <button
               key={t.id}
