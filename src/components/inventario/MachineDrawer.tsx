@@ -43,6 +43,7 @@ type FormValues = yup.InferType<typeof schema>;
 interface Props {
   open:                    boolean;
   machine:                 Machine | null;
+  duplicateFrom?:          Machine | null;
   defaultMachineTypeSlug?: string;
   onClose:                 (changed: boolean) => void;
   onSave:                  (data: Omit<Machine, "id" | "created_at" | "updated_at">) => Promise<Machine | undefined>;
@@ -87,7 +88,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 }
 
 /* ── Component ── */
-export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, onClose, onSave }: Props) {
+export default function MachineDrawer({ open, machine, duplicateFrom, defaultMachineTypeSlug, onClose, onSave }: Props) {
   const [images,         setImages]         = useState<MachineImage[]>([]);
   const [pendingImages,  setPendingImages]  = useState<File[]>([]);
   const [pendingPdf,     setPendingPdf]     = useState<File | null>(null);
@@ -101,6 +102,7 @@ export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, o
   const changedRef      = useRef(false);
 
   const isEditing = !!machine;
+  const isDuplicating = !!duplicateFrom;
 
   /* Load machine types once */
   useEffect(() => {
@@ -123,32 +125,33 @@ export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, o
   const { fields: specFields, append: addSpec, remove: removeSpec } = useFieldArray({ control, name: "specs" });
   const { fields: hlFields,   append: addHl,   remove: removeHl   } = useFieldArray({ control, name: "highlights" });
 
-  /* Populate form when editing */
+  /* Populate form when editing or duplicating */
   useEffect(() => {
-    if (open && machine) {
+    const source = machine ?? (isDuplicating ? duplicateFrom : null);
+    if (open && source) {
       reset({
-        code:          machine.code,
-        brand:         machine.brand,
-        category:      machine.category,
-        model:         machine.model,
-        description:   machine.description,
-        price:         machine.price,
-        show_price:    machine.show_price,
-        warranty:      machine.warranty,
-        delivery_time: machine.delivery_time,
-        specs:         machine.specs.map(({ label, value, icon }) => ({ label, value, icon: icon ?? "" })),
-        highlights:    machine.highlights.map(({ text }) => ({ text })),
-        visible_web:   machine.visible_web,
-        featured:      machine.featured,
-        machine_type_id: machine.machine_type_id,
-        year:          machine.year ?? undefined,
-        hours_used:    machine.hours_used ?? "",
-        condition:     machine.condition ?? "",
-        inspection:    machine.inspection ?? "",
+        code:          isDuplicating ? "" : source.code,
+        brand:         source.brand,
+        category:      source.category,
+        model:         source.model,
+        description:   source.description,
+        price:         source.price,
+        show_price:    source.show_price,
+        warranty:      source.warranty,
+        delivery_time: source.delivery_time,
+        specs:         source.specs.map(({ label, value, icon }) => ({ label, value, icon: icon ?? "" })),
+        highlights:    source.highlights.map(({ text }) => ({ text })),
+        visible_web:   source.visible_web,
+        featured:      source.featured,
+        machine_type_id: source.machine_type_id,
+        year:          source.year ?? undefined,
+        hours_used:    source.hours_used ?? "",
+        condition:     source.condition ?? "",
+        inspection:    source.inspection ?? "",
       });
-      setImages(machine.images ?? []);
-      setPdfName(machine.pdf_url ? machine.pdf_url.split("/").pop() ?? "" : "");
-    } else if (open && !machine) {
+      setImages(isDuplicating ? [] : source.images ?? []);
+      setPdfName(isDuplicating ? "" : (source.pdf_url ? source.pdf_url.split("/").pop() ?? "" : ""));
+    } else if (open && !source) {
       const defaultId = machineTypes.find((t) => t.slug === defaultMachineTypeSlug)?.id;
       reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0, machine_type_id: defaultId });
       setImages([]);
@@ -244,12 +247,12 @@ export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, o
         price:           data.price ?? 0,
         specs:           data.specs ?? [],
         highlights:      (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
-        image_url:       machine?.image_url || "",
-        pdf_url:         machine?.pdf_url || "",
-        images:          machine?.images || [],
-        slug:            machine?.slug || slug,
+        image_url:       isEditing ? (machine!.image_url || "") : "",
+        pdf_url:         isEditing ? (machine!.pdf_url || "") : "",
+        images:          isEditing ? (machine!.images || []) : [],
+        slug:            isEditing ? (machine!.slug) : slug,
         machine_type_id: data.machine_type_id!,
-        machine_type:    selectedType ?? machine!.machine_type,
+        machine_type:    selectedType ?? (machine ?? duplicateFrom)!.machine_type,
         year:            data.year ?? null,
         hours_used:      data.hours_used || null,
         condition:       data.condition || null,
@@ -314,10 +317,10 @@ export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, o
         <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <div>
             <h2 className="text-fg font-semibold text-base">
-              {isEditing ? "Editar máquina" : "Nueva máquina"}
+              {isEditing ? "Editar máquina" : isDuplicating ? "Duplicar máquina" : "Nueva máquina"}
             </h2>
             <p className="text-fg-5 text-xs mt-0.5">
-              {isEditing ? machine.model : "Completa los campos del producto"}
+              {isEditing ? machine.model : isDuplicating ? `Copia de ${duplicateFrom!.model}` : "Completa los campos del producto"}
             </p>
           </div>
           <button onClick={() => onClose(changedRef.current)} className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-fg-2 hover:bg-surface-4 transition-all">
@@ -692,7 +695,7 @@ export default function MachineDrawer({ open, machine, defaultMachineTypeSlug, o
             className="px-6 py-2.5 text-sm font-semibold bg-accent hover:bg-accent-light text-zinc-900
                        hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear producto"}
+            {saving ? "Guardando..." : isEditing ? "Guardar cambios" : isDuplicating ? "Crear copia" : "Crear producto"}
           </button>
         </div>
       </div>

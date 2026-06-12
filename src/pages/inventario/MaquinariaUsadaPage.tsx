@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Clock, Calendar,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Clock, Calendar, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
@@ -47,9 +47,10 @@ export default function MaquinariaUsadaPage() {
 
   const [search,     setSearch]     = useState("");
   const [catFilter,  setCatFilter]  = useState<string>("");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing,    setEditing]    = useState<Machine | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [editing,      setEditing]      = useState<Machine | null>(null);
+  const [duplicating,  setDuplicating]  = useState<Machine | null>(null);
+  const [deletingId,   setDeletingId]   = useState<string | null>(null);
 
   /* Filtered list */
   const filtered = useMemo(() => {
@@ -67,9 +68,10 @@ export default function MaquinariaUsadaPage() {
   const featured = machines.filter((m) => m.featured).length;
 
   /* Handlers */
-  const openCreate  = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit    = (m: Machine) => { setEditing(m); setDrawerOpen(true); };
-  const closeDrawer = (changed: boolean) => { setDrawerOpen(false); setEditing(null); if (changed) refresh(); };
+  const openCreate    = () => { setEditing(null); setDuplicating(null); setDrawerOpen(true); };
+  const openEdit      = (m: Machine) => { setEditing(m); setDuplicating(null); setDrawerOpen(true); };
+  const openDuplicate = (m: Machine) => { setEditing(null); setDuplicating(m); setDrawerOpen(true); };
+  const closeDrawer   = (changed: boolean) => { setDrawerOpen(false); setEditing(null); setDuplicating(null); if (changed) refresh(); };
 
   const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine | undefined> => {
     try {
@@ -315,12 +317,21 @@ export default function MaquinariaUsadaPage() {
                         <button
                           onClick={() => openEdit(m)}
                           className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-accent hover:bg-surface-4 transition-all"
+                          title="Editar"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
+                          onClick={() => openDuplicate(m)}
+                          className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-sky-400 hover:bg-sky-950/20 transition-all"
+                          title="Duplicar"
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button
                           onClick={() => setDeletingId(m.id)}
                           className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-red-400 hover:bg-red-950/20 transition-all"
+                          title="Eliminar"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -376,6 +387,7 @@ export default function MaquinariaUsadaPage() {
       <MachineDrawer
         open={drawerOpen}
         machine={editing}
+        duplicateFrom={duplicating}
         defaultMachineTypeSlug="used"
         onClose={closeDrawer}
         onSave={handleSave}
