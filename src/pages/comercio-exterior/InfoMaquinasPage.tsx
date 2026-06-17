@@ -298,7 +298,7 @@ export default function InfoMaquinasPage() {
       m.machine_serial.toLowerCase().includes(q) ||
       (m.purchase_order ?? "").toLowerCase().includes(q)
     );
-  }, [machines, search, statusFilter]);
+  }, [machines, search]);
 
   const total    = machines.length;
   const active   = machines.filter((m) => m.is_active).length;
