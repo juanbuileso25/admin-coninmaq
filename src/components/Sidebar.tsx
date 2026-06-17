@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Building2,
   ContactRound,
+  Globe,
+  Info,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useAbility } from "../context/AbilityContext";
@@ -56,6 +58,14 @@ const NAV: NavGroup[] = [
         ],
       },
       { label: "Cotizaciones", to: "/cotizaciones", icon: FileText,      subject: "Quote"   },
+      {
+        label: "Comercio exterior",
+        icon:  Globe,
+        subject: "ForeignTrade",
+        sub: [
+          { label: "Info maquinas", to: "/comercio-exterior/informacion-maquinas" },
+        ],
+      },
       { label: "Clientes",    to: "/clientes",    icon: ContactRound,  subject: "Client"  },
       {
         label: "Renta",
@@ -93,6 +103,7 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/renta/horometro":             Key,
   "/ajustes/roles":               ShieldCheck,
   "/ajustes/areas":               Building2,
+  "/comercio-exterior/informacion-maquinas": Info,
 };
 
 interface SidebarProps {
@@ -106,8 +117,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const location  = useLocation();
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => ({
-    Inventario: location.pathname.startsWith("/inventario"),
-    Renta:      location.pathname.startsWith("/renta"),
+    Inventario:          location.pathname.startsWith("/inventario"),
+    Renta:               location.pathname.startsWith("/renta"),
+    "Comercio exterior": location.pathname.startsWith("/comercio-exterior"),
   }));
 
   const toggleMenu = (label: string) =>

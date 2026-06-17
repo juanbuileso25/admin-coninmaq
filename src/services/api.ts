@@ -134,6 +134,34 @@ export type ClientResponse = {
   documents: ClientDocumentResponse[];
 };
 
+// ── Foreign Trade ─────────────────────────────────────────────────────────────
+export type MachineInfoDocumentResponse = {
+  id: string;
+  document_key: string;
+  label: string;
+  file_url: string;
+  file_name: string;
+  is_active: boolean;
+  uploaded_at: string;
+};
+
+export type MachineInfoResponse = {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  machine_serial: string;
+  engine_serial: string | null;
+  model_year: number | null;
+  import_declaration: string | null;
+  clearance_date: string | null;
+  purchase_order: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  documents: MachineInfoDocumentResponse[];
+};
+
 // ── Onboarding ────────────────────────────────────────────────────────────────
 export type RequiredDocStatus = {
   key: string;
@@ -344,6 +372,32 @@ export const api = {
       return request<ClientResponse>(`/clients/${id}/documents`, { method: "POST", body: form, headers: {} });
     },
     removeDocument: (id: string, docId: string) => request<ClientResponse>(`/clients/${id}/documents/${docId}`, { method: "DELETE" }),
+  },
+  foreignTrade: {
+    list: (params?: { is_active?: boolean; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+      if (params?.search) qs.set("search", params.search);
+      return request<MachineInfoResponse[]>(`/foreign-trade/?${qs}`);
+    },
+    get: (id: string) => request<MachineInfoResponse>(`/foreign-trade/${id}`),
+    create: (data: object) =>
+      request<MachineInfoResponse>("/foreign-trade/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: object) =>
+      request<MachineInfoResponse>(`/foreign-trade/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivate: (id: string) => request<void>(`/foreign-trade/${id}`, { method: "DELETE" }),
+    uploadDocument: (id: string, file: File, documentKey: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("document_key", documentKey);
+      return request<MachineInfoResponse>(`/foreign-trade/${id}/documents`, {
+        method: "POST",
+        body: form,
+        headers: {},
+      });
+    },
+    removeDocument: (id: string, docId: string) =>
+      request<MachineInfoResponse>(`/foreign-trade/${id}/documents/${docId}`, { method: "DELETE" }),
   },
   onboarding: {
     get:          (token: string) => request<OnboardingPublicResponse>(`/onboarding/${token}`),

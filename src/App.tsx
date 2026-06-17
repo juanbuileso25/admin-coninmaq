@@ -14,6 +14,7 @@ import ForgotPasswordPage   from "./pages/ForgotPasswordPage";
 import ResetPasswordPage    from "./pages/ResetPasswordPage";
 import ClientesPage         from "./pages/clientes/ClientesPage";
 import OnboardingPage       from "./pages/onboarding/OnboardingPage";
+import InfoMaquinasPage     from "./pages/comercio-exterior/InfoMaquinasPage";
 
 export default function App() {
   return (
@@ -40,6 +41,10 @@ export default function App() {
         <Route path="/renta/horometro" element={<HorometroPage />} />
 
         <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
+
+        {/* Comercio exterior */}
+        <Route path="/comercio-exterior" element={<Navigate to="/comercio-exterior/informacion-maquinas" replace />} />
+        <Route path="/comercio-exterior/informacion-maquinas" element={<InfoMaquinasPage />} />
         <Route path="/clientes"    element={<ClientesPage />} />
         <Route path="/agente"       element={<PlaceholderPage title="Agente IA" />} />
         <Route path="/usuarios"     element={<UsersPage />} />

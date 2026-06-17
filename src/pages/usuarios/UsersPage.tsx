@@ -20,6 +20,8 @@ const SUBJECT_LABELS: Record<string, string> = {
   Inventory:    "Inventario",
   Quote:        "Cotizaciones",
   RentalRecord: "Renta",
+  Client:       "Clientes",
+  ForeignTrade: "Comercio Exterior",
   User:         "Usuarios",
   Settings:     "Ajustes",
   Agent:        "Agente IA",

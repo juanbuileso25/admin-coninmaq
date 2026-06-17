@@ -11,6 +11,7 @@ export type Subjects =
   | "User"
   | "Settings"
   | "Agent"
+  | "ForeignTrade"
   | "all";
 
 export type AppAbility = MongoAbility<[Actions, Subjects]>;
