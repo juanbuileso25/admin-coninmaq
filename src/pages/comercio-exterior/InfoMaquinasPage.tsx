@@ -284,27 +284,20 @@ export default function InfoMaquinasPage() {
 
   const { machines, loading, error, refresh } = useMachineInfo(undefined);
 
-  const [search,       setSearch]       = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+  const [search, setSearch] = useState("");
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [editing,      setEditing]      = useState<MachineInfoResponse | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return machines.filter((m) => {
-      const matchSearch =
-        !q ||
-        m.plate.toLowerCase().includes(q) ||
-        m.brand.toLowerCase().includes(q) ||
-        m.model.toLowerCase().includes(q) ||
-        m.machine_serial.toLowerCase().includes(q) ||
-        (m.purchase_order ?? "").toLowerCase().includes(q);
-      const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active"   &&  m.is_active) ||
-        (statusFilter === "inactive" && !m.is_active);
-      return matchSearch && matchStatus;
-    });
+    return machines.filter((m) =>
+      !q ||
+      m.plate.toLowerCase().includes(q) ||
+      m.brand.toLowerCase().includes(q) ||
+      m.model.toLowerCase().includes(q) ||
+      m.machine_serial.toLowerCase().includes(q) ||
+      (m.purchase_order ?? "").toLowerCase().includes(q)
+    );
   }, [machines, search, statusFilter]);
 
   const total    = machines.length;
@@ -354,26 +347,15 @@ export default function InfoMaquinasPage() {
         <StatCard label="Docs completos" value={String(allDocs)}  icon={FolderCheck}  />
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-6 pointer-events-none" />
-          <input
-            className="w-full bg-surface-2 border border-border text-fg pl-9 pr-4 py-2.5 text-sm"
-            placeholder="Placa, marca, serial..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select
-          className="bg-surface-2 border border-border text-fg px-3 py-2.5 text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
-        >
-          <option value="all">Todas</option>
-          <option value="active">Activas</option>
-          <option value="inactive">Inactivas</option>
-        </select>
+      {/* Buscador */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-6 pointer-events-none" />
+        <input
+          className="w-full bg-surface-2 border border-border text-fg pl-9 pr-4 py-2.5 text-sm"
+          placeholder="Placa, marca, serial..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
