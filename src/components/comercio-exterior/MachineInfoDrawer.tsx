@@ -11,11 +11,12 @@ import { useAbility } from "../../context/AbilityContext";
 import DatePicker from "../ui/DatePicker";
 
 const DOCUMENT_SLOTS = [
-  { key: "lonking_contract",    label: "Contrato Lonking",       icon: FileText, accept: ".pdf,.doc,.docx" },
-  { key: "gps_certificate",     label: "Certificado GPS",        icon: FileText, accept: ".pdf,.doc,.docx" },
-  { key: "runt_registration",   label: "Registro RUNT",          icon: FileText, accept: ".pdf,.doc,.docx" },
-  { key: "machine_plate_photo", label: "Foto Plaqueta Máquina",  icon: Image,    accept: "image/*" },
-  { key: "engine_plate_photo",  label: "Foto Plaqueta Motor",    icon: Image,    accept: "image/*" },
+  { key: "lonking_contract",       label: "Contrato Lonking",            icon: FileText, accept: ".pdf,.doc,.docx" },
+  { key: "gps_certificate",        label: "Certificado GPS",             icon: FileText, accept: ".pdf,.doc,.docx" },
+  { key: "runt_registration",      label: "Registro RUNT",               icon: FileText, accept: ".pdf,.doc,.docx" },
+  { key: "import_declaration_doc", label: "Declaración de Importación",  icon: FileText, accept: ".pdf,.doc,.docx" },
+  { key: "machine_plate_photo",    label: "Foto Plaqueta Máquina",       icon: Image,    accept: "image/*" },
+  { key: "engine_plate_photo",     label: "Foto Plaqueta Motor",         icon: Image,    accept: "image/*" },
 ] as const;
 
 const schema = yup.object({
