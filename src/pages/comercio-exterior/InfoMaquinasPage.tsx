@@ -11,11 +11,12 @@ import StatCard from "../../components/StatCard";
 import MachineInfoDrawer from "../../components/comercio-exterior/MachineInfoDrawer";
 
 const DOCUMENT_SLOTS = [
-  { key: "lonking_contract",    label: "Contrato Lonking",      icon: FileText },
-  { key: "gps_certificate",     label: "Certificado GPS",       icon: FileText },
-  { key: "runt_registration",   label: "Registro RUNT",         icon: FileText },
-  { key: "machine_plate_photo", label: "Foto Plaqueta Máquina", icon: Image    },
-  { key: "engine_plate_photo",  label: "Foto Plaqueta Motor",   icon: Image    },
+  { key: "lonking_contract",       label: "Contrato Lonking",           icon: FileText },
+  { key: "gps_certificate",        label: "Certificado GPS",            icon: FileText },
+  { key: "runt_registration",      label: "Registro RUNT",              icon: FileText },
+  { key: "import_declaration_doc", label: "Declaración de Importación", icon: FileText },
+  { key: "machine_plate_photo",    label: "Foto Plaqueta Máquina",      icon: Image    },
+  { key: "engine_plate_photo",     label: "Foto Plaqueta Motor",        icon: Image    },
 ] as const;
 
 function formatDate(dateStr: string | null) {
@@ -60,8 +61,8 @@ function MachineCard({
           </div>
           <p className="text-fg text-sm font-medium">{machine.brand} {machine.model} {machine.model_year ? `· ${machine.model_year}` : ""}</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <span className={`text-xs font-medium ${docsCount === 5 ? "text-green-400" : docsCount > 0 ? "text-yellow-400" : "text-fg-6"}`}>
-              {docsCount}/5 docs
+            <span className={`text-xs font-medium ${docsCount === 6 ? "text-green-400" : docsCount > 0 ? "text-yellow-400" : "text-fg-6"}`}>
+              {docsCount}/6 docs
             </span>
             <div className="flex gap-0.5">
               {DOCUMENT_SLOTS.map((s) => (
@@ -187,8 +188,8 @@ function MachineRow({
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5">
-            <span className={`text-xs font-medium ${docsCount === 5 ? "text-green-400" : docsCount > 0 ? "text-yellow-400" : "text-fg-6"}`}>
-              {docsCount}/5
+            <span className={`text-xs font-medium ${docsCount === 6 ? "text-green-400" : docsCount > 0 ? "text-yellow-400" : "text-fg-6"}`}>
+              {docsCount}/6
             </span>
             <div className="flex gap-0.5">
               {DOCUMENT_SLOTS.map((s) => (
@@ -303,7 +304,7 @@ export default function InfoMaquinasPage() {
   const total    = machines.length;
   const active   = machines.filter((m) => m.is_active).length;
   const inactive = total - active;
-  const allDocs  = machines.filter((m) => m.documents.filter((d) => d.is_active).length === 5).length;
+  const allDocs  = machines.filter((m) => m.documents.filter((d) => d.is_active).length === 6).length;
 
   const openCreate = () => { setEditing(null); setDrawerOpen(true); };
   const openEdit   = (m: MachineInfoResponse) => { setEditing(m); setDrawerOpen(true); };
