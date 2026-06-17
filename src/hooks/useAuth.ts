@@ -37,7 +37,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string, remember: boolean): Promise<boolean> => {
     try {
-      const { access_token, refresh_token } = await api.auth.login(email, password);
+      const { access_token, refresh_token } = await api.auth.login(email, password, remember);
       setTokens(access_token, refresh_token, remember);
 
       const me = await api.users.me();

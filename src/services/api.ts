@@ -215,10 +215,10 @@ export type PermissionResponse = { id: string; action: string; subject: string; 
 
 export const api = {
   auth: {
-    login: (email: string, password: string) =>
+    login: (email: string, password: string, remember_me = false) =>
       request<{ access_token: string; refresh_token: string }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember_me }),
       }),
   },
   users: {
