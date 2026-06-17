@@ -23,13 +23,22 @@ const schema = yup.object({
   brand:              yup.string().required("Campo obligatorio").max(100),
   model:              yup.string().required("Campo obligatorio").max(100),
   machine_serial:     yup.string().required("Campo obligatorio").max(100),
-  engine_serial:      yup.string().nullable().optional(),
-  model_year:         yup.number().nullable().optional().min(1900).max(2100),
-  import_declaration: yup.string().nullable().optional(),
-  purchase_order:     yup.string().nullable().optional(),
+  engine_serial:      yup.string().nullable().default(null),
+  model_year:         yup.number().nullable().default(null).min(1900).max(2100),
+  import_declaration: yup.string().nullable().default(null),
+  purchase_order:     yup.string().nullable().default(null),
 });
 
-type FormData = yup.InferType<typeof schema>;
+type FormData = {
+  plate:              string;
+  brand:              string;
+  model:              string;
+  machine_serial:     string;
+  engine_serial:      string | null;
+  model_year:         number | null;
+  import_declaration: string | null;
+  purchase_order:     string | null;
+};
 
 interface Props {
   open:    boolean;

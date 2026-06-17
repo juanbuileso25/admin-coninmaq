@@ -4,10 +4,9 @@ import {
   PencilLine, ChevronDown, ChevronUp, Truck, PackageCheck, PackageX, FolderCheck,
   Download,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useAbility } from "../../context/AbilityContext";
 import { useMachineInfo } from "../../hooks/useMachineInfo";
-import { api, type MachineInfoResponse } from "../../services/api";
+import { type MachineInfoResponse } from "../../services/api";
 import StatCard from "../../components/StatCard";
 import MachineInfoDrawer from "../../components/comercio-exterior/MachineInfoDrawer";
 
