@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { api, type MachineInfoResponse, type MachineInfoDocumentResponse } from "../../services/api";
 import { useAbility } from "../../context/AbilityContext";
 import DatePicker from "../ui/DatePicker";
+import { CATEGORIES } from "../../types/machine";
 
 const DOCUMENT_SLOTS = [
   { key: "lonking_contract",       label: "Contrato Lonking",            icon: FileText, accept: ".pdf,.doc,.docx" },
@@ -26,6 +27,7 @@ const schema = yup.object({
   machine_serial:     yup.string().required("Campo obligatorio").max(100),
   engine_serial:      yup.string().nullable().default(null),
   model_year:         yup.number().nullable().default(null).min(1900).max(2100),
+  category:           yup.string().nullable().default(null),
   import_declaration: yup.string().nullable().default(null),
   purchase_order:     yup.string().nullable().default(null),
 });
@@ -37,6 +39,7 @@ type FormData = {
   machine_serial:     string;
   engine_serial:      string | null;
   model_year:         number | null;
+  category:           string | null;
   import_declaration: string | null;
   purchase_order:     string | null;
 };
@@ -75,6 +78,7 @@ export default function MachineInfoDrawer({ open, machine, onClose, onSaved }: P
         machine_serial:     machine.machine_serial,
         engine_serial:      machine.engine_serial ?? "",
         model_year:         machine.model_year ?? undefined,
+        category:           machine.category ?? "",
         import_declaration: machine.import_declaration ?? "",
         purchase_order:     machine.purchase_order ?? "",
       });
@@ -83,7 +87,7 @@ export default function MachineInfoDrawer({ open, machine, onClose, onSaved }: P
       reset({
         plate: "", brand: "", model: "", machine_serial: "",
         engine_serial: "", model_year: undefined,
-        import_declaration: "", purchase_order: "",
+        category: "", import_declaration: "", purchase_order: "",
       });
       setClearanceDate(null);
     }
@@ -95,10 +99,11 @@ export default function MachineInfoDrawer({ open, machine, onClose, onSaved }: P
       const payload = {
         ...data,
         engine_serial:      data.engine_serial      || null,
+        model_year:         data.model_year         || null,
+        category:           data.category           || null,
         import_declaration: data.import_declaration || null,
         clearance_date:     clearanceDate           || null,
         purchase_order:     data.purchase_order     || null,
-        model_year:         data.model_year         || null,
       };
       const saved = isEditing
         ? await api.foreignTrade.update(machine!.id, payload)
@@ -220,6 +225,17 @@ export default function MachineInfoDrawer({ open, machine, onClose, onSaved }: P
                   {...register("model_year")}
                 />
                 {errors.model_year && <p className="text-red-400 text-xs mt-1">{errors.model_year.message}</p>}
+              </div>
+              {/* Categoría */}
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-fg-4 mb-1.5">Categoría</label>
+                <select
+                  className="w-full bg-surface-3 border border-border text-fg px-3.5 py-2.5 text-sm appearance-none"
+                  {...register("category")}
+                >
+                  <option value="">Sin categoría</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>
           </section>

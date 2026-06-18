@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import {
   Plus, Search, FileText, Image, CheckCircle2, Circle,
   PencilLine, ChevronDown, ChevronUp, Truck, PackageCheck, PackageX, FolderCheck,
-  Download,
+  Download, FileDown,
 } from "lucide-react";
 import { useAbility } from "../../context/AbilityContext";
 import { useMachineInfo } from "../../hooks/useMachineInfo";
 import { type MachineInfoResponse } from "../../services/api";
 import StatCard from "../../components/StatCard";
 import MachineInfoDrawer from "../../components/comercio-exterior/MachineInfoDrawer";
+import CartaTrasladoModal from "../../components/comercio-exterior/CartaTrasladoModal";
 
 const DOCUMENT_SLOTS = [
   { key: "lonking_contract",       label: "Contrato Lonking",           icon: FileText },
@@ -35,9 +36,11 @@ function DocBadge({ uploaded }: { uploaded: boolean }) {
 function MachineCard({
   machine,
   onEdit,
+  onCarta,
 }: {
   machine: MachineInfoResponse;
-  onEdit: (m: MachineInfoResponse) => void;
+  onEdit:  (m: MachineInfoResponse) => void;
+  onCarta: (m: MachineInfoResponse) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const activeDocs = machine.documents.filter((d) => d.is_active);
@@ -60,6 +63,7 @@ function MachineCard({
             </span>
           </div>
           <p className="text-fg text-sm font-medium">{machine.brand} {machine.model} {machine.model_year ? `· ${machine.model_year}` : ""}</p>
+          {machine.category && <p className="text-fg-5 text-xs">{machine.category}</p>}
           <div className="flex items-center gap-1.5 mt-1">
             <span className={`text-xs font-medium ${docsCount === 6 ? "text-green-400" : docsCount > 0 ? "text-yellow-400" : "text-fg-6"}`}>
               {docsCount}/6 docs
@@ -72,6 +76,13 @@ function MachineCard({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onCarta(machine); }}
+            className="p-2 text-fg-5 hover:text-accent border border-border hover:border-accent/40 transition-colors"
+            title="Carta de traslado"
+          >
+            <FileDown size={14} />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(machine); }}
             className="p-2 text-fg-5 hover:text-accent border border-border hover:border-accent/40 transition-colors"
@@ -91,6 +102,7 @@ function MachineCard({
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <DataItem label="Serial máquina" value={machine.machine_serial} mono />
             <DataItem label="Serial motor"   value={machine.engine_serial}  mono />
+            <DataItem label="Categoría"      value={machine.category} />
             <DataItem label="Declaración importación" value={machine.import_declaration} />
             <DataItem label="Fecha levante"  value={formatDate(machine.clearance_date)} />
             <DataItem label="Pedido CONINMAQ" value={machine.purchase_order} />
@@ -150,9 +162,11 @@ function DataItem({ label, value, mono = false }: { label: string; value?: strin
 function MachineRow({
   machine,
   onEdit,
+  onCarta,
 }: {
   machine: MachineInfoResponse;
-  onEdit: (m: MachineInfoResponse) => void;
+  onEdit:  (m: MachineInfoResponse) => void;
+  onCarta: (m: MachineInfoResponse) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const activeDocs = machine.documents.filter((d) => d.is_active);
@@ -170,6 +184,11 @@ function MachineRow({
         <td className="px-4 py-3">
           <p className="text-fg text-sm font-medium">{machine.brand}</p>
           <p className="text-fg-5 text-xs">{machine.model}</p>
+          {machine.category && (
+            <span className="text-[10px] text-fg-6 border border-border px-1.5 py-0.5 mt-0.5 inline-block">
+              {machine.category}
+            </span>
+          )}
         </td>
         <td className="px-4 py-3 hidden lg:table-cell">
           <p className="font-mono text-xs text-fg">{machine.machine_serial}</p>
@@ -201,6 +220,13 @@ function MachineRow({
         <td className="px-4 py-3">
           <div className="flex items-center gap-2 justify-end">
             <button
+              onClick={(e) => { e.stopPropagation(); onCarta(machine); }}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border border-border text-fg-4 hover:text-accent hover:border-accent/40 transition-colors"
+              title="Carta de traslado"
+            >
+              <FileDown size={12} /> Carta
+            </button>
+            <button
               onClick={(e) => { e.stopPropagation(); onEdit(machine); }}
               className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border border-border text-fg-4 hover:text-accent hover:border-accent/40 transition-colors"
             >
@@ -222,6 +248,7 @@ function MachineRow({
             <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
               <div className="space-y-1.5 col-span-2 lg:col-span-1">
                 <p className="text-xs font-semibold text-fg-5 uppercase tracking-wider mb-2">Detalle</p>
+                <DesktopRow label="Categoría"               value={machine.category} />
                 <DesktopRow label="Declaración importación" value={machine.import_declaration} />
                 <DesktopRow label="Fecha levante"           value={formatDate(machine.clearance_date)} />
                 <DesktopRow label="Pedido CONINMAQ"         value={machine.purchase_order} />
@@ -288,6 +315,7 @@ export default function InfoMaquinasPage() {
   const [search, setSearch] = useState("");
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [editing,      setEditing]      = useState<MachineInfoResponse | null>(null);
+  const [cartaMachine, setCartaMachine] = useState<MachineInfoResponse | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -373,7 +401,7 @@ export default function InfoMaquinasPage() {
       {!loading && filtered.length > 0 && (
         <div className="md:hidden space-y-3">
           {filtered.map((m) => (
-            <MachineCard key={m.id} machine={m} onEdit={openEdit} />
+            <MachineCard key={m.id} machine={m} onEdit={openEdit} onCarta={setCartaMachine} />
           ))}
         </div>
       )}
@@ -396,7 +424,7 @@ export default function InfoMaquinasPage() {
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <MachineRow key={m.id} machine={m} onEdit={openEdit} />
+                <MachineRow key={m.id} machine={m} onEdit={openEdit} onCarta={setCartaMachine} />
               ))}
             </tbody>
           </table>
@@ -409,6 +437,13 @@ export default function InfoMaquinasPage() {
         onClose={handleClose}
         onSaved={handleSaved}
       />
+
+      {cartaMachine && (
+        <CartaTrasladoModal
+          machine={cartaMachine}
+          onClose={() => setCartaMachine(null)}
+        />
+      )}
     </div>
   );
 }

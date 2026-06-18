@@ -153,6 +153,7 @@ export type MachineInfoResponse = {
   machine_serial: string;
   engine_serial: string | null;
   model_year: number | null;
+  category: string | null;
   import_declaration: string | null;
   clearance_date: string | null;
   purchase_order: string | null;
