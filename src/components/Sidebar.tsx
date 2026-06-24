@@ -18,6 +18,10 @@ import {
   ContactRound,
   Globe,
   Info,
+  Bot,
+  MessageSquare,
+  UserCheck,
+  ReceiptText,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useAbility } from "../context/AbilityContext";
@@ -80,7 +84,16 @@ const NAV: NavGroup[] = [
   {
     section: "Sistema",
     items: [
-      // { label: "Agente IA", to: "/agente",   icon: Bot,      subject: "Agent"    },
+      {
+        label: "Agente IA",
+        icon: Bot,
+        subject: "BotSession",
+        sub: [
+          { label: "Conversaciones", to: "/agente/sesiones"      },
+          { label: "Leads",          to: "/agente/leads"         },
+          { label: "Cotizaciones",   to: "/agente/cotizaciones"  },
+        ],
+      },
       { label: "Usuarios",  to: "/usuarios", icon: Users,    subject: "User"     },
       {
         label: "Ajustes",
@@ -104,6 +117,9 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/ajustes/roles":               ShieldCheck,
   "/ajustes/areas":               Building2,
   "/comercio-exterior/informacion-maquinas": Info,
+  "/agente/sesiones":     MessageSquare,
+  "/agente/leads":        UserCheck,
+  "/agente/cotizaciones": ReceiptText,
 };
 
 interface SidebarProps {
@@ -120,6 +136,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     Inventario:          location.pathname.startsWith("/inventario"),
     Renta:               location.pathname.startsWith("/renta"),
     "Comercio exterior": location.pathname.startsWith("/comercio-exterior"),
+    "Agente IA":         location.pathname.startsWith("/agente"),
   }));
 
   const toggleMenu = (label: string) =>

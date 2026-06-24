@@ -85,6 +85,96 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+// ── Bot types ──────────────────────────────────────────────────────────────────
+
+export type BotMessageResponse = {
+  id: number;
+  role: string;
+  content: string;
+  created_at: string;
+};
+
+export type BotSessionListItem = {
+  id: number;
+  session_id: string;
+  phone_number: string | null;
+  phase: string;
+  bot_active: boolean;
+  assigned_advisor_id: string | null;
+  products_count: number;
+  client_name: string | null;
+  client_company: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+};
+
+export type BotSessionDetail = BotSessionListItem & {
+  accumulated_products: object[];
+  client_data_cache: Record<string, unknown> | null;
+  qualification_cache: Record<string, unknown> | null;
+  messages: BotMessageResponse[];
+};
+
+export type BotLeadResponse = {
+  id: number;
+  session_id: string;
+  phone_number: string | null;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  client_type: string;
+  equipment_interest: string | null;
+  timeline: string | null;
+  industry: string | null;
+  budget_text: string | null;
+  budget_value: number;
+  created_at: string;
+};
+
+export type BotQuotationResponse = {
+  id: number;
+  session_id: string;
+  lead_id: number | null;
+  quotation_number: string;
+  items: object[] | null;
+  subtotal: number;
+  discount_total: number;
+  total: number;
+  pdf_url: string | null;
+  delivery_mode: string;
+  email_sent: boolean;
+  status: string;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type PhaseCount = { phase: string; count: number };
+export type BotMetrics = {
+  total_sessions: number;
+  active_sessions: number;
+  bot_paused_sessions: number;
+  sessions_by_phase: PhaseCount[];
+  total_leads: number;
+  leads_last_7_days: number;
+  top_equipment_interest: { equipment: string; count: number }[];
+  top_industries: { industry: string; count: number }[];
+  total_quotations: number;
+  quotations_email_sent: number;
+  total_revenue: number;
+  quotations_by_delivery: { mode: string; count: number }[];
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+};
+
+// ── Machine types ──────────────────────────────────────────────────────────────
+
 export type MachineTypeResponse      = { id: number; name: string; slug: string; is_active: boolean };
 export type MachineSpecResponse      = { id: string; label: string; value: string; icon: string; order: number };
 export type MachineHighlightResponse = { id: string; text: string; order: number };
@@ -423,5 +513,38 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ token, new_password }),
       }),
+  },
+  bot: {
+    metrics: () => request<BotMetrics>("/bot/metrics"),
+    sessions: (params?: { phase?: string; bot_active?: boolean; is_active?: boolean; page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.phase !== undefined)      qs.set("phase",      params.phase);
+      if (params?.bot_active !== undefined)  qs.set("bot_active", String(params.bot_active));
+      if (params?.is_active !== undefined)   qs.set("is_active",  String(params.is_active));
+      if (params?.page !== undefined)        qs.set("page",       String(params.page));
+      if (params?.page_size !== undefined)   qs.set("page_size",  String(params.page_size));
+      return request<PaginatedResponse<BotSessionListItem>>(`/bot/sessions?${qs}`);
+    },
+    session: (sessionId: string) => request<BotSessionDetail>(`/bot/sessions/${sessionId}`),
+    patchSession: (sessionId: string, data: { bot_active?: boolean; assigned_advisor_id?: string }) =>
+      request<BotSessionDetail>(`/bot/sessions/${sessionId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    sendMessage: (sessionId: string, content: string) =>
+      request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
+    leads: (params?: { industry?: string; client_type?: string; page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.industry)   qs.set("industry",    params.industry);
+      if (params?.client_type) qs.set("client_type", params.client_type);
+      if (params?.page)        qs.set("page",        String(params.page));
+      if (params?.page_size)   qs.set("page_size",   String(params.page_size));
+      return request<PaginatedResponse<BotLeadResponse>>(`/bot/leads?${qs}`);
+    },
+    quotations: (params?: { status?: string; delivery_mode?: string; page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status)        qs.set("status",        params.status);
+      if (params?.delivery_mode) qs.set("delivery_mode", params.delivery_mode);
+      if (params?.page)          qs.set("page",          String(params.page));
+      if (params?.page_size)     qs.set("page_size",     String(params.page_size));
+      return request<PaginatedResponse<BotQuotationResponse>>(`/bot/quotations?${qs}`);
+    },
   },
 };
