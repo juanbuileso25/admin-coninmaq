@@ -310,7 +310,7 @@ export default function SesionDetailPage() {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={load}
+            onClick={() => load()}
             className="flex items-center gap-1.5 px-3 py-2 border border-border text-fg-5 hover:text-fg hover:bg-surface-3 text-sm transition-colors"
           >
             <RefreshCw size={13} />
