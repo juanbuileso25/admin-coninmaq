@@ -304,6 +304,7 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
         image_url:       isEditing ? (machine!.image_url || "") : "",
         pdf_url:         isEditing ? (machine!.pdf_url || "") : "",
         images:          isEditing ? (machine!.images || []) : [],
+        media:           isEditing ? (machine!.media || []) : [],
         slug:            isEditing ? (machine!.slug) : slug,
         machine_type_id: data.machine_type_id!,
         machine_type:    selectedType ?? (machine ?? duplicateFrom)!.machine_type,
