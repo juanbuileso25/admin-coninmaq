@@ -179,6 +179,7 @@ export type MachineTypeResponse      = { id: number; name: string; slug: string;
 export type MachineSpecResponse      = { id: string; label: string; value: string; icon: string; order: number };
 export type MachineHighlightResponse = { id: string; text: string; order: number };
 export type MachineImageResponse     = { id: string; url: string; is_primary: boolean; order: number };
+export type MachineMediaResponse     = { id: string; url: string; file_name: string; media_type: "image" | "video"; title: string | null; file_size: number | null; order: number; uploaded_at: string };
 export type MachineResponse = {
   id: string; code: string; brand: string; category: string; model: string; slug: string;
   description: string; price: number; show_price: boolean; warranty: string; delivery_time: string;
@@ -411,6 +412,20 @@ export const api = {
       request<MachineResponse>(`/machines/${machineId}/images/${imageId}/set-primary`, { method: "PATCH" }),
     deleteImage: (machineId: string, imageId: string) =>
       request<MachineResponse>(`/machines/${machineId}/images/${imageId}`, { method: "DELETE" }),
+    listMedia: (machineId: string) =>
+      request<MachineMediaResponse[]>(`/machines/${machineId}/media`),
+    uploadMedia: (machineId: string, file: File, title?: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      const qs = title ? `?title=${encodeURIComponent(title)}` : "";
+      return request<MachineMediaResponse>(`/machines/${machineId}/media${qs}`, {
+        method: "POST",
+        body: form,
+        headers: {},
+      });
+    },
+    deleteMedia: (machineId: string, mediaId: string) =>
+      request<void>(`/machines/${machineId}/media/${mediaId}`, { method: "DELETE" }),
   },
   locations: {
     countries: () => request<CountryResponse[]>("/locations/countries"),

@@ -39,6 +39,17 @@ export interface MachineImage {
   order:      number;
 }
 
+export interface MachineMedia {
+  id:         string;
+  url:        string;
+  file_name:  string;
+  media_type: "image" | "video";
+  title:      string | null;
+  file_size:  number | null;
+  order:      number;
+  uploaded_at: string;
+}
+
 export interface Machine {
   id:            string;
   code:          string;
@@ -54,6 +65,7 @@ export interface Machine {
   specs:         MachineSpec[];
   highlights:    MachineHighlight[];
   images:        MachineImage[];
+  media:         MachineMedia[];
   image_url:     string;
   pdf_url:       string;
   visible_web:   boolean;

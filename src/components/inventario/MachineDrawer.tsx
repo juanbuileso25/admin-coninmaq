@@ -3,10 +3,10 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
-  X, Plus, Trash2, Upload, GripVertical, ChevronDown, FileText, Star, Loader2,
+  X, Plus, Trash2, Upload, GripVertical, ChevronDown, FileText, Star, Loader2, Film, ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Machine, MachineImage, MachineTypeOption } from "../../types/machine";
+import type { Machine, MachineImage, MachineMedia, MachineTypeOption } from "../../types/machine";
 import { CATEGORIES, CONDITIONS } from "../../types/machine";
 import { api } from "../../services/api";
 
@@ -97,8 +97,12 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
   const [uploadingIdx,     setUploadingIdx]     = useState<number | null>(null);
   const [processingImgId,  setProcessingImgId]  = useState<string | null>(null);
   const [machineTypes,     setMachineTypes]     = useState<MachineTypeOption[]>([]);
+  const [internalMedia,    setInternalMedia]    = useState<MachineMedia[]>([]);
+  const [uploadingMedia,   setUploadingMedia]   = useState(false);
+  const [deletingMediaId,  setDeletingMediaId]  = useState<string | null>(null);
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const pdfInputRef     = useRef<HTMLInputElement>(null);
+  const mediaInputRef   = useRef<HTMLInputElement>(null);
   const changedRef      = useRef(false);
 
   const isEditing = !!machine;
@@ -159,7 +163,15 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
     }
     setPendingImages([]);
     setPendingPdf(null);
+    setInternalMedia([]);
     changedRef.current = false;
+
+    // Load internal media for existing machines
+    if (open && machine) {
+      api.machines.listMedia(machine.id)
+        .then((items) => setInternalMedia(items as unknown as MachineMedia[]))
+        .catch(() => {});
+    }
   }, [open, machine, machineTypes, reset]);
 
   /* Queue files for upload after save */
@@ -227,6 +239,48 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
       toast.error("Error al eliminar imagen");
     } finally {
       setProcessingImgId(null);
+    }
+  };
+
+  const handleUploadMedia = async (files: File[]) => {
+    if (!files.length || !machine) return;
+    setUploadingMedia(true);
+    let uploaded = 0;
+    for (const file of files) {
+      try {
+        const item = await api.machines.uploadMedia(machine.id, file);
+        setInternalMedia((prev) => [...prev, item as unknown as MachineMedia]);
+        uploaded++;
+      } catch (e: unknown) {
+        const err = e as { status?: number; detail?: string };
+        if (err.status === 415) {
+          toast.error(`Tipo no permitido: ${file.name}`);
+        } else if (err.status === 413) {
+          toast.error(`Archivo demasiado grande: ${file.name}`);
+        } else {
+          toast.error(`Error al subir: ${file.name}`);
+        }
+      }
+    }
+    if (uploaded > 0) {
+      changedRef.current = true;
+      toast.success(uploaded === 1 ? "Archivo subido correctamente" : `${uploaded} archivos subidos`);
+    }
+    setUploadingMedia(false);
+  };
+
+  const handleDeleteMedia = async (mediaId: string) => {
+    if (!machine) return;
+    setDeletingMediaId(mediaId);
+    try {
+      await api.machines.deleteMedia(machine.id, mediaId);
+      setInternalMedia((prev) => prev.filter((m) => m.id !== mediaId));
+      changedRef.current = true;
+      toast.success("Archivo eliminado");
+    } catch {
+      toast.error("Error al eliminar el archivo");
+    } finally {
+      setDeletingMediaId(null);
     }
   };
 
@@ -678,6 +732,96 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
               label="Producto destacado (aparece en inicio)"
             />
           </div>
+
+          {/* ── RECURSOS ── */}
+          <SectionTitle>Recursos</SectionTitle>
+
+          {!isEditing ? (
+            <p className="text-fg-6 text-xs py-2">Guarda la máquina primero para poder añadir recursos.</p>
+          ) : (
+            <div className="pb-2">
+              {/* Grid de archivos subidos */}
+              {internalMedia.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {internalMedia.map((item) => (
+                    <div key={item.id} className="relative group bg-surface-3 border border-border overflow-hidden aspect-square">
+                      {item.media_type === "image" ? (
+                        <img src={item.url} alt={item.title ?? item.file_name} className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-fg-5 p-2">
+                          <Film size={28} className="text-accent/70" />
+                          <span className="text-[9px] text-center truncate w-full px-1 text-fg-5">{item.file_name}</span>
+                        </div>
+                      )}
+
+                      {/* Overlay */}
+                      {deletingMediaId === item.id ? (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                          <Loader2 size={20} className="animate-spin text-white" />
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-semibold text-white bg-surface-4/80 hover:bg-surface-4 px-2 py-1 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {item.media_type === "video" ? "Ver / Descargar" : "Ver"}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMedia(item.id)}
+                            className="text-[10px] font-semibold text-white bg-red-700/80 hover:bg-red-600 px-2 py-1 transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Badge de tipo */}
+                      <span className="absolute bottom-1 right-1 opacity-60">
+                        {item.media_type === "video"
+                          ? <Film size={10} className="text-white" />
+                          : <ImageIcon size={10} className="text-white" />
+                        }
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Botón subir */}
+              <button
+                type="button"
+                onClick={() => mediaInputRef.current?.click()}
+                disabled={uploadingMedia}
+                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border-light
+                           text-fg-5 hover:text-accent hover:border-accent/40 text-xs transition-all disabled:opacity-50"
+              >
+                {uploadingMedia
+                  ? <><Loader2 size={13} className="animate-spin" /> Subiendo...</>
+                  : <><Upload size={13} /> Agregar imágenes o videos</>
+                }
+              </button>
+              <p className="text-fg-7 text-[10px] mt-1">
+                Imágenes: jpg, png, webp (máx. 10 MB) · Videos: mp4, mov, avi (máx. 500 MB)
+              </p>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-msvideo"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = "";
+                  handleUploadMedia(files);
+                }}
+              />
+            </div>
+          )}
 
         </form>
 
