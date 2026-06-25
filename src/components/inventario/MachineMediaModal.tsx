@@ -186,7 +186,7 @@ export default function MachineMediaModal({ machine, onClose }: Props) {
                           key={item.id}
                           item={item}
                           deleting={deletingId === item.id}
-                          onView={() => window.open(item.url, "_blank")}
+                          onView={() => setLightbox(item)}
                           onDelete={() => handleDelete(item.id)}
                         />
                       ))}
@@ -215,7 +215,7 @@ export default function MachineMediaModal({ machine, onClose }: Props) {
         </div>
       </div>
 
-      {/* Lightbox for images */}
+      {/* Lightbox (imágenes y videos) */}
       {lightbox && (
         <div
           className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
@@ -235,12 +235,24 @@ export default function MachineMediaModal({ machine, onClose }: Props) {
               <X size={20} />
             </button>
           </div>
-          <img
-            src={lightbox.url}
-            alt={lightbox.title ?? lightbox.file_name}
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+
+          {lightbox.media_type === "image" ? (
+            <img
+              src={lightbox.url}
+              alt={lightbox.title ?? lightbox.file_name}
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <video
+              src={lightbox.url}
+              controls
+              autoPlay
+              className="max-w-full max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+
           <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
             {lightbox.file_name}
           </p>
@@ -288,11 +300,18 @@ function MediaCard({
           className="w-full h-full object-contain p-1"
         />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-fg-5 p-3">
-          <Film size={32} className="text-accent/70" />
-          <span className="text-[10px] text-center break-all leading-tight text-fg-5 line-clamp-3">
-            {item.file_name}
-          </span>
+        <div className="w-full h-full relative">
+          <video
+            src={item.url}
+            preload="metadata"
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 flex items-center gap-1">
+            <Film size={9} className="text-white" />
+            <span className="text-[9px] text-white/80 max-w-[80px] truncate">{item.file_name}</span>
+          </div>
         </div>
       )}
 
