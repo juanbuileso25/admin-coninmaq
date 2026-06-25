@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Copy,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Copy, Images,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
 import MachineDrawer from "../../components/inventario/MachineDrawer";
+import MachineMediaModal from "../../components/inventario/MachineMediaModal";
 import type { Machine } from "../../types/machine";
 import { CATEGORIES } from "../../types/machine";
 
@@ -45,6 +46,7 @@ export default function MaquinariaNuevaPage() {
   const [editing,      setEditing]      = useState<Machine | null>(null);
   const [duplicating,  setDuplicating]  = useState<Machine | null>(null);
   const [deletingId,   setDeletingId]   = useState<string | null>(null);
+  const [mediaMachine, setMediaMachine] = useState<Machine | null>(null);
 
   /* Filtered list */
   const filtered = useMemo(() => {
@@ -288,6 +290,13 @@ export default function MaquinariaNuevaPage() {
                           <Pencil size={14} />
                         </button>
                         <button
+                          onClick={() => setMediaMachine(m)}
+                          className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-violet-400 hover:bg-violet-950/20 transition-all"
+                          title="Recursos"
+                        >
+                          <Images size={14} />
+                        </button>
+                        <button
                           onClick={() => openDuplicate(m)}
                           className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-sky-400 hover:bg-sky-950/20 transition-all"
                           title="Duplicar"
@@ -358,6 +367,14 @@ export default function MaquinariaNuevaPage() {
         onClose={closeDrawer}
         onSave={handleSave}
       />
+
+      {/* Modal de Recursos */}
+      {mediaMachine && (
+        <MachineMediaModal
+          machine={mediaMachine}
+          onClose={() => setMediaMachine(null)}
+        />
+      )}
     </div>
   );
 }
