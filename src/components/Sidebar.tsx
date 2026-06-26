@@ -22,6 +22,9 @@ import {
   MessageSquare,
   UserCheck,
   ReceiptText,
+  Banknote,
+  FileSpreadsheet,
+  GitMerge,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useAbility } from "../context/AbilityContext";
@@ -72,6 +75,16 @@ const NAV: NavGroup[] = [
       },
       { label: "Clientes",    to: "/clientes",    icon: ContactRound,  subject: "Client"  },
       {
+        label: "Pagos",
+        icon: Banknote,
+        subject: "Payments",
+        sub: [
+          { label: "Comprobantes",  to: "/pagos/comprobantes"  },
+          { label: "Extracto",      to: "/pagos/extracto"      },
+          { label: "Conciliación",  to: "/pagos/conciliacion"  },
+        ],
+      },
+      {
         label: "Renta",
         icon:  DollarSign,
         subject: "RentalRecord",
@@ -120,6 +133,9 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/agente/sesiones":     MessageSquare,
   "/agente/leads":        UserCheck,
   "/agente/cotizaciones": ReceiptText,
+  "/pagos/comprobantes":  Banknote,
+  "/pagos/extracto":      FileSpreadsheet,
+  "/pagos/conciliacion":  GitMerge,
 };
 
 interface SidebarProps {
@@ -137,6 +153,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     Renta:               location.pathname.startsWith("/renta"),
     "Comercio exterior": location.pathname.startsWith("/comercio-exterior"),
     "Agente IA":         location.pathname.startsWith("/agente"),
+    Pagos:               location.pathname.startsWith("/pagos"),
   }));
 
   const toggleMenu = (label: string) =>

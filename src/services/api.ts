@@ -85,6 +85,47 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+// ── Payments types ────────────────────────────────────────────────────────────
+
+export type PaymentStatus = "pending" | "matched";
+
+export type BankTransactionResponse = {
+  id: string;
+  account: string;
+  transaction_date: string;
+  amount: number;
+  description: string;
+  matched: boolean;
+  source_file: string;
+  uploaded_by: string;
+  created_at: string;
+};
+
+export type PaymentResponse = {
+  id: string;
+  file_url: string;
+  file_type: "image" | "pdf";
+  extracted_date: string | null;
+  extracted_amount: number | null;
+  payer_name: string | null;
+  whatsapp_sender: string;
+  whatsapp_sender_name: string | null;
+  status: PaymentStatus;
+  created_at: string;
+  matched_transaction: BankTransactionResponse | null;
+};
+
+export type ReconciliationItem = {
+  payment: PaymentResponse;
+  candidates: BankTransactionResponse[];
+};
+
+export type UploadSummary = {
+  imported: number;
+  skipped: number;
+  auto_matched: number;
+};
+
 // ── Bot types ──────────────────────────────────────────────────────────────────
 
 export type BotMessageResponse = {
@@ -528,6 +569,48 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ token, new_password }),
       }),
+  },
+  payments: {
+    list: (status?: string) => {
+      const qs = status ? `?status=${status}` : "";
+      return request<PaymentResponse[]>(`/payments/${qs}`);
+    },
+    get: (id: string) => request<PaymentResponse>(`/payments/${id}`),
+    update: (id: string, data: object) =>
+      request<PaymentResponse>(`/payments/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    match: (paymentId: string, txId: string) =>
+      request<PaymentResponse>(`/payments/${paymentId}/match/${txId}`, { method: "POST" }),
+    unmatch: (paymentId: string) =>
+      request<PaymentResponse>(`/payments/${paymentId}/match`, { method: "DELETE" }),
+    upload: (files: File[], payerName?: string, caption?: string) => {
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      if (payerName) form.append("payer_name", payerName);
+      if (caption)   form.append("caption", caption);
+      return request<PaymentResponse[]>("/payments/upload", { method: "POST", body: form });
+    },
+    reconciliation: () => request<ReconciliationItem[]>("/payments/reconciliation"),
+    reconciliationExport: async (fromDate: string, toDate: string): Promise<Blob> => {
+      const token = getToken();
+      const res = await fetch(
+        `${BASE_URL}/payments/reconciliation/export?from_date=${fromDate}&to_date=${toDate}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+      );
+      if (!res.ok) throw { status: res.status, detail: "Error generando reporte" };
+      return res.blob();
+    },
+    bankTransactions: {
+      list: (matched?: boolean) => {
+        const qs = matched !== undefined ? `?matched=${matched}` : "";
+        return request<BankTransactionResponse[]>(`/payments/bank-transactions/${qs}`);
+      },
+      upload: (file: File, filterDate?: string) => {
+        const form = new FormData();
+        form.append("file", file);
+        const qs = filterDate ? `?filter_date=${filterDate}` : "";
+        return request<UploadSummary>(`/payments/bank-transactions/upload${qs}`, { method: "POST", body: form });
+      },
+    },
   },
   bot: {
     metrics: () => request<BotMetrics>("/bot/metrics"),

@@ -15,6 +15,9 @@ import ResetPasswordPage    from "./pages/ResetPasswordPage";
 import ClientesPage         from "./pages/clientes/ClientesPage";
 import OnboardingPage       from "./pages/onboarding/OnboardingPage";
 import InfoMaquinasPage     from "./pages/comercio-exterior/InfoMaquinasPage";
+import ComprobantesPage    from "./pages/pagos/ComprobantesPage";
+import ExtractoPage        from "./pages/pagos/ExtractoPage";
+import ConciliacionPage    from "./pages/pagos/ConciliacionPage";
 import SesionesPage        from "./pages/agente/SesionesPage";
 import SesionDetailPage    from "./pages/agente/SesionDetailPage";
 import LeadsPage           from "./pages/agente/LeadsPage";
@@ -50,6 +53,12 @@ export default function App() {
         <Route path="/comercio-exterior" element={<Navigate to="/comercio-exterior/informacion-maquinas" replace />} />
         <Route path="/comercio-exterior/informacion-maquinas" element={<InfoMaquinasPage />} />
         <Route path="/clientes"    element={<ClientesPage />} />
+
+        {/* Pagos */}
+        <Route path="/pagos" element={<Navigate to="/pagos/comprobantes" replace />} />
+        <Route path="/pagos/comprobantes" element={<ComprobantesPage />} />
+        <Route path="/pagos/extracto"     element={<ExtractoPage />} />
+        <Route path="/pagos/conciliacion" element={<ConciliacionPage />} />
 
         {/* Agente IA */}
         <Route path="/agente" element={<Navigate to="/agente/sesiones" replace />} />
