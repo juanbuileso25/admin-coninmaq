@@ -58,8 +58,11 @@ export interface Machine {
   model:         string;
   slug:          string;
   description:   string;
-  price:         number;
-  show_price:    boolean;
+  sale_price:     number;
+  cost_price:     number;
+  tax_percentage: number;
+  tax_value:      number;
+  show_price:     boolean;
   warranty:      string;
   delivery_time: string;
   specs:         MachineSpec[];

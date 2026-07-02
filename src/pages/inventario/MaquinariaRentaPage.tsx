@@ -282,8 +282,8 @@ export default function MaquinariaRentaPage() {
 
                     {/* Precio */}
                     <td className="px-4 py-3">
-                      <p className={`text-sm font-semibold ${m.price === 0 ? "text-fg-5 italic" : "text-fg"}`}>
-                        {formatCOP(m.price)}
+                      <p className={`text-sm font-semibold ${m.sale_price === 0 ? "text-fg-5 italic" : "text-fg"}`}>
+                        {formatCOP(m.sale_price)}
                       </p>
                     </td>
 

@@ -17,7 +17,9 @@ const schema = yup.object({
   category:      yup.string().oneOf([...CATEGORIES]).required("Selecciona una categoría"),
   model:         yup.string().required("Campo obligatorio"),
   description:   yup.string().required("Campo obligatorio"),
-  price:         yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
+  sale_price:     yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
+  cost_price:     yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
+  tax_percentage: yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).max(100).default(0),
   show_price:    yup.boolean().default(false),
   warranty:      yup.string().default(""),
   delivery_time: yup.string().default(""),
@@ -134,9 +136,11 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
         brand:         source.brand,
         category:      source.category,
         model:         source.model,
-        description:   source.description,
-        price:         source.price,
-        show_price:    source.show_price,
+        description:    source.description,
+        sale_price:     source.sale_price,
+        cost_price:     source.cost_price,
+        tax_percentage: source.tax_percentage,
+        show_price:     source.show_price,
         warranty:      source.warranty,
         delivery_time: source.delivery_time,
         specs:         source.specs.map(({ label, value, icon }) => ({ label, value, icon: icon ?? "" })),
@@ -153,7 +157,7 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
       setPdfName(isDuplicating ? "" : (source.pdf_url ? source.pdf_url.split("/").pop() ?? "" : ""));
     } else if (open && !source) {
       const defaultId = machineTypes.find((t) => t.slug === defaultMachineTypeSlug)?.id;
-      reset({ specs: [], highlights: [], visible_web: true, featured: false, price: 0, machine_type_id: defaultId });
+      reset({ specs: [], highlights: [], visible_web: true, featured: false, sale_price: 0, cost_price: 0, tax_percentage: 0, machine_type_id: defaultId });
       setImages([]);
       setPdfName("");
     }
@@ -241,11 +245,15 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
     setSaving(true);
     try {
       const selectedType = machineTypes.find((t) => t.id === data.machine_type_id);
+      const tax_value = Math.round(((data.cost_price ?? 0) * (data.tax_percentage ?? 0)) / 100);
       const saved = await onSave({
         ...data,
-        category:        data.category as Machine["category"],
-        price:           data.price ?? 0,
-        specs:           data.specs ?? [],
+        category:       data.category as Machine["category"],
+        sale_price:     data.sale_price ?? 0,
+        cost_price:     data.cost_price ?? 0,
+        tax_percentage: data.tax_percentage ?? 0,
+        tax_value,
+        specs:          data.specs ?? [],
         highlights:      (data.highlights ?? []).map((h, i) => ({ text: h.text, order: i })),
         image_url:       isEditing ? (machine!.image_url || "") : "",
         pdf_url:         isEditing ? (machine!.pdf_url || "") : "",
@@ -531,12 +539,43 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Precio (COP)</Label>
+              <Label>Precio Costo (COP)</Label>
               <input
-                type="number" {...register("price")} placeholder="0"
-                className={`${FIELD_CLASS} ${errors.price ? ERROR_CLASS : ""}`}
+                type="number" {...register("cost_price")} placeholder="0"
+                className={`${FIELD_CLASS} ${errors.cost_price ? ERROR_CLASS : ""}`}
               />
-              {errors.price && <p className="text-red-400 text-[10px] mt-1">{errors.price.message}</p>}
+              {errors.cost_price && <p className="text-red-400 text-[10px] mt-1">{errors.cost_price.message}</p>}
+            </div>
+            <div>
+              <Label>% IVA</Label>
+              <input
+                type="number" {...register("tax_percentage")} placeholder="0"
+                className={`${FIELD_CLASS} ${errors.tax_percentage ? ERROR_CLASS : ""}`}
+              />
+              {errors.tax_percentage && <p className="text-red-400 text-[10px] mt-1">{errors.tax_percentage.message}</p>}
+            </div>
+          </div>
+
+          <div className="bg-surface-3 border border-border-light px-3.5 py-2.5 flex items-center justify-between">
+            <p className="text-fg-4 text-[11px] font-medium uppercase tracking-wider">Valor IVA (calculado)</p>
+            <p className="text-sm font-semibold text-fg">
+              {(() => {
+                const cp = Number(watch("cost_price") ?? 0);
+                const tp = Number(watch("tax_percentage") ?? 0);
+                const tv = Math.round((cp * tp) / 100);
+                return tv === 0 ? "$ 0" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(tv);
+              })()}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Precio Venta (COP)</Label>
+              <input
+                type="number" {...register("sale_price")} placeholder="0"
+                className={`${FIELD_CLASS} ${errors.sale_price ? ERROR_CLASS : ""}`}
+              />
+              {errors.sale_price && <p className="text-red-400 text-[10px] mt-1">{errors.sale_price.message}</p>}
             </div>
             <div>
               <Label>Garantía</Label>
