@@ -24,11 +24,13 @@ import LeadsPage           from "./pages/agente/LeadsPage";
 import LeadScorePage       from "./pages/agente/LeadScorePage";
 import CotizacionesPage    from "./pages/agente/CotizacionesPage";
 import ScoringConfigPage   from "./pages/ajustes/ScoringConfigPage";
+import QuotationPage       from "./pages/public/QuotationPage";
 
 export default function App() {
   return (
     <Routes>
-      {/* Public */}
+      {/* Páginas públicas (sin auth) */}
+      <Route path="/c/:quotationNumber" element={<QuotationPage />} />
       <Route path="/" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />

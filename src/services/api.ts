@@ -248,6 +248,31 @@ export type BotQuotationResponse = {
 };
 
 export type ManualQuotationItem = { machine_code: string; quantity: number; sale_price?: number; tax_value?: number };
+
+// ── Quotation page (public) ───────────────────────────────────────────────────
+export type QuotationMachineSpec      = { label: string; value: string; icon: string; order: number };
+export type QuotationMachineHighlight = { text: string; icon: string; order: number };
+export type QuotationMachineImage     = { url: string; is_primary: boolean; order: number };
+export type QuotationMachineMedia     = { url: string; media_type: string; title: string | null; order: number };
+export type QuotationMachine = {
+  code: string; model: string; brand: string; category: string;
+  description: string; pdf_url: string; image_url: string;
+  specs: QuotationMachineSpec[]; highlights: QuotationMachineHighlight[];
+  images: QuotationMachineImage[]; videos: QuotationMachineMedia[];
+};
+export type QuotationItem = {
+  producto: string; cantidad: number; precio_base: number;
+  codigo: string; sale_price: number; tax_value: number;
+  machine: QuotationMachine | null;
+};
+export type QuotationClient  = { name: string | null; email: string | null; company: string | null; phone_number: string | null };
+export type QuotationAdvisor = { name: string; email: string; phone: string; cargo: string };
+export type QuotationPageData = {
+  quotation_number: string; quotation_date: string | null; expires_at: string | null;
+  subtotal: number; iva_total: number; total: number; discount_total: number;
+  delivery_mode: string; status: string; pdf_url: string | null; page_url: string | null;
+  items: QuotationItem[]; client: QuotationClient | null; advisor: QuotationAdvisor | null;
+};
 export type ManualQuotationRequest = {
   client_name: string;
   client_email: string;
@@ -738,5 +763,9 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+  },
+  quotations: {
+    getPage: (quotationNumber: string) =>
+      request<QuotationPageData>(`/cotizacion/${quotationNumber}`),
   },
 };
