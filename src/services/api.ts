@@ -1,5 +1,4 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "https://api.coninmaqsas.com";
-const COTIZADOR_URL = import.meta.env.VITE_COTIZADOR_URL ?? "http://localhost:8000";
 
 const TOKEN_KEY = "coninmaq_token";
 const REFRESH_KEY = "coninmaq_refresh";
