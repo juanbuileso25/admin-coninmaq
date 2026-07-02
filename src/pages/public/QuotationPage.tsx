@@ -58,7 +58,6 @@ export default function QuotationPage() {
   const advisorName  = data.advisor?.name  ?? "Equipo Comercial";
   const advisorEmail = data.advisor?.email ?? "comercial@coninmaq.com";
   const advisorPhone = data.advisor?.phone ?? "+57 316 381 5694";
-  const waLink = `https://wa.me/573163815694?text=Hola%2C+me+interesa+la+cotizaci%C3%B3n+${data.quotation_number}`;
   const waAccept = `https://wa.me/573163815694?text=Hola%2C+quiero+avanzar+con+la+cotizaci%C3%B3n+${data.quotation_number}`;
 
   return (
