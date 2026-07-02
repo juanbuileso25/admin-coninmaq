@@ -20,10 +20,9 @@ function fmtDateShort(s: string | null): string {
   return `${d.getUTCDate()} ${MESES[d.getUTCMonth() + 1]?.slice(0, 3)} ${d.getUTCFullYear()}`;
 }
 
-function saludo(name: string | null): string {
+function primerNombre(name: string | null): string {
   if (!name) return "cliente";
-  const parts = name.trim().split(" ");
-  return `Sr. ${parts[0]}`;
+  return name.trim().split(" ")[0];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -76,11 +75,9 @@ export default function QuotationPage() {
         img, video { display: block; max-width: 100%; }
         a { color: inherit; }
 
-        .topbar { position: sticky; top: 0; z-index: 100; background: rgba(250,250,249,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-4); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; }
-        .topbar__brand { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; color: var(--black); }
-        .topbar__brand span { color: var(--yellow); }
+        .topbar { position: sticky; top: 0; z-index: 100; background: rgba(250,250,249,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-4); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 60px; }
+        .topbar__logo { height: 32px; width: auto; display: block; }
         .topbar__meta { font-size: 12px; color: var(--gray-2); }
-        .topbar__cta { background: var(--black); color: var(--white); font-size: 12px; font-weight: 600; letter-spacing: .5px; padding: 9px 20px; border-radius: 6px; text-decoration: none; white-space: nowrap; }
 
         .hero { display: grid; grid-template-columns: 1fr 1fr; min-height: 88vh; max-height: 860px; }
         .hero__left { background: var(--black); color: var(--white); display: flex; flex-direction: column; justify-content: flex-end; padding: 64px 56px; position: relative; overflow: hidden; }
@@ -154,42 +151,58 @@ export default function QuotationPage() {
         .s-brochure__dl { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; font-size: 13px; font-weight: 600; text-decoration: none; border-bottom: 2px solid var(--yellow); padding-bottom: 2px; }
 
         .s-investment { padding: 80px 0; background: var(--white); }
-        .s-investment__card { background: var(--black); border-radius: var(--radius); padding: 56px 56px 48px; color: var(--white); display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: start; }
-        .s-investment__row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 14px; color: rgba(255,255,255,.6); }
+        .s-investment__card { background: var(--black); border-radius: var(--radius); padding: 64px 64px 56px; color: var(--white); display: grid; grid-template-columns: 1fr auto; gap: 56px; align-items: start; }
+        .s-investment__row { display: flex; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 16px; color: rgba(255,255,255,.6); }
         .s-investment__row span:last-child { font-weight: 500; color: rgba(255,255,255,.85); }
-        .s-investment__total { display: flex; justify-content: space-between; align-items: baseline; padding: 24px 0 0; gap: 16px; }
-        .s-investment__total-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,.4); margin-bottom: 8px; }
-        .s-investment__total-amount { font-size: clamp(32px,4vw,48px); font-weight: 900; color: var(--yellow); line-height: 1; letter-spacing: -1px; }
-        .s-investment__total-currency { font-size: 16px; color: rgba(255,255,255,.4); font-weight: 400; margin-left: 6px; }
-        .s-investment__right { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
-        .s-investment__validity-note { font-size: 12px; color: rgba(255,255,255,.35); line-height: 1.7; max-width: 200px; text-align: right; }
-        .s-investment__cta { display: inline-block; background: var(--yellow); color: var(--black); font-size: 13px; font-weight: 700; padding: 16px 28px; border-radius: 8px; text-decoration: none; text-align: center; }
+        .s-investment__total { display: flex; justify-content: space-between; align-items: baseline; padding: 28px 0 0; gap: 16px; }
+        .s-investment__total-label { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,.4); margin-bottom: 10px; }
+        .s-investment__total-amount { font-size: clamp(40px,5vw,64px); font-weight: 900; color: var(--yellow); line-height: 1; letter-spacing: -2px; }
+        .s-investment__total-currency { font-size: 20px; color: rgba(255,255,255,.4); font-weight: 400; margin-left: 8px; }
+        .s-investment__right { display: flex; flex-direction: column; gap: 20px; padding-top: 8px; }
+        .s-investment__validity-note { font-size: 13px; color: rgba(255,255,255,.35); line-height: 1.7; max-width: 220px; text-align: right; }
+        .s-investment__cta { display: inline-block; background: var(--yellow); color: var(--black); font-size: 14px; font-weight: 700; padding: 18px 32px; border-radius: 8px; text-decoration: none; text-align: center; }
 
-        .s-footer { border-top: 1px solid var(--gray-4); background: var(--bg); padding: 48px 0; }
-        .s-footer__inner { max-width: 960px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; }
-        .s-footer__brand { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
-        .s-footer__brand span { color: var(--yellow); }
-        .s-footer__links { display: flex; gap: 32px; flex-wrap: wrap; }
-        .s-footer__link { font-size: 13px; color: var(--gray-2); text-decoration: none; }
-        .s-footer__copy { font-size: 12px; color: var(--gray-3); width: 100%; padding-top: 24px; border-top: 1px solid var(--gray-4); }
+        .s-footer { background: var(--black); padding: 64px 0 40px; }
+        .s-footer__inner { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+        .s-footer__top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 40px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .s-footer__logo { height: 36px; width: auto; display: block; margin-bottom: 16px; }
+        .s-footer__tagline { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.7; max-width: 260px; }
+        .s-footer__col-title { font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 16px; }
+        .s-footer__links { display: flex; flex-direction: column; gap: 10px; }
+        .s-footer__link { font-size: 13px; color: rgba(255,255,255,.55); text-decoration: none; transition: color .15s; }
+        .s-footer__link:hover { color: var(--yellow); }
+        .s-footer__wa { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; background: #25D366; color: #fff; font-size: 12px; font-weight: 600; padding: 10px 18px; border-radius: 6px; text-decoration: none; }
+        .s-footer__bottom { padding-top: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .s-footer__copy { font-size: 12px; color: rgba(255,255,255,.25); }
+        .s-footer__legal { font-size: 12px; color: rgba(255,255,255,.25); }
 
         @media (max-width: 768px) {
           .topbar { padding: 0 20px; } .topbar__meta { display: none; }
           .hero { grid-template-columns: 1fr; min-height: auto; max-height: none; }
-          .hero__left { padding: 48px 28px 40px; min-height: 60vh; }
-          .hero__right { padding: 36px 28px; }
-          .s-about__grid { grid-template-columns: 1fr; gap: 40px; }
-          .s-features__grid { grid-template-columns: 1fr 1fr; }
+          .hero__left { padding: 48px 24px 40px; min-height: 55vh; }
+          .hero__right { padding: 32px 24px; }
+          .container { padding: 0 20px; }
+          .s-carta { padding: 56px 0; } .s-carta__inner { padding: 0 20px; }
+          .s-about { padding: 56px 0; } .s-about__grid { grid-template-columns: 1fr; gap: 36px; }
+          .s-features { padding: 56px 0; } .s-features__grid { grid-template-columns: 1fr 1fr; }
+          .s-gallery { padding: 56px 0; }
           .s-gallery__grid { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
           .s-gallery__item:first-child { grid-row: auto; }
-          .s-investment__card { grid-template-columns: 1fr; padding: 36px 28px; }
-          .s-investment__total-amount { font-size: 36px; }
+          .s-video { padding: 56px 0; }
+          .s-brochure { padding: 56px 0; }
+          .s-investment { padding: 56px 0; }
+          .s-investment__card { grid-template-columns: 1fr; padding: 36px 24px; }
+          .s-investment__total-amount { font-size: 44px; }
           .s-investment__right { align-items: flex-start; }
           .s-investment__validity-note { text-align: left; max-width: none; }
+          .s-footer__inner { padding: 0 20px; }
+          .s-footer__top { flex-direction: column; gap: 32px; }
+          .s-footer__tagline { max-width: none; }
         }
         @media (max-width: 480px) {
           .s-features__grid { grid-template-columns: 1fr; }
           .s-gallery__grid { grid-template-columns: 1fr; }
+          .hero__machine { font-size: 36px; }
         }
       `}</style>
 
@@ -197,9 +210,10 @@ export default function QuotationPage() {
 
       {/* Topbar */}
       <nav className="topbar">
-        <a className="topbar__brand" href="#">CONIN<span>MAQ</span></a>
+        <a href="https://coninmaqsas.com" target="_blank" rel="noopener">
+          <img className="topbar__logo" src="/logo.png" alt="CONINMAQ" />
+        </a>
         <span className="topbar__meta">{data.quotation_number} · Válida hasta {fmtDateShort(data.expires_at)}</span>
-        <a className="topbar__cta" href={waLink} target="_blank" rel="noopener">Hablar con un asesor →</a>
       </nav>
 
       {/* Hero */}
@@ -220,7 +234,9 @@ export default function QuotationPage() {
                 <p className="hero__greeting">
                   Estimado/a <strong>{data.client.name ?? "cliente"}</strong>,<br /><br />
                   A continuación encontrará nuestra propuesta comercial preparada especialmente para usted —
-                  con condiciones de inversión, ficha técnica y todo lo que necesita para tomar su decisión con confianza.
+                  con condiciones de inversión, ficha técnica detallada y toda la información que necesita
+                  para tomar su decisión con confianza. Nuestro equipo comercial está disponible para
+                  acompañarle en cada paso del proceso.
                 </p>
               )}
               <div>
@@ -265,7 +281,7 @@ export default function QuotationPage() {
       <section className="s-carta">
         <div className="s-carta__inner">
           <p className="s-carta__date">Medellín, {fmtDate(data.quotation_date)}</p>
-          <p className="s-carta__saludo">Estimado {saludo(data.client?.name ?? null)},</p>
+          <p className="s-carta__saludo">Estimado/a {primerNombre(data.client?.name ?? null)},</p>
           <div className="s-carta__body">
             <p>Agradecemos sinceramente su interés en nuestros equipos LONKING. En CONINMAQ S.A.S llevamos más de 10 años siendo líderes en maquinaria pesada en Colombia, respaldando a empresas constructoras, mineras e industriales con equipos de alta calidad, soporte técnico especializado y acompañamiento postventa a nivel nacional.</p>
             <p>Nuestra misión es entregar soluciones confiables y eficientes que impulsen la productividad de cada obra. Cada equipo LONKING que comercializamos cuenta con garantía oficial, capacitación al operador y red de repuestos disponible en todo el país.</p>
@@ -450,13 +466,31 @@ export default function QuotationPage() {
       {/* Footer */}
       <footer className="s-footer">
         <div className="s-footer__inner">
-          <span className="s-footer__brand">CONIN<span>MAQ</span></span>
-          <nav className="s-footer__links">
-            <a className="s-footer__link" href="tel:+573163815694">+57 316 381 5694</a>
-            <a className="s-footer__link" href="mailto:comercial@coninmaq.com">comercial@coninmaq.com</a>
-            <a className="s-footer__link" href="https://coninmaqsas.com" target="_blank" rel="noopener">coninmaqsas.com</a>
-          </nav>
-          <p className="s-footer__copy">© {new Date().getFullYear()} CONINMAQ S.A.S · Todos los derechos reservados</p>
+          <div className="s-footer__top">
+            <div>
+              <img className="s-footer__logo" src="/logo-yellow-r.png" alt="CONINMAQ" />
+              <p className="s-footer__tagline">Líderes en maquinaria pesada LONKING en Colombia. Más de 10 años respaldando constructoras, mineras e industriales.</p>
+            </div>
+            <div>
+              <p className="s-footer__col-title">Contacto</p>
+              <nav className="s-footer__links">
+                <a className="s-footer__link" href={`tel:${advisorPhone}`}>{advisorPhone}</a>
+                <a className="s-footer__link" href={`mailto:${advisorEmail}`}>{advisorEmail}</a>
+                <a className="s-footer__link" href="https://coninmaqsas.com" target="_blank" rel="noopener">coninmaqsas.com</a>
+              </nav>
+            </div>
+            <div>
+              <p className="s-footer__col-title">¿Listo para avanzar?</p>
+              <a className="s-footer__wa" href={waAccept} target="_blank" rel="noopener">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Quiero este equipo
+              </a>
+            </div>
+          </div>
+          <div className="s-footer__bottom">
+            <p className="s-footer__copy">© {new Date().getFullYear()} CONINMAQ S.A.S · Todos los derechos reservados</p>
+            <p className="s-footer__legal">Medellín, Colombia</p>
+          </div>
         </div>
       </footer>
     </>

@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, UserCheck, TrendingUp, Hammer } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import { api, type BotLeadResponse, type BotMetrics } from "../../services/api";
+
+function TierBadge({ tier }: { tier?: string | null }) {
+  if (!tier) return <span className="text-fg-6">—</span>;
+  const styles = ({
+    A:      "bg-green-500/15 text-green-400 border-green-500/30",
+    B:      "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    no_fit: "bg-red-500/15 text-red-400 border-red-500/30",
+  } as Record<string, string>)[tier] ?? "bg-surface-3 text-fg-5 border-border";
+  const label = tier === "no_fit" ? "No Fit" : `Tier ${tier}`;
+  return (
+    <span className={`px-2 py-0.5 text-[11px] font-bold border rounded-sm ${styles}`}>
+      {label}
+    </span>
+  );
+}
 
 const COP = (n: number) =>
   n ? `$${n.toLocaleString("es-CO")}` : "—";
 
 export default function LeadsPage() {
+  const navigate = useNavigate();
   const [leads, setLeads]         = useState<BotLeadResponse[]>([]);
   const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
   const [total, setTotal]         = useState(0);
@@ -15,6 +32,7 @@ export default function LeadsPage() {
   const [search, setSearch]       = useState("");
   const [industryFilter, setIndustry] = useState("");
   const [typeFilter, setType]     = useState("");
+  const [tierFilter, setTier]     = useState("");
 
   const PAGE_SIZE = 20;
 
@@ -24,6 +42,7 @@ export default function LeadsPage() {
       const res = await api.bot.leads({
         industry: industryFilter || undefined,
         client_type: typeFilter || undefined,
+        tier: tierFilter || undefined,
         page,
         page_size: PAGE_SIZE,
       });
@@ -34,7 +53,7 @@ export default function LeadsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [page, industryFilter, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [page, industryFilter, typeFilter, tierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     api.bot.metrics().then(setMetrics).catch(() => null);
@@ -94,6 +113,16 @@ export default function LeadsPage() {
           <option value="minorista">Minorista</option>
           <option value="mayorista">Mayorista</option>
         </select>
+        <select
+          className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
+          value={tierFilter}
+          onChange={e => { setTier(e.target.value); setPage(1); }}
+        >
+          <option value="">Tier: todos</option>
+          <option value="A">Tier A</option>
+          <option value="B">Tier B</option>
+          <option value="no_fit">No Fit</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -101,7 +130,7 @@ export default function LeadsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              {["Nombre", "Empresa", "Teléfono", "Email", "Tipo", "Equipo de interés", "Presupuesto", "Industria", "Fecha"].map(h => (
+              {["Tier", "Nombre", "Empresa", "Teléfono", "Email", "Cotización", "Equipo de interés", "Presupuesto", "Industria", "Fecha"].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -110,19 +139,30 @@ export default function LeadsPage() {
             {loading && <tr><td colSpan={9} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
             {!loading && filtered.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-fg-5">Sin leads</td></tr>}
             {!loading && filtered.map(l => (
-              <tr key={l.id} className="border-b border-border hover:bg-surface-3 transition-colors">
+              <tr
+                key={l.id}
+                className="border-b border-border hover:bg-surface-3 transition-colors cursor-pointer"
+                onClick={() => navigate(`/agente/leads/${l.id}/score`)}
+              >
+                <td className="px-4 py-3 whitespace-nowrap"><TierBadge tier={l.score?.tier_final} /></td>
                 <td className="px-4 py-3 text-fg font-medium">{l.name ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4">{l.company ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4 font-mono text-xs">{l.phone_number ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4">{l.email ?? "—"}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${
-                    l.client_type === "mayorista"
-                      ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
-                      : "bg-blue-500/15 text-blue-400 border-blue-500/30"
-                  }`}>
-                    {l.client_type}
-                  </span>
+                  {l.latest_quotation ? (
+                    <a
+                      href={l.latest_quotation.pdf_url ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="text-accent text-xs hover:underline font-mono"
+                    >
+                      {l.latest_quotation.quotation_number}
+                    </a>
+                  ) : (
+                    <span className="text-fg-6">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-fg-4">{l.equipment_interest ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4">{l.budget_text ? `${l.budget_text} (${COP(l.budget_value)})` : "—"}</td>
