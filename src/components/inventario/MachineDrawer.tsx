@@ -245,7 +245,7 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
     setSaving(true);
     try {
       const selectedType = machineTypes.find((t) => t.id === data.machine_type_id);
-      const tax_value = Math.round(((data.cost_price ?? 0) * (data.tax_percentage ?? 0)) / 100);
+      const tax_value = Math.round(((data.sale_price ?? 0) * (data.tax_percentage ?? 0)) / 100);
       const saved = await onSave({
         ...data,
         category:       data.category as Machine["category"],
@@ -547,29 +547,6 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
               {errors.cost_price && <p className="text-red-400 text-[10px] mt-1">{errors.cost_price.message}</p>}
             </div>
             <div>
-              <Label>% IVA</Label>
-              <input
-                type="number" {...register("tax_percentage")} placeholder="0"
-                className={`${FIELD_CLASS} ${errors.tax_percentage ? ERROR_CLASS : ""}`}
-              />
-              {errors.tax_percentage && <p className="text-red-400 text-[10px] mt-1">{errors.tax_percentage.message}</p>}
-            </div>
-          </div>
-
-          <div className="bg-surface-3 border border-border-light px-3.5 py-2.5 flex items-center justify-between">
-            <p className="text-fg-4 text-[11px] font-medium uppercase tracking-wider">Valor IVA (calculado)</p>
-            <p className="text-sm font-semibold text-fg">
-              {(() => {
-                const cp = Number(watch("cost_price") ?? 0);
-                const tp = Number(watch("tax_percentage") ?? 0);
-                const tv = Math.round((cp * tp) / 100);
-                return tv === 0 ? "$ 0" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(tv);
-              })()}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
               <Label>Precio Venta (COP)</Label>
               <input
                 type="number" {...register("sale_price")} placeholder="0"
@@ -577,9 +554,45 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
               />
               {errors.sale_price && <p className="text-red-400 text-[10px] mt-1">{errors.sale_price.message}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>% IVA</Label>
+              <input
+                type="number" {...register("tax_percentage")} placeholder="0"
+                className={`${FIELD_CLASS} ${errors.tax_percentage ? ERROR_CLASS : ""}`}
+              />
+              {errors.tax_percentage && <p className="text-red-400 text-[10px] mt-1">{errors.tax_percentage.message}</p>}
+            </div>
+            <div>
+              <Label>Valor IVA (calculado)</Label>
+              <div className="bg-surface-3 border border-border-light px-3.5 py-2.5 text-sm font-semibold text-fg">
+                {(() => {
+                  const sp = Number(watch("sale_price") ?? 0);
+                  const tp = Number(watch("tax_percentage") ?? 0);
+                  const tv = Math.round((sp * tp) / 100);
+                  return tv === 0 ? "$ 0" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(tv);
+                })()}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Garantía</Label>
               <input {...register("warranty")} placeholder="12 meses o 2.000 horas" className={FIELD_CLASS} />
+            </div>
+            <div>
+              <Label>Total con IVA</Label>
+              <div className="bg-surface-3 border border-border-light px-3.5 py-2.5 text-sm font-semibold text-accent">
+                {(() => {
+                  const sp = Number(watch("sale_price") ?? 0);
+                  const tp = Number(watch("tax_percentage") ?? 0);
+                  const total = sp + Math.round((sp * tp) / 100);
+                  return total === 0 ? "$ 0" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(total);
+                })()}
+              </div>
             </div>
           </div>
 
