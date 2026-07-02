@@ -6,6 +6,7 @@ export type Subjects =
   | "Dashboard"
   | "Inventory"
   | "Quote"
+  | "Lead"
   | "RentalRecord"
   | "Client"
   | "User"

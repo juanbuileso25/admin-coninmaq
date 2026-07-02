@@ -1,4 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "https://api.coninmaqsas.com";
+const COTIZADOR_URL = import.meta.env.VITE_COTIZADOR_URL ?? "http://localhost:8000";
 
 const TOKEN_KEY = "coninmaq_token";
 const REFRESH_KEY = "coninmaq_refresh";
@@ -126,6 +127,51 @@ export type UploadSummary = {
   auto_matched: number;
 };
 
+// ── Scoring types ─────────────────────────────────────────────────────────────
+
+export interface LeadScoreDetail {
+  display_name: string;
+  captured_value: string | null;
+  label: string;
+  points: number;
+  tier: "A" | "B" | "C";
+}
+
+export interface LeadScoreResponse {
+  id: number;
+  lead_id: number;
+  product_code: string | null;
+  detail: Record<string, LeadScoreDetail>;
+  raw_score: number;
+  final_score: number;
+  tier_final: "A" | "B" | "no_fit";
+  tier_a_threshold: number;
+  tier_b_threshold: number;
+  calculated_at: string;
+}
+
+export interface ScoringRule {
+  id: number;
+  tier: "A" | "B" | "C";
+  condition_type: string;
+  value_min: number | null;
+  value_max: number | null;
+  values_list: string[] | null;
+  points: number;
+  label: string;
+}
+
+export interface ScoringVariable {
+  id: number;
+  name: string;
+  display_name: string;
+  source: string;
+  data_key: string;
+  is_active: boolean;
+  sort_order: number;
+  rules: ScoringRule[];
+}
+
 // ── Bot types ──────────────────────────────────────────────────────────────────
 
 export type BotMessageResponse = {
@@ -157,6 +203,14 @@ export type BotSessionDetail = BotSessionListItem & {
   messages: BotMessageResponse[];
 };
 
+export interface BotQuotationSummary {
+  quotation_number: string;
+  total: number;
+  pdf_url: string | null;
+  email_sent: boolean;
+  created_at: string;
+}
+
 export type BotLeadResponse = {
   id: number;
   session_id: string;
@@ -171,6 +225,8 @@ export type BotLeadResponse = {
   budget_text: string | null;
   budget_value: number;
   created_at: string;
+  score?: LeadScoreResponse | null;
+  latest_quotation?: BotQuotationSummary | null;
 };
 
 export type BotQuotationResponse = {
@@ -183,11 +239,35 @@ export type BotQuotationResponse = {
   discount_total: number;
   total: number;
   pdf_url: string | null;
+  page_url: string | null;
   delivery_mode: string;
   email_sent: boolean;
   status: string;
   expires_at: string | null;
   created_at: string;
+};
+
+export type ManualQuotationItem = { machine_code: string; quantity: number; sale_price?: number; tax_value?: number };
+export type ManualQuotationRequest = {
+  client_name: string;
+  client_email: string;
+  client_company?: string;
+  client_type?: string;
+  lead_id?: number;
+  items: ManualQuotationItem[];
+  delivery_mode: string;
+  send_email: boolean;
+};
+export type ManualQuotationResponse = {
+  quotation_number: string;
+  subtotal: number;
+  iva_total: number;
+  discount_total: number;
+  total: number;
+  page_url: string;
+  pdf_url: string | null;
+  email_sent: boolean;
+  not_found: string[];
 };
 
 export type PhaseCount = { phase: string; count: number };
@@ -223,9 +303,9 @@ export type MachineImageResponse     = { id: string; url: string; is_primary: bo
 export type MachineMediaResponse     = { id: string; url: string; file_name: string; media_type: "image" | "video"; title: string | null; file_size: number | null; order: number; uploaded_at: string };
 export type MachineResponse = {
   id: string; code: string; brand: string; category: string; model: string; slug: string;
-  description: string; price: number; show_price: boolean; warranty: string; delivery_time: string;
-  image_url: string; pdf_url: string; visible_web: boolean; featured: boolean;
-  machine_type_id: number; machine_type: MachineTypeResponse;
+  description: string; price: number; sale_price: number; tax_value: number; show_price: boolean;
+  warranty: string; delivery_time: string; image_url: string; pdf_url: string;
+  visible_web: boolean; featured: boolean; machine_type_id: number; machine_type: MachineTypeResponse;
   specs: MachineSpecResponse[]; highlights: MachineHighlightResponse[]; images: MachineImageResponse[];
   year: number | null; hours_used: string | null; condition: string | null; inspection: string | null;
   created_at: string; updated_at: string;
@@ -628,14 +708,23 @@ export const api = {
       request<BotSessionDetail>(`/bot/sessions/${sessionId}`, { method: "PATCH", body: JSON.stringify(data) }),
     sendMessage: (sessionId: string, content: string) =>
       request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
-    leads: (params?: { industry?: string; client_type?: string; page?: number; page_size?: number }) => {
+    leads: (params?: { industry?: string; client_type?: string; tier?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
-      if (params?.industry)   qs.set("industry",    params.industry);
+      if (params?.industry)    qs.set("industry",    params.industry);
       if (params?.client_type) qs.set("client_type", params.client_type);
+      if (params?.tier)        qs.set("tier",        params.tier);
       if (params?.page)        qs.set("page",        String(params.page));
       if (params?.page_size)   qs.set("page_size",   String(params.page_size));
       return request<PaginatedResponse<BotLeadResponse>>(`/bot/leads?${qs}`);
     },
+    leadScore: (leadId: number) =>
+      request<BotLeadResponse>(`/bot/leads/${leadId}/score`),
+    scoringVariables: () =>
+      request<ScoringVariable[]>("/bot/scoring/variables"),
+    patchScoringVariable: (id: number, data: Partial<Pick<ScoringVariable, "display_name" | "is_active" | "sort_order">>) =>
+      request<ScoringVariable>(`/bot/scoring/variables/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    patchScoringRule: (id: number, data: Partial<Pick<ScoringRule, "points" | "label" | "value_min" | "value_max" | "values_list">>) =>
+      request<ScoringRule>(`/bot/scoring/rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     quotations: (params?: { status?: string; delivery_mode?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.status)        qs.set("status",        params.status);
@@ -644,5 +733,10 @@ export const api = {
       if (params?.page_size)     qs.set("page_size",     String(params.page_size));
       return request<PaginatedResponse<BotQuotationResponse>>(`/bot/quotations?${qs}`);
     },
+    createManualQuotation: (data: ManualQuotationRequest) =>
+      request<ManualQuotationResponse>("/quotations/generate", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 };

@@ -21,7 +21,9 @@ import ConciliacionPage    from "./pages/pagos/ConciliacionPage";
 import SesionesPage        from "./pages/agente/SesionesPage";
 import SesionDetailPage    from "./pages/agente/SesionDetailPage";
 import LeadsPage           from "./pages/agente/LeadsPage";
+import LeadScorePage       from "./pages/agente/LeadScorePage";
 import CotizacionesPage    from "./pages/agente/CotizacionesPage";
+import ScoringConfigPage   from "./pages/ajustes/ScoringConfigPage";
 
 export default function App() {
   return (
@@ -47,7 +49,6 @@ export default function App() {
         <Route path="/renta" element={<Navigate to="/renta/horometro" replace />} />
         <Route path="/renta/horometro" element={<HorometroPage />} />
 
-        <Route path="/cotizaciones" element={<PlaceholderPage title="Cotizaciones" />} />
 
         {/* Comercio exterior */}
         <Route path="/comercio-exterior" element={<Navigate to="/comercio-exterior/informacion-maquinas" replace />} />
@@ -60,17 +61,27 @@ export default function App() {
         <Route path="/pagos/extracto"     element={<ExtractoPage />} />
         <Route path="/pagos/conciliacion" element={<ConciliacionPage />} />
 
+        {/* Comercial */}
+        <Route path="/comercial" element={<Navigate to="/comercial/leads" replace />} />
+        <Route path="/comercial/leads"                  element={<LeadsPage />} />
+        <Route path="/comercial/leads/:leadId/score"    element={<LeadScorePage />} />
+        <Route path="/comercial/cotizaciones"           element={<CotizacionesPage />} />
+
         {/* Agente IA */}
         <Route path="/agente" element={<Navigate to="/agente/sesiones" replace />} />
-        <Route path="/agente/sesiones"              element={<SesionesPage />} />
-        <Route path="/agente/sesiones/:sessionId"   element={<SesionDetailPage />} />
-        <Route path="/agente/leads"                 element={<LeadsPage />} />
-        <Route path="/agente/cotizaciones"          element={<CotizacionesPage />} />
+        <Route path="/agente/sesiones"            element={<SesionesPage />} />
+        <Route path="/agente/sesiones/:sessionId" element={<SesionDetailPage />} />
+
+        {/* Redirects de rutas antiguas */}
+        <Route path="/agente/leads"                element={<Navigate to="/comercial/leads" replace />} />
+        <Route path="/agente/leads/:leadId/score"  element={<Navigate to="/comercial/leads" replace />} />
+        <Route path="/agente/cotizaciones"         element={<Navigate to="/comercial/cotizaciones" replace />} />
 
         <Route path="/usuarios"     element={<UsersPage />} />
         <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
-        <Route path="/ajustes/roles"  element={<RolesPage />} />
-        <Route path="/ajustes/areas"  element={<AreasPage />} />
+        <Route path="/ajustes/roles"    element={<RolesPage />} />
+        <Route path="/ajustes/areas"    element={<AreasPage />} />
+        <Route path="/ajustes/scoring"  element={<ScoringConfigPage />} />
       </Route>
 
       {/* Fallback */}

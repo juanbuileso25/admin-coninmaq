@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, FileText, Download } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, FileText, Download, Plus, ExternalLink } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import { api, type BotQuotationResponse, type BotMetrics } from "../../services/api";
+import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
 const DELIVERY_LABELS: Record<string, string> = {
-  chat:   "Chat",
+  chat:   "Solo link",
   email:  "Email",
-  ambas:  "Chat + Email",
+  ambas:  "Email + link",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -25,6 +26,7 @@ export default function CotizacionesPage() {
   const [search, setSearch]       = useState("");
   const [statusFilter, setStatus] = useState("");
   const [modeFilter, setMode]     = useState("");
+  const [drawerOpen, setDrawer]   = useState(false);
 
   const PAGE_SIZE = 20;
 
@@ -60,11 +62,24 @@ export default function CotizacionesPage() {
   const pages = Math.ceil(total / PAGE_SIZE) || 1;
 
   return (
+    <>
+    <NuevaCotizacionDrawer
+      open={drawerOpen}
+      onClose={() => setDrawer(false)}
+      onCreated={() => { setPage(1); load(); }}
+    />
     <div className="space-y-5">
 
-      <div>
-        <h1 className="text-fg font-bold text-xl">Cotizaciones del bot</h1>
-        <p className="text-fg-5 text-sm mt-0.5">Cotizaciones generadas por Coni</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-fg font-bold text-xl">Cotizaciones</h1>
+          <p className="text-fg-5 text-sm mt-0.5">Generadas por Coni o manualmente</p>
+        </div>
+        <button
+          onClick={() => setDrawer(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-accent text-black text-sm font-semibold hover:bg-accent/90 transition-colors shrink-0">
+          <Plus size={14} /> Nueva cotización
+        </button>
       </div>
 
       {metrics && (
@@ -113,7 +128,7 @@ export default function CotizacionesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              {["N° Cotización", "Sesión", "Subtotal", "Descuento", "Total", "Entrega", "Email", "Estado", "Vence", "Fecha", "PDF"].map(h => (
+              {["N° Cotización", "Sesión", "Subtotal", "Total", "Entrega", "Email", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -126,7 +141,6 @@ export default function CotizacionesPage() {
                 <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
                 <td className="px-4 py-3 font-mono text-xs text-fg-5">{q.session_id.slice(0, 20)}…</td>
                 <td className="px-4 py-3 text-fg-4">{COP(q.subtotal)}</td>
-                <td className="px-4 py-3 text-red-400">{q.discount_total ? `-${COP(q.discount_total)}` : "—"}</td>
                 <td className="px-4 py-3 text-fg font-semibold">{COP(q.total)}</td>
                 <td className="px-4 py-3 text-fg-4">{DELIVERY_LABELS[q.delivery_mode] ?? q.delivery_mode}</td>
                 <td className="px-4 py-3 text-center">
@@ -149,14 +163,22 @@ export default function CotizacionesPage() {
                 <td className="px-4 py-3">
                   {q.pdf_url
                     ? (
-                      <a
-                        href={q.pdf_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <a href={q.pdf_url} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1 text-accent hover:text-accent/80 text-xs transition-colors"
-                        title="Descargar PDF"
-                      >
+                        title="Descargar PDF">
                         <Download size={13} /> PDF
+                      </a>
+                    )
+                    : <span className="text-fg-6 text-xs">—</span>
+                  }
+                </td>
+                <td className="px-4 py-3">
+                  {q.page_url
+                    ? (
+                      <a href={q.page_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs transition-colors"
+                        title="Ver cotización web">
+                        <ExternalLink size={13} /> Ver
                       </a>
                     )
                     : <span className="text-fg-6 text-xs">—</span>
@@ -185,5 +207,6 @@ export default function CotizacionesPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -25,6 +25,7 @@ import {
   Banknote,
   FileSpreadsheet,
   GitMerge,
+  Star,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useAbility } from "../context/AbilityContext";
@@ -64,13 +65,21 @@ const NAV: NavGroup[] = [
           { label: "Renta",            to: "/inventario/renta"            },
         ],
       },
-      { label: "Cotizaciones", to: "/cotizaciones", icon: FileText,      subject: "Quote"   },
       {
         label: "Comercio exterior",
         icon:  Globe,
         subject: "ForeignTrade",
         sub: [
           { label: "Info maquinas", to: "/comercio-exterior/informacion-maquinas" },
+        ],
+      },
+      {
+        label: "Comercial",
+        icon: FileText,
+        subject: "Quote",
+        sub: [
+          { label: "Leads",        to: "/comercial/leads"        },
+          { label: "Cotizaciones", to: "/comercial/cotizaciones" },
         ],
       },
       { label: "Clientes",    to: "/clientes",    icon: ContactRound,  subject: "Client"  },
@@ -98,13 +107,11 @@ const NAV: NavGroup[] = [
     section: "Sistema",
     items: [
       {
-        label: "Agente IA",
+        label: "Coni",
         icon: Bot,
         subject: "BotSession",
         sub: [
-          { label: "Conversaciones", to: "/agente/sesiones"      },
-          { label: "Leads",          to: "/agente/leads"         },
-          { label: "Cotizaciones",   to: "/agente/cotizaciones"  },
+          { label: "Conversaciones", to: "/agente/sesiones" },
         ],
       },
       { label: "Usuarios",  to: "/usuarios", icon: Users,    subject: "User"     },
@@ -113,8 +120,9 @@ const NAV: NavGroup[] = [
         icon: Settings,
         subject: "Settings",
         sub: [
-          { label: "Roles", to: "/ajustes/roles" },
-          { label: "Áreas", to: "/ajustes/areas" },
+          { label: "Roles",            to: "/ajustes/roles"    },
+          { label: "Áreas",            to: "/ajustes/areas"    },
+          { label: "Calificación ICP", to: "/ajustes/scoring"  },
         ],
       },
     ],
@@ -130,12 +138,13 @@ const SUB_ICONS: Record<string, React.ElementType> = {
   "/ajustes/roles":               ShieldCheck,
   "/ajustes/areas":               Building2,
   "/comercio-exterior/informacion-maquinas": Info,
-  "/agente/sesiones":     MessageSquare,
-  "/agente/leads":        UserCheck,
-  "/agente/cotizaciones": ReceiptText,
+  "/agente/sesiones":        MessageSquare,
+  "/comercial/leads":        UserCheck,
+  "/comercial/cotizaciones": ReceiptText,
   "/pagos/comprobantes":  Banknote,
   "/pagos/extracto":      FileSpreadsheet,
   "/pagos/conciliacion":  GitMerge,
+  "/ajustes/scoring":     Star,
 };
 
 interface SidebarProps {
@@ -152,8 +161,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     Inventario:          location.pathname.startsWith("/inventario"),
     Renta:               location.pathname.startsWith("/renta"),
     "Comercio exterior": location.pathname.startsWith("/comercio-exterior"),
+    Comercial:           location.pathname.startsWith("/comercial"),
     "Agente IA":         location.pathname.startsWith("/agente"),
     Pagos:               location.pathname.startsWith("/pagos"),
+    Ajustes:             location.pathname.startsWith("/ajustes"),
   }));
 
   const toggleMenu = (label: string) =>
