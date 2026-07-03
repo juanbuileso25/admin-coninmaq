@@ -172,6 +172,7 @@ export default function QuotationPage() {
         .s-footer__top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 40px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,.1); }
         .s-footer__logo { height: 36px; width: auto; display: block; margin-bottom: 16px; }
         .s-footer__tagline { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.7; max-width: 260px; }
+        .s-footer__headline { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; margin-bottom: 8px; max-width: 260px; }
         .s-footer__col-title { font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 16px; }
         .s-footer__links { display: flex; flex-direction: column; gap: 10px; }
         .s-footer__link { font-size: 13px; color: rgba(255,255,255,.55); text-decoration: none; transition: color .15s; }
@@ -423,7 +424,7 @@ export default function QuotationPage() {
             <div className="section-header__num">6</div>
             <div>
               <p className="section-header__label">Propuesta económica</p>
-              <h2 className="section-header__title">Costo de la inversión</h2>
+              <h2 className="section-header__title">Inversión</h2>
             </div>
           </div>
           <div className="s-investment__card">
@@ -513,7 +514,8 @@ export default function QuotationPage() {
           <div className="s-footer__top">
             <div>
               <img className="s-footer__logo" src="/logo-yellow-r.png" alt="CONINMAQ" />
-              <p className="s-footer__tagline">Líderes en maquinaria pesada LONKING en Colombia. Más de 10 años respaldando constructoras, mineras e industriales.</p>
+              <p className="s-footer__headline">#1 en posventa en Colombia</p>
+              <p className="s-footer__tagline">Soluciones en maquinaria pesada con respaldo, potencia y tecnología de clase mundial. Equipos nuevos, repuestos y soporte especializado para construcción, minería e industria.</p>
             </div>
             <div>
               <p className="s-footer__col-title">Contacto</p>
