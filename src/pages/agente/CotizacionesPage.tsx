@@ -17,6 +17,11 @@ const STATUS_COLORS: Record<string, string> = {
   sent:      "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  generated: "Generada",
+  sent:      "Enviada",
+};
+
 export default function CotizacionesPage() {
   const [quotes, setQuotes]       = useState<BotQuotationResponse[]>([]);
   const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
@@ -128,19 +133,26 @@ export default function CotizacionesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              {["N° Cotización", "Sesión", "Subtotal", "Total", "Entrega", "Email", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
+              {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
-            {!loading && filtered.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones</td></tr>}
+            {loading && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
+            {!loading && filtered.length === 0 && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones</td></tr>}
             {!loading && filtered.map(q => (
               <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
-                <td className="px-4 py-3 font-mono text-xs text-fg-5">{q.session_id.slice(0, 20)}…</td>
+                <td className="px-4 py-3">
+                  {q.lead_name
+                    ? <span className="text-fg text-xs">{q.lead_name}</span>
+                    : <span className="text-fg-6 text-xs">—</span>
+                  }
+                  {q.lead_email && <p className="text-fg-5 text-[11px]">{q.lead_email}</p>}
+                </td>
                 <td className="px-4 py-3 text-fg-4">{COP(q.subtotal)}</td>
+                <td className="px-4 py-3 text-fg-4">{q.iva_total > 0 ? COP(q.iva_total) : <span className="text-fg-6">—</span>}</td>
                 <td className="px-4 py-3 text-fg font-semibold">{COP(q.total)}</td>
                 <td className="px-4 py-3 text-fg-4">{DELIVERY_LABELS[q.delivery_mode] ?? q.delivery_mode}</td>
                 <td className="px-4 py-3 text-center">
@@ -151,7 +163,7 @@ export default function CotizacionesPage() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${STATUS_COLORS[q.status] ?? "bg-surface-4 text-fg-5 border-border"}`}>
-                    {q.status}
+                    {STATUS_LABELS[q.status] ?? q.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-fg-5 text-xs whitespace-nowrap">

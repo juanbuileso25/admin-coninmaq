@@ -232,9 +232,12 @@ export type BotQuotationResponse = {
   id: number;
   session_id: string;
   lead_id: number | null;
+  lead_email: string | null;
+  lead_name: string | null;
   quotation_number: string;
   items: object[] | null;
   subtotal: number;
+  iva_total: number;
   discount_total: number;
   total: number;
   pdf_url: string | null;
