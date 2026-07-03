@@ -23,6 +23,7 @@ import SesionDetailPage    from "./pages/agente/SesionDetailPage";
 import LeadsPage           from "./pages/agente/LeadsPage";
 import LeadScorePage       from "./pages/agente/LeadScorePage";
 import CotizacionesPage    from "./pages/agente/CotizacionesPage";
+import CalificacionesPage  from "./pages/comercial/CalificacionesPage";
 import ScoringConfigPage   from "./pages/ajustes/ScoringConfigPage";
 import QuotationPage       from "./pages/public/QuotationPage";
 
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/comercial/leads"                  element={<LeadsPage />} />
         <Route path="/comercial/leads/:leadId/score"    element={<LeadScorePage />} />
         <Route path="/comercial/cotizaciones"           element={<CotizacionesPage />} />
+        <Route path="/comercial/calificaciones"         element={<CalificacionesPage />} />
 
         {/* Agente IA */}
         <Route path="/agente" element={<Navigate to="/agente/sesiones" replace />} />

@@ -85,6 +85,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+// ── Reviews types ─────────────────────────────────────────────────────────────
+
+export type ReviewResponse = {
+  id:                  number;
+  q1_attention:        number;
+  q2_information:      number;
+  q3_response_time:    number;
+  q4_quality:          number;
+  q5_understanding:    number;
+  q6_value:            number;
+  q7_overall:          number;
+  q8_nps:              number;
+  comment:             string | null;
+  reviewer_name:       string | null;
+  reviewer_role:       string | null;
+  average_score:       number;
+  show_as_testimonial: boolean;
+  created_at:          string;
+};
+
 // ── Payments types ────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "pending" | "matched";
@@ -769,5 +789,15 @@ export const api = {
   quotations: {
     getPage: (quotationNumber: string) =>
       request<QuotationPageData>(`/cotizacion/${quotationNumber}`),
+  },
+  reviews: {
+    list: (params?: { page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.page)      qs.set("page",      String(params.page));
+      if (params?.page_size) qs.set("page_size", String(params.page_size));
+      return request<PaginatedResponse<ReviewResponse>>(`/reviews/?${qs}`);
+    },
+    patch: (id: number, data: { show_as_testimonial?: boolean; reviewer_name?: string; reviewer_role?: string }) =>
+      request<ReviewResponse>(`/reviews/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   },
 };

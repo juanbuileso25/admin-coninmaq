@@ -142,7 +142,7 @@ export default function LeadsPage() {
               <tr
                 key={l.id}
                 className="border-b border-border hover:bg-surface-3 transition-colors cursor-pointer"
-                onClick={() => navigate(`/agente/leads/${l.id}/score`)}
+                onClick={() => navigate(`/comercial/leads/${l.id}/score`)}
               >
                 <td className="px-4 py-3 whitespace-nowrap"><TierBadge tier={l.score?.tier_final} /></td>
                 <td className="px-4 py-3 text-fg font-medium">{l.name ?? "—"}</td>
