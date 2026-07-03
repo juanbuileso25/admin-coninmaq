@@ -79,13 +79,8 @@ export default function QuotationPage() {
         .topbar__meta { font-size: 12px; color: var(--gray-2); }
 
         .hero { display: grid; grid-template-columns: 1fr 1fr; min-height: 88vh; max-height: 860px; }
-        .hero__left { background: var(--black); color: var(--white); display: flex; flex-direction: column; justify-content: flex-end; padding: 64px 56px; position: relative; overflow: hidden; }
-        .hero__left::before { content: ''; position: absolute; inset: 0; background: url('${heroImage}') center/cover no-repeat; opacity: .18; }
-        .hero__eyebrow { position: relative; z-index: 1; font-size: 10px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--yellow); margin-bottom: 20px; }
-        .hero__machine { position: relative; z-index: 1; font-size: clamp(40px,5vw,68px); font-weight: 900; line-height: 1.05; margin-bottom: 24px; }
-        .hero__pills { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
-        .hero__pill { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.15); border-radius: 100px; padding: 5px 14px; }
-        .hero__pill strong { color: var(--white); font-weight: 600; }
+        .hero__left { position: relative; overflow: hidden; background: var(--gray-4); }
+        .hero__left img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .hero__right { background: var(--white); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 52px; }
         .hero__greeting { font-size: 14px; color: var(--gray-2); line-height: 1.8; margin-bottom: 32px; }
         .hero__greeting strong { color: var(--black); font-weight: 600; }
@@ -161,6 +156,17 @@ export default function QuotationPage() {
         .s-investment__validity-note { font-size: 13px; color: rgba(255,255,255,.35); line-height: 1.7; max-width: 220px; text-align: right; }
         .s-investment__cta { display: inline-block; background: var(--yellow); color: var(--black); font-size: 14px; font-weight: 700; padding: 18px 32px; border-radius: 8px; text-decoration: none; text-align: center; }
 
+        .s-conditions { padding: 80px 0; background: var(--bg); }
+        .s-conditions__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 56px; }
+        .s-conditions__card { background: var(--white); border: 1px solid var(--gray-4); border-radius: var(--radius); padding: 32px 36px; }
+        .s-conditions__card-title { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-3); margin-bottom: 14px; }
+        .s-conditions__card-body { font-size: 14px; color: var(--gray-1); line-height: 1.8; }
+        .s-conditions__warranty { background: var(--black); border-radius: var(--radius); padding: 48px 56px; }
+        .s-conditions__warranty-title { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--yellow); margin-bottom: 12px; }
+        .s-conditions__warranty-heading { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .s-conditions__warranty-body { font-size: 15px; color: rgba(255,255,255,.7); line-height: 1.9; }
+        .s-conditions__warranty-body strong { color: var(--yellow); font-weight: 600; }
+
         .s-footer { background: var(--black); padding: 64px 0 40px; }
         .s-footer__inner { max-width: 960px; margin: 0 auto; padding: 0 32px; }
         .s-footer__top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 40px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,.1); }
@@ -178,7 +184,7 @@ export default function QuotationPage() {
         @media (max-width: 768px) {
           .topbar { padding: 0 20px; } .topbar__meta { display: none; }
           .hero { grid-template-columns: 1fr; min-height: auto; max-height: none; }
-          .hero__left { padding: 48px 24px 40px; min-height: 55vh; }
+          .hero__left { min-height: 55vw; }
           .hero__right { padding: 32px 24px; }
           .container { padding: 0 20px; }
           .s-carta { padding: 56px 0; } .s-carta__inner { padding: 0 20px; }
@@ -194,6 +200,8 @@ export default function QuotationPage() {
           .s-investment__total-amount { font-size: 44px; }
           .s-investment__right { align-items: flex-start; }
           .s-investment__validity-note { text-align: left; max-width: none; }
+          .s-conditions__grid { grid-template-columns: 1fr; gap: 16px; }
+          .s-conditions__warranty { padding: 32px 24px; }
           .s-footer__inner { padding: 0 20px; }
           .s-footer__top { flex-direction: column; gap: 32px; }
           .s-footer__tagline { max-width: none; }
@@ -219,13 +227,7 @@ export default function QuotationPage() {
       {firstMachine && (
         <div className="hero">
           <div className="hero__left">
-            <p className="hero__eyebrow">Cotización exclusiva · Lonking Colombia</p>
-            <h1 className="hero__machine">{firstMachine.category}<br />{firstMachine.code}</h1>
-            <div className="hero__pills">
-              {firstMachine.specs.slice(0, 4).map((s, i) => (
-                <span key={i} className="hero__pill"><strong>{s.value}</strong> {s.label}</span>
-              ))}
-            </div>
+            {heroImage && <img src={heroImage} alt={firstMachine.code} />}
           </div>
           <div className="hero__right">
             <div>
@@ -310,6 +312,9 @@ export default function QuotationPage() {
                 <div>
                   <p className="section-header__label">El equipo</p>
                   <h2 className="section-header__title">{item.machine.brand} {item.machine.code}</h2>
+                  {item.machine.model && (
+                    <p style={{ fontSize: 14, color: "var(--gray-2)", marginTop: 4 }}>{item.machine.model}</p>
+                  )}
                 </div>
               </div>
               <div className="s-about__grid">
@@ -458,6 +463,46 @@ export default function QuotationPage() {
                 Quiero este equipo →
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Condiciones y Garantía */}
+      <section className="s-conditions">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-header__num">7</div>
+            <div>
+              <p className="section-header__label">Términos</p>
+              <h2 className="section-header__title">Condiciones y garantía</h2>
+            </div>
+          </div>
+          <div className="s-conditions__grid">
+            <div className="s-conditions__card">
+              <p className="s-conditions__card-title">Condiciones de entrega</p>
+              <p className="s-conditions__card-body">
+                Toda entrega de maquinaria a realizar por fuera de las instalaciones de CONINMAQ tiene un costo adicional
+                no incluido en el precio cotizado. Este será definido por el Departamento de Servicios una vez
+                se concrete el lugar de entrega.
+              </p>
+            </div>
+            <div className="s-conditions__card">
+              <p className="s-conditions__card-title">Soporte al producto</p>
+              <p className="s-conditions__card-body">
+                Contamos con soporte postventa a nivel nacional, con técnicos especializados y disponibilidad
+                de repuestos originales LONKING en todo el país.
+              </p>
+            </div>
+          </div>
+          <div className="s-conditions__warranty">
+            <p className="s-conditions__warranty-title">Garantía comercial LONKING</p>
+            <p className="s-conditions__warranty-heading">Garantía de 12 meses o 2.000 horas de operación</p>
+            <p className="s-conditions__warranty-body">
+              Cubre la reparación y reposición de partes o componentes por defectos de diseño, fabricación o ensamble
+              a expensas del fabricante, durante un período previamente establecido, bajo condiciones normales de
+              operación y mantenimiento. <strong>Lo primero que ocurra</strong>, siempre y cuando los mantenimientos
+              y la compra de repuestos sea directamente con <strong>CONINMAQ S.A.S.</strong>
+            </p>
           </div>
         </div>
       </section>
