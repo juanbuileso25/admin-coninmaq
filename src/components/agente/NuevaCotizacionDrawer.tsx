@@ -12,16 +12,29 @@ type LineItem = {
   nombre:     string;
   cantidad:   number;
   sale_price: number;
-  tax_value:  number;
+  tax_rate:   number;   // porcentaje como decimal, ej. 0.19
+  tax_value:  number;   // calculado: sale_price * tax_rate
 };
+
+interface PrefillLead {
+  lead_id:       number;
+  session_id?:   string | null;
+  name?:         string | null;
+  email?:        string | null;
+  company?:      string | null;
+  tax_id?:       string | null;
+  address?:      string | null;
+  machine_code?: string | null;
+}
 
 interface Props {
   open:      boolean;
   onClose:   () => void;
   onCreated: () => void;
+  prefill?:  PrefillLead;
 }
 
-export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Props) {
+export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefill }: Props) {
   // Máquinas
   const [machines, setMachines]       = useState<MachineResponse[]>([]);
   const [loadingMachines, setLM]      = useState(false);
@@ -38,12 +51,15 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Datos del cliente
-  const [clienteNombre,  setNombre]  = useState("");
-  const [clienteEmail,   setEmail]   = useState("");
-  const [clienteEmpresa, setEmpresa] = useState("");
+  const [clienteNombre,    setNombre]    = useState("");
+  const [clienteEmail,     setEmail]     = useState("");
+  const [clienteEmpresa,   setEmpresa]   = useState("");
+  const [clienteTaxId,  setTaxId]  = useState("");
+  const [clienteAddress, setAddress] = useState("");
 
   // Opciones
   const [modoEntrega, setModo]      = useState<"email" | "chat" | "ambas">("email");
+  const [sendToWa, setSendToWa]     = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState<ManualQuotationResponse | null>(null);
 
@@ -51,18 +67,41 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
     if (!open) return;
     setLM(true);
     api.machines.list({ machine_type: "new" })
-      .then(data => { setMachines(data); setShowCatalog(true); })
+      .then(data => {
+        setMachines(data);
+        // Si hay prefill con código de máquina, preseleccionarla
+        if (prefill?.machine_code) {
+          const found = data.find(m => m.code === prefill.machine_code);
+          if (found) {
+            const sp   = found.sale_price ?? 0;
+            const tv   = found.tax_value  ?? 0;
+            const rate = sp > 0 ? tv / sp : 0.19;
+            setItems([{ codigo: found.code, nombre: found.model, cantidad: 1, sale_price: sp, tax_rate: rate, tax_value: tv }]);
+            setShowCatalog(false);
+          } else {
+            setShowCatalog(true);
+          }
+        } else {
+          setShowCatalog(true);
+        }
+      })
       .catch(() => toast.error("No se pudo cargar el catálogo"))
       .finally(() => setLM(false));
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) {
-      setItems([]); setNombre(""); setEmail(""); setEmpresa("");
-      setModo("email"); setResult(null); setMSearch(""); setShowCatalog(false);
+      setItems([]); setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
+      setModo("email"); setSendToWa(true); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
+    } else if (prefill) {
+      if (prefill.name)    setNombre(prefill.name);
+      if (prefill.email)   setEmail(prefill.email);
+      if (prefill.company) setEmpresa(prefill.company);
+      if (prefill.tax_id)  setTaxId(prefill.tax_id);
+      if (prefill.address) setAddress(prefill.address);
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Buscar clientes con debounce
   useEffect(() => {
@@ -92,7 +131,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
 
   const clearClient = () => {
     setSelectedClient(null);
-    setNombre(""); setEmail(""); setEmpresa("");
+    setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
   };
 
   // Catálogo
@@ -103,7 +142,10 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
   const addMachine = (m: MachineResponse) => {
     setItems(prev => {
       if (prev.length > 0) return prev;
-      return [{ codigo: m.code, nombre: m.model, cantidad: 1, sale_price: m.sale_price ?? 0, tax_value: m.tax_value ?? 0 }];
+      const sp = m.sale_price ?? 0;
+      const tv = m.tax_value  ?? 0;
+      const rate = sp > 0 ? tv / sp : 0.19;
+      return [{ codigo: m.code, nombre: m.model, cantidad: 1, sale_price: sp, tax_rate: rate, tax_value: tv }];
     });
     setShowCatalog(false);
     setMSearch("");
@@ -114,9 +156,15 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
     setItems(prev => prev.map(i => i.codigo === codigo ? { ...i, cantidad: qty } : i));
   };
 
-  const updatePrice = (codigo: string, field: "sale_price" | "tax_value", raw: string) => {
-    setItems(prev => prev.map(i => i.codigo === codigo ? { ...i, [field]: parseCOP(raw) } : i));
+  const updateSalePrice = (codigo: string, raw: string) => {
+    const sp = parseCOP(raw);
+    setItems(prev => prev.map(i =>
+      i.codigo === codigo
+        ? { ...i, sale_price: sp, tax_value: Math.round(sp * i.tax_rate) }
+        : i
+    ));
   };
+
 
   const removeItem = (codigo: string) => setItems(prev => prev.filter(i => i.codigo !== codigo));
 
@@ -124,26 +172,42 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
   const iva      = items.reduce((acc, i) => acc + i.tax_value  * i.cantidad, 0);
   const total    = subtotal + iva;
 
+  const fromLead = !!prefill?.session_id;
+
   const submit = async () => {
     if (!clienteNombre.trim()) return toast.error("Ingresa el nombre del contacto");
-    if (modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
+    if (!fromLead && modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
     if (items.length === 0) return toast.error("Agrega al menos un equipo");
 
     setSubmitting(true);
     try {
+      const entrega = fromLead ? "chat" : modoEntrega;
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
         client_company: clienteEmpresa.trim() || undefined,
+        lead_id:        prefill?.lead_id,
         items: items.map(i => ({
           machine_code: i.codigo,
           quantity:     i.cantidad,
           sale_price:   i.sale_price,
           tax_value:    i.tax_value,
         })),
-        delivery_mode: modoEntrega,
-        send_email:    modoEntrega === "email" || modoEntrega === "ambas",
+        delivery_mode: entrega,
+        send_email:    entrega === "email" || entrega === "ambas",
       });
+
+      // Enviar link al WhatsApp de la conversación si aplica
+      if (fromLead && sendToWa && prefill?.session_id && res.page_url) {
+        try {
+          await api.bot.sendMessage(
+            prefill.session_id,
+            `Hola${clienteNombre.trim() ? `, ${clienteNombre.trim().split(" ")[0]}` : ""}! 🎉 Su cotización está lista. Puede verla aquí:\n\n${res.page_url}`
+          );
+        } catch {
+          toast.warning("Cotización generada, pero no se pudo enviar al WhatsApp");
+        }
+      }
       setResult(res);
       onCreated();
       if (res.not_found.length > 0)
@@ -273,17 +337,20 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
                           <div className="grid grid-cols-3 gap-2">
                             <div>
                               <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">Valor venta</label>
-                              <input className="w-full bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
+                              <input
+                                className="w-full bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
                                 value={fmtInput(item.sale_price)}
-                                onChange={e => updatePrice(item.codigo, "sale_price", e.target.value)}
-                                placeholder="0" />
+                                onChange={e => updateSalePrice(item.codigo, e.target.value)}
+                                placeholder="0"
+                              />
                             </div>
                             <div>
-                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">IVA</label>
-                              <input className="w-full bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
-                                value={fmtInput(item.tax_value)}
-                                onChange={e => updatePrice(item.codigo, "tax_value", e.target.value)}
-                                placeholder="0" />
+                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">
+                                IVA {Math.round(item.tax_rate * 100)}%
+                              </label>
+                              <div className="w-full bg-surface-2 border border-border text-fg-4 text-xs px-2 py-1.5 select-none">
+                                {COP(item.tax_value)}
+                              </div>
                             </div>
                             <div>
                               <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">A pagar</label>
@@ -300,7 +367,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
                         <span>Subtotal</span><span>{COP(subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-fg-4">
-                        <span>IVA</span><span>{COP(iva)}</span>
+                        <span>IVA ({items.length === 1 ? `${Math.round(items[0].tax_rate * 100)}%` : "mixto"})</span>
+                        <span>{COP(iva)}</span>
                       </div>
                       <div className="flex justify-between text-sm text-fg font-semibold border-t border-border pt-1.5 mt-1.5">
                         <span>Total</span><span>{COP(total)}</span>
@@ -384,7 +452,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
                   </div>
                   <div>
                     <label className="text-fg-4 text-xs mb-1.5 block">
-                      Email {modoEntrega !== "chat" ? "*" : "(opcional)"}
+                      Email {!fromLead && modoEntrega !== "chat" ? "*" : "(opcional)"}
                     </label>
                     <input type="email"
                       className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
@@ -392,24 +460,51 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated }: Prop
                       value={clienteEmail} onChange={e => setEmail(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-fg-4 text-xs mb-1.5 block">Empresa (opcional)</label>
+                    <label className="text-fg-4 text-xs mb-1.5 block">Razón social (opcional)</label>
                     <input className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
                       placeholder="Nombre de la empresa"
                       value={clienteEmpresa} onChange={e => setEmpresa(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-fg-4 text-xs mb-1.5 block">NIT (opcional)</label>
+                    <input className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                      placeholder="900.123.456-7"
+                      value={clienteTaxId} onChange={e => setTaxId(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-fg-4 text-xs mb-1.5 block">Dirección (opcional)</label>
+                    <input className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                      placeholder="Calle 123 # 45-67, Ciudad"
+                      value={clienteAddress} onChange={e => setAddress(e.target.value)} />
                   </div>
                 </div>
               </section>
 
               {/* Entrega */}
-              <section>
-                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                <select className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
-                  value={modoEntrega} onChange={e => setModo(e.target.value as "email" | "chat" | "ambas")}>
-                  <option value="email">Enviar por email</option>
-                  <option value="chat">Solo generar (link)</option>
-                  <option value="ambas">Email + link</option>
-                </select>
-              </section>
+              {fromLead ? (
+                <section>
+                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={sendToWa}
+                      onChange={e => setSendToWa(e.target.checked)}
+                      className="w-4 h-4 accent-accent"
+                    />
+                    <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
+                  </label>
+                </section>
+              ) : (
+                <section>
+                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
+                  <select className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
+                    value={modoEntrega} onChange={e => setModo(e.target.value as "email" | "chat" | "ambas")}>
+                    <option value="email">Enviar por email</option>
+                    <option value="chat">Solo generar (link)</option>
+                    <option value="ambas">Email + link</option>
+                  </select>
+                </section>
+              )}
 
             </div>
 

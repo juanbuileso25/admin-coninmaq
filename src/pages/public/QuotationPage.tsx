@@ -234,7 +234,7 @@ export default function QuotationPage() {
             <div>
               {data.client && (
                 <p className="hero__greeting">
-                  Estimado/a <strong>{data.client.name ?? "cliente"}</strong>,<br /><br />
+                  Estimado/a <strong>{data.client.representative ?? data.client.name ?? "cliente"}</strong>,<br /><br />
                   A continuación encontrará nuestra propuesta comercial preparada especialmente para usted —
                   con condiciones de inversión, ficha técnica detallada y toda la información que necesita
                   para tomar su decisión con confianza. Nuestro equipo comercial está disponible para
@@ -244,8 +244,26 @@ export default function QuotationPage() {
               <div>
                 {data.client?.company && (
                   <div className="hero__detail">
-                    <span className="hero__detail-label">Empresa</span>
+                    <span className="hero__detail-label">Razón social</span>
                     <span className="hero__detail-value">{data.client.company}</span>
+                  </div>
+                )}
+                {data.client?.tax_id && (
+                  <div className="hero__detail">
+                    <span className="hero__detail-label">NIT</span>
+                    <span className="hero__detail-value">{data.client.tax_id}</span>
+                  </div>
+                )}
+                {data.client?.address && (
+                  <div className="hero__detail">
+                    <span className="hero__detail-label">Dirección</span>
+                    <span className="hero__detail-value">{data.client.address}</span>
+                  </div>
+                )}
+                {data.client?.representative && (
+                  <div className="hero__detail">
+                    <span className="hero__detail-label">Representante</span>
+                    <span className="hero__detail-value">{data.client.representative}</span>
                   </div>
                 )}
                 <div className="hero__detail">
@@ -283,7 +301,7 @@ export default function QuotationPage() {
       <section className="s-carta">
         <div className="s-carta__inner">
           <p className="s-carta__date">Medellín, {fmtDate(data.quotation_date)}</p>
-          <p className="s-carta__saludo">Estimado/a {primerNombre(data.client?.name ?? null)},</p>
+          <p className="s-carta__saludo">Estimado/a {primerNombre(data.client?.representative ?? data.client?.name ?? null)},</p>
           <div className="s-carta__body">
             <p>Agradecemos sinceramente su interés en nuestros equipos LONKING. En CONINMAQ S.A.S llevamos más de 10 años siendo líderes en maquinaria pesada en Colombia, respaldando a empresas constructoras, mineras e industriales con equipos de alta calidad, soporte técnico especializado y acompañamiento postventa a nivel nacional.</p>
             <p>Nuestra misión es entregar soluciones confiables y eficientes que impulsen la productividad de cada obra. Cada equipo LONKING que comercializamos cuenta con garantía oficial, capacitación al operador y red de repuestos disponible en todo el país.</p>

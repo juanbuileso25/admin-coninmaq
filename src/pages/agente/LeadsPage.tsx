@@ -144,7 +144,15 @@ export default function LeadsPage() {
                 className="border-b border-border hover:bg-surface-3 transition-colors cursor-pointer"
                 onClick={() => navigate(`/comercial/leads/${l.id}/score`)}
               >
-                <td className="px-4 py-3 whitespace-nowrap"><TierBadge tier={l.score?.tier_final} /></td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex flex-col gap-0.5">
+                    {l.score?.final_score != null
+                      ? <span className="font-mono font-bold text-base text-fg leading-none">{l.score.final_score} <span className="text-fg-5 text-xs font-normal">/ 20</span></span>
+                      : <span className="text-fg-6 text-sm">—</span>
+                    }
+                    <TierBadge tier={l.score?.tier_final} />
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-fg font-medium">{l.name ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4">{l.company ?? "—"}</td>
                 <td className="px-4 py-3 text-fg-4 font-mono text-xs">{l.phone_number ?? "—"}</td>

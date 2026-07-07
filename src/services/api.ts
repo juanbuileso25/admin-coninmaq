@@ -243,6 +243,11 @@ export type BotLeadResponse = {
   industry: string | null;
   budget_text: string | null;
   budget_value: number;
+  rut_nit: string | null;
+  rut_razon_social: string | null;
+  rut_direccion: string | null;
+  rut_representante: string | null;
+  rut_received: boolean;
   created_at: string;
   score?: LeadScoreResponse | null;
   latest_quotation?: BotQuotationSummary | null;
@@ -287,7 +292,7 @@ export type QuotationItem = {
   codigo: string; sale_price: number; tax_value: number;
   machine: QuotationMachine | null;
 };
-export type QuotationClient  = { name: string | null; email: string | null; company: string | null; phone_number: string | null };
+export type QuotationClient  = { name: string | null; email: string | null; company: string | null; phone_number: string | null; tax_id: string | null; address: string | null; representative: string | null };
 export type QuotationAdvisor = { name: string; email: string; phone: string; cargo: string };
 export type QuotationPageData = {
   quotation_number: string; quotation_date: string | null; expires_at: string | null;
