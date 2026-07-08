@@ -143,15 +143,13 @@ export default function PedidosMaquinasPage() {
             icon={<AlertCircle size={18} />}
             label="Saldo por cobrar"
             value={String(stats.pendingBalance)}
-            sub={debtFilter ? "click para limpiar filtro" : "click para filtrar"}
-            active={debtFilter}
-            onClick={() => setDebtFilter((v) => !v)}
+            sub="pedidos con anticipo, saldo pendiente"
           />
           <StatCard
             icon={<CircleDollarSign size={18} />}
             label="Deuda restante"
             value={fmtUSD(stats.remainingDebt)}
-            sub={debtFilter ? "click para limpiar filtro" : "click para filtrar"}
+            sub={debtFilter ? "▶ activo — click para quitar" : "click para ver pedidos"}
             active={debtFilter}
             onClick={() => setDebtFilter((v) => !v)}
           />
