@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { es } from "react-day-picker/locale";
 import { CalendarDays, X } from "lucide-react";
@@ -34,21 +35,51 @@ function toIso(date: Date): string {
 export default function DatePicker({
   value, onChange, placeholder = "dd/mm/aaaa", label, error, disabled = false,
 }: DatePickerProps) {
-  const [open, setOpen]         = useState(false);
-  const [month, setMonth]       = useState<Date>(parseDate(value) ?? new Date());
-  const containerRef            = useRef<HTMLDivElement>(null);
-  const selected                = parseDate(value);
+  const [open, setOpen]               = useState(false);
+  const [month, setMonth]             = useState<Date>(parseDate(value) ?? new Date());
+  const [calendarStyle, setCalendarStyle] = useState<React.CSSProperties>({});
+  const buttonRef                     = useRef<HTMLButtonElement>(null);
+  const calendarRef                   = useRef<HTMLDivElement>(null);
+  const selected                      = parseDate(value);
+
+  // Posicionar el portal bajo el botón
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setCalendarStyle({
+      position: "fixed",
+      top:      rect.bottom + 4,
+      left:     rect.left,
+      zIndex:   9999,
+    });
+  }, [open]);
 
   // Cerrar al hacer click fuera
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        calendarRef.current && !calendarRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Cerrar al hacer scroll/resize
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
   }, [open]);
 
   // Sincronizar mes visible cuando cambia el valor externo
@@ -67,17 +98,17 @@ export default function DatePicker({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative">
       {label && (
         <label className="block text-xs font-medium text-fg-4 mb-1.5">{label}</label>
       )}
 
-      {/* Input visible */}
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen((v) => !v)}
-        className={`w-full flex items-center gap-2 bg-surface-3 border px-3.5 py-2.5 text-sm text-left transition-colors
+        className={`w-full flex items-center gap-2 bg-surface-3 border rounded-sm px-4 py-3 text-sm text-left transition-colors
           ${error   ? "border-red-500/60" : open ? "border-accent/60" : "border-border hover:border-border-light"}
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
@@ -86,10 +117,7 @@ export default function DatePicker({
           {selected ? formatDisplay(selected) : placeholder}
         </span>
         {selected && !disabled && (
-          <span
-            onClick={handleClear}
-            className="p-0.5 text-fg-6 hover:text-fg transition-colors cursor-pointer"
-          >
+          <span onClick={handleClear} className="p-0.5 text-fg-6 hover:text-fg transition-colors cursor-pointer">
             <X size={12} />
           </span>
         )}
@@ -97,9 +125,8 @@ export default function DatePicker({
 
       {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
 
-      {/* Calendario desplegable */}
-      {open && (
-        <div className="absolute z-50 mt-1 bg-surface-2 border border-border shadow-lg left-0">
+      {open && createPortal(
+        <div ref={calendarRef} style={calendarStyle} className="bg-surface-2 border border-border shadow-lg">
           <DayPicker
             mode="single"
             selected={selected}
@@ -109,29 +136,30 @@ export default function DatePicker({
             locale={es}
             showOutsideDays
             classNames={{
-              root:        "p-3",
-              months:      "flex flex-col",
-              month:       "space-y-2",
-              month_caption: "flex items-center justify-between px-1 py-1",
-              caption_label: "text-sm font-semibold text-fg capitalize",
-              nav:           "flex items-center gap-1",
+              root:            "p-3",
+              months:          "flex flex-col",
+              month:           "space-y-2",
+              month_caption:   "flex items-center justify-between px-1 py-1",
+              caption_label:   "text-sm font-semibold text-fg capitalize",
+              nav:             "flex items-center gap-1",
               button_previous: "p-1 text-fg-5 hover:text-fg hover:bg-surface-3 transition-colors",
               button_next:     "p-1 text-fg-5 hover:text-fg hover:bg-surface-3 transition-colors",
-              weeks:       "border-collapse",
-              weekdays:    "flex",
-              weekday:     "w-8 h-7 flex items-center justify-center text-[10px] font-medium text-fg-6 uppercase",
-              week:        "flex mt-0.5",
-              day:         "w-8 h-8 flex items-center justify-center text-xs text-fg-4 hover:bg-surface-3 cursor-pointer transition-colors",
-              day_button:  "w-full h-full flex items-center justify-center",
-              selected:    "bg-accent text-black font-semibold hover:bg-accent",
-              today:       "text-accent font-semibold",
-              outside:     "text-fg-6 opacity-40",
-              disabled:    "opacity-30 cursor-not-allowed",
-              range_start: "bg-accent text-black rounded-l",
-              range_end:   "bg-accent text-black rounded-r",
+              weeks:           "border-collapse",
+              weekdays:        "flex",
+              weekday:         "w-8 h-7 flex items-center justify-center text-[10px] font-medium text-fg-6 uppercase",
+              week:            "flex mt-0.5",
+              day:             "w-8 h-8 flex items-center justify-center text-xs text-fg-4 hover:bg-surface-3 cursor-pointer transition-colors",
+              day_button:      "w-full h-full flex items-center justify-center",
+              selected:        "bg-accent text-black font-semibold hover:bg-accent",
+              today:           "text-accent font-semibold",
+              outside:         "text-fg-6 opacity-40",
+              disabled:        "opacity-30 cursor-not-allowed",
+              range_start:     "bg-accent text-black rounded-l",
+              range_end:       "bg-accent text-black rounded-r",
             }}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

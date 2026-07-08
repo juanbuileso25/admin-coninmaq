@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { Plus, Search, Pencil, Trash2, AlertTriangle, Loader2, AlertCircle, UserCheck, UserX, ShieldCheck } from "lucide-react";
-import { api, type UserResponse, type RoleResponse, type AreaResponse, type PermissionResponse } from "../../services/api";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Plus, Search, Pencil, Trash2, AlertTriangle, Loader2, AlertCircle, UserCheck, UserX, ShieldCheck, Zap, Menu } from "lucide-react";
+import { api, type UserResponse, type RoleResponse, type AreaResponse, type AppModuleResponse, type MenuItemResponse } from "../../services/api";
 
 /* ── helpers ── */
 function initials(u: UserResponse) {
@@ -15,37 +15,39 @@ function primaryArea(u: UserResponse) {
   return u.role_assignments[0]?.area_name ?? null;
 }
 
-const SUBJECT_LABELS: Record<string, string> = {
-  Dashboard:    "Dashboard",
-  Inventory:    "Inventario",
-  Quote:        "Cotizaciones",
-  RentalRecord: "Renta",
-  Client:       "Clientes",
-  ForeignTrade: "Comercio Exterior",
-  User:         "Usuarios",
-  Settings:     "Ajustes",
-  Agent:        "Agente IA",
-};
-
-const ACTION_LABELS: Record<string, string> = {
-  read:   "Ver",
-  create: "Crear",
-  update: "Editar",
-  delete: "Eliminar",
-};
+/* ── Checkbox helper ── */
+function Checkbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <label className="flex-shrink-0 cursor-pointer" onClick={onChange}>
+      <div className={`w-3.5 h-3.5 border flex items-center justify-center transition-all ${
+        checked ? "bg-accent border-accent" : "border-border-light bg-surface-3"
+      }`}>
+        {checked && (
+          <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </div>
+    </label>
+  );
+}
 
 /* ── Modal ── */
 type ModalProps = {
   user: UserResponse | null;
   roles: RoleResponse[];
   areas: AreaResponse[];
-  allPermissions: PermissionResponse[];
+  allModules: AppModuleResponse[];
+  allMenuItems: MenuItemResponse[];
   onClose: () => void;
   onSaved: () => void;
 };
 
-function UserModal({ user, roles, areas, allPermissions, onClose, onSaved }: ModalProps) {
+type Tab = "datos" | "acciones" | "menu";
+
+function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSaved }: ModalProps) {
   const isEdit = !!user;
+  const [tab, setTab] = useState<Tab>("datos");
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName,  setLastName]  = useState(user?.last_name ?? "");
@@ -54,223 +56,291 @@ function UserModal({ user, roles, areas, allPermissions, onClose, onSaved }: Mod
   const [areaId,    setAreaId]    = useState(user?.role_assignments[0]?.area_id ?? "");
   const [isActive,  setIsActive]  = useState(user?.is_active ?? true);
 
-  const [selectedPermIds, setSelectedPermIds] = useState<Set<string>>(() => {
-    if (!user) return new Set();
-    return new Set(
-      allPermissions
-        .filter((p) => user.permissions.some((up) => up.action === p.action && up.subject === p.subject))
-        .map((p) => p.id)
-    );
-  });
+  const [selectedActionIds,   setSelectedActionIds]   = useState<Set<string>>(
+    () => new Set(user?.user_action_ids ?? [])
+  );
+  const [selectedMenuItemIds, setSelectedMenuItemIds] = useState<Set<string>>(
+    () => new Set(user?.user_menu_item_ids ?? [])
+  );
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
-  const togglePerm = (id: string) => {
-    setSelectedPermIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+  // ── Actions helpers ──
+  const toggleAction = (id: string) =>
+    setSelectedActionIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const toggleModule = (mod: AppModuleResponse) => {
+    const ids = mod.actions.filter((a) => a.is_active).map((a) => a.id);
+    const allSel = ids.every((id) => selectedActionIds.has(id));
+    setSelectedActionIds((prev) => {
+      const n = new Set(prev);
+      ids.forEach((id) => allSel ? n.delete(id) : n.add(id));
+      return n;
     });
   };
 
-  const toggleSubject = (subject: string) => {
-    const subjectPerms = allPermissions.filter((p) => p.subject === subject).map((p) => p.id);
-    const allSelected = subjectPerms.every((id) => selectedPermIds.has(id));
-    setSelectedPermIds((prev) => {
-      const next = new Set(prev);
-      subjectPerms.forEach((id) => allSelected ? next.delete(id) : next.add(id));
-      return next;
+  // ── Menu items helpers ──
+  const toggleMenuItem = (id: string) =>
+    setSelectedMenuItemIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const toggleParentMenu = (item: MenuItemResponse) => {
+    const ids = [item.id, ...item.children.map((c) => c.id)];
+    const allSel = ids.every((id) => selectedMenuItemIds.has(id));
+    setSelectedMenuItemIds((prev) => {
+      const n = new Set(prev);
+      ids.forEach((id) => allSel ? n.delete(id) : n.add(id));
+      return n;
     });
   };
-
-  // Agrupar permisos por subject
-  const permsBySubject = useMemo(() => {
-    const map: Record<string, PermissionResponse[]> = {};
-    for (const p of allPermissions) {
-      if (!map[p.subject]) map[p.subject] = [];
-      map[p.subject].push(p);
-    }
-    return map;
-  }, [allPermissions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
+      let userId = user?.id ?? "";
+
       if (isEdit) {
         await api.users.update(user.id, { first_name: firstName, last_name: lastName, is_active: isActive });
-
         const currentRole = user.role_assignments[0];
         const roleChanged = currentRole?.role.id !== roleId || currentRole?.area_id !== (areaId || null);
         if (roleChanged) {
           if (currentRole) await api.users.removeRole(user.id, currentRole.role.id, currentRole.area_id);
           if (roleId) await api.users.assignRole(user.id, roleId, areaId || undefined);
         }
-
-        await api.permissions.setUserPermissions(user.id, Array.from(selectedPermIds));
       } else {
         const newUser = await api.users.create({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          role_id: roleId || undefined,
-          area_id: areaId || undefined,
+          first_name: firstName, last_name: lastName, email,
+          role_id: roleId || undefined, area_id: areaId || undefined,
         });
-        if (selectedPermIds.size > 0) {
-          await api.permissions.setUserPermissions(newUser.id, Array.from(selectedPermIds));
-        }
+        userId = newUser.id;
       }
+
+      await Promise.all([
+        api.users.setActions(userId, Array.from(selectedActionIds)),
+        api.users.setMenuItems(userId, Array.from(selectedMenuItemIds)),
+      ]);
+
       onSaved();
     } catch (err: unknown) {
-      const e = err as { detail?: string };
-      setError(e?.detail ?? "Ocurrió un error. Intenta de nuevo.");
+      setError((err as { detail?: string }).detail ?? "Ocurrió un error. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   };
+
+  const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: "datos",    label: "Datos",    icon: null },
+    { key: "menu",     label: "Menú",     icon: <Menu size={11} /> },
+    { key: "acciones", label: "Acciones", icon: <Zap size={11} /> },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative bg-surface-2 border border-border w-full max-w-lg shadow-card animate-fade-up flex flex-col max-h-[90vh]">
         <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent flex-shrink-0" />
-        <div className="p-6 overflow-y-auto">
-          <h2 className="text-fg text-base font-semibold mb-5">
+
+        <div className="px-6 pt-5 flex-shrink-0">
+          <h2 className="text-fg text-base font-semibold mb-4">
             {isEdit ? "Editar usuario" : "Nuevo usuario"}
           </h2>
+          {/* Tabs */}
+          <div className="flex border-b border-border gap-1">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-all border-b-2 -mb-px ${
+                  tab === t.key
+                    ? "text-accent border-accent"
+                    : "text-fg-5 border-transparent hover:text-fg-3"
+                }`}
+              >
+                {t.icon}{t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-            {/* Datos básicos */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Nombre</label>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="input-dark w-full" placeholder="Juan" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Apellido</label>
-                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} required className="input-dark w-full" placeholder="Pérez" />
-                </div>
-              </div>
-
-              {!isEdit && (
-                <div className="space-y-1.5">
-                  <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Correo electrónico</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-dark w-full" placeholder="usuario@coninmaq.com" />
-                  <p className="text-fg-6 text-[11px]">Se enviará un correo para que el usuario configure su contraseña.</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Rol</label>
-                  <select value={roleId} onChange={(e) => { setRoleId(e.target.value); setAreaId(""); }} className="input-dark w-full appearance-none">
-                    <option value="">Sin rol</option>
-                    {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </div>
-                {areas.length > 0 && (
+            {/* ── Tab: Datos ── */}
+            {tab === "datos" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Área</label>
-                    <select value={areaId} onChange={(e) => setAreaId(e.target.value)} className="input-dark w-full appearance-none">
-                      <option value="">Sin área</option>
-                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
+                    <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Nombre</label>
+                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="input-dark w-full" placeholder="Juan" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Apellido</label>
+                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} required className="input-dark w-full" placeholder="Pérez" />
+                  </div>
+                </div>
+                {!isEdit && (
+                  <div className="space-y-1.5">
+                    <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Correo electrónico</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-dark w-full" placeholder="usuario@coninmaq.com" />
+                    <p className="text-fg-6 text-[11px]">Se enviará un correo para que el usuario configure su contraseña.</p>
                   </div>
                 )}
-              </div>
-
-              {isEdit && (
-                <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                  <div className="relative flex-shrink-0">
-                    <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="peer sr-only" />
-                    <div className="w-4 h-4 border border-border-light bg-surface-3 peer-checked:bg-accent peer-checked:border-accent transition-all duration-150 flex items-center justify-center">
-                      <svg className="w-2.5 h-2.5 text-zinc-900 opacity-0 peer-checked:opacity-100 transition-opacity absolute" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Rol</label>
+                    <select value={roleId} onChange={(e) => { setRoleId(e.target.value); setAreaId(""); }} className="input-dark w-full appearance-none">
+                      <option value="">Sin rol</option>
+                      {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
                   </div>
-                  <span className="text-fg-4 text-xs group-hover:text-fg-3 transition-colors select-none">Usuario activo</span>
-                </label>
-              )}
-            </div>
-
-            {/* Permisos */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={13} className="text-accent" />
-                <span className="text-fg-4 text-xs font-medium uppercase tracking-wider">Permisos</span>
-              </div>
-              <div className="border border-border divide-y divide-border">
-                {Object.entries(permsBySubject).map(([subject, perms]) => {
-                  const allSelected = perms.every((p) => selectedPermIds.has(p.id));
-                  const someSelected = perms.some((p) => selectedPermIds.has(p.id));
-                  return (
-                    <div key={subject} className="px-3 py-2.5">
-                      <div className="flex items-center justify-between mb-2">
-                        <button type="button" onClick={() => toggleSubject(subject)}
-                          className="flex items-center gap-2 group">
-                          <div className={`w-3.5 h-3.5 border flex items-center justify-center flex-shrink-0 transition-colors ${
-                            allSelected ? "bg-accent border-accent" : someSelected ? "bg-accent/40 border-accent/60" : "border-border-light bg-surface-3"
-                          }`}>
-                            {(allSelected || someSelected) && (
-                              <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
-                                <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </div>
-                          <span className="text-fg-3 text-xs font-medium group-hover:text-fg transition-colors">
-                            {SUBJECT_LABELS[subject] ?? subject}
-                          </span>
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2 pl-5">
-                        {perms.map((p) => (
-                          <label key={p.id} className="flex items-center gap-1.5 cursor-pointer group">
-                            <div className="relative flex-shrink-0">
-                              <input type="checkbox" checked={selectedPermIds.has(p.id)} onChange={() => togglePerm(p.id)} className="peer sr-only" />
-                              <div className="w-3.5 h-3.5 border border-border-light bg-surface-3 peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
-                                <svg className="w-2 h-2 text-zinc-900 opacity-0 peer-checked:opacity-100 transition-opacity absolute" viewBox="0 0 10 8" fill="none">
-                                  <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              </div>
-                            </div>
-                            <span className="text-fg-5 text-[11px] group-hover:text-fg-3 transition-colors select-none">
-                              {ACTION_LABELS[p.action] ?? p.action}
-                            </span>
-                          </label>
-                        ))}
+                  {areas.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Área</label>
+                      <select value={areaId} onChange={(e) => setAreaId(e.target.value)} className="input-dark w-full appearance-none">
+                        <option value="">Sin área</option>
+                        {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                {isEdit && (
+                  <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                    <div className="relative flex-shrink-0">
+                      <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="peer sr-only" />
+                      <div className="w-4 h-4 border border-border-light bg-surface-3 peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-zinc-900 opacity-0 peer-checked:opacity-100 transition-opacity absolute" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-2.5 bg-red-950/40 border border-red-800/40 px-3 py-2.5">
-                <AlertCircle size={13} className="text-red-400 mt-0.5 flex-shrink-0" />
-                <p className="text-red-400 text-xs">{error}</p>
+                    <span className="text-fg-4 text-xs group-hover:text-fg-3 transition-colors select-none">Usuario activo</span>
+                  </label>
+                )}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" onClick={onClose}
-                className="px-4 py-2 text-xs text-fg-4 border border-border hover:border-border-light transition-all">
-                Cancelar
-              </button>
-              <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-light text-zinc-900
-                           font-semibold text-xs uppercase tracking-wider transition-all hover:shadow-glow disabled:opacity-60">
-                {loading ? <Loader2 size={13} className="animate-spin" /> : null}
-                {isEdit ? "Guardar cambios" : "Crear usuario"}
-              </button>
+            {/* ── Tab: Acciones (nuevo sistema) ── */}
+            {tab === "acciones" && (
+              <div className="space-y-3">
+                <p className="text-fg-6 text-[11px]">Acciones específicas del nuevo sistema de permisos, agrupadas por módulo.</p>
+                {allModules.length === 0 ? (
+                  <p className="text-fg-6 text-xs italic py-4 text-center">No hay módulos configurados. Crea módulos en Ajustes → Módulos.</p>
+                ) : (
+                  <div className="border border-border divide-y divide-border">
+                    {allModules.map((mod) => {
+                      const activeActions = mod.actions.filter((a) => a.is_active);
+                      const allSel = activeActions.length > 0 && activeActions.every((a) => selectedActionIds.has(a.id));
+                      const someSel = activeActions.some((a) => selectedActionIds.has(a.id));
+                      return (
+                        <div key={mod.id} className="px-3 py-2.5">
+                          <button type="button" onClick={() => toggleModule(mod)} className="flex items-center gap-2 group mb-2">
+                            <div className={`w-3.5 h-3.5 border flex items-center justify-center flex-shrink-0 transition-colors ${
+                              allSel ? "bg-accent border-accent" : someSel ? "bg-accent/40 border-accent/60" : "border-border-light bg-surface-3"
+                            }`}>
+                              {(allSel || someSel) && (
+                                <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
+                                  <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-fg-3 text-xs font-medium group-hover:text-fg transition-colors">{mod.name}</span>
+                            <span className="font-mono text-[10px] text-fg-6">{mod.code}</span>
+                          </button>
+                          {activeActions.length === 0 ? (
+                            <p className="text-fg-6 text-[11px] pl-5 italic">Sin acciones activas</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2 pl-5">
+                              {activeActions.map((action) => (
+                                <label key={action.id} className="flex items-center gap-1.5 cursor-pointer group">
+                                  <Checkbox checked={selectedActionIds.has(action.id)} onChange={() => toggleAction(action.id)} />
+                                  <span className="text-fg-5 text-[11px] group-hover:text-fg-3 transition-colors select-none">
+                                    {action.name}
+                                    <span className="font-mono text-fg-6 ml-1">({action.code})</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Tab: Menú ── */}
+            {tab === "menu" && (
+              <div className="space-y-3">
+                <p className="text-fg-6 text-[11px]">Selecciona los ítems de menú que este usuario puede ver en el sidebar.</p>
+                {allMenuItems.length === 0 ? (
+                  <p className="text-fg-6 text-xs italic py-4 text-center">No hay ítems de menú. Crea el menú en Ajustes → Menú.</p>
+                ) : (
+                  <div className="border border-border divide-y divide-border">
+                    {allMenuItems.map((item) => {
+                      const childIds = item.children.map((c) => c.id);
+                      const allIds = [item.id, ...childIds];
+                      const allSel  = allIds.every((id) => selectedMenuItemIds.has(id));
+                      const someSel = allIds.some((id) => selectedMenuItemIds.has(id));
+                      return (
+                        <div key={item.id} className="px-3 py-2.5">
+                          <button type="button" onClick={() => toggleParentMenu(item)} className="flex items-center gap-2 group mb-1">
+                            <div className={`w-3.5 h-3.5 border flex items-center justify-center flex-shrink-0 transition-colors ${
+                              allSel ? "bg-accent border-accent" : someSel ? "bg-accent/40 border-accent/60" : "border-border-light bg-surface-3"
+                            }`}>
+                              {(allSel || someSel) && (
+                                <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
+                                  <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-fg-3 text-xs font-medium group-hover:text-fg transition-colors">{item.label}</span>
+                            {item.icon && <span className="text-fg-6 text-[10px] font-mono">{item.icon}</span>}
+                          </button>
+                          {item.children.length > 0 && (
+                            <div className="pl-5 flex flex-col gap-1">
+                              {item.children.map((child) => (
+                                <label key={child.id} className="flex items-center gap-1.5 cursor-pointer group">
+                                  <Checkbox checked={selectedMenuItemIds.has(child.id)} onChange={() => toggleMenuItem(child.id)} />
+                                  <span className="text-fg-5 text-[11px] group-hover:text-fg-3 transition-colors select-none">{child.label}</span>
+                                  {child.path && <span className="text-fg-6 text-[10px] font-mono">{child.path}</span>}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+
+          {error && (
+            <div className="mx-6 mb-2 flex items-start gap-2.5 bg-red-950/40 border border-red-800/40 px-3 py-2.5">
+              <AlertCircle size={13} className="text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="text-red-400 text-xs">{error}</p>
             </div>
-          </form>
-        </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 px-6 pb-5 pt-2 flex-shrink-0 border-t border-border">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-xs text-fg-4 border border-border hover:border-border-light transition-all">
+              Cancelar
+            </button>
+            <button type="submit" disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-light text-zinc-900
+                         font-semibold text-xs uppercase tracking-wider transition-all hover:shadow-glow disabled:opacity-60">
+              {loading && <Loader2 size={13} className="animate-spin" />}
+              {isEdit ? "Guardar cambios" : "Crear usuario"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -281,7 +351,8 @@ export default function UsersPage() {
   const [users,          setUsers]          = useState<UserResponse[]>([]);
   const [roles,          setRoles]          = useState<RoleResponse[]>([]);
   const [areas,          setAreas]          = useState<AreaResponse[]>([]);
-  const [allPermissions, setAllPermissions] = useState<PermissionResponse[]>([]);
+  const [allModules,     setAllModules]     = useState<AppModuleResponse[]>([]);
+  const [allMenuItems,   setAllMenuItems]   = useState<MenuItemResponse[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState("");
 
@@ -293,16 +364,18 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [u, r, a, p] = await Promise.all([
+      const [u, r, a, m, mi] = await Promise.all([
         api.users.list(),
         api.roles.list(),
         api.areas.list(),
-        api.permissions.list(),
+        api.appModules.list().catch(() => []),
+        api.menuItems.list().catch(() => []),
       ]);
       setUsers(u);
       setRoles(r);
       setAreas(a);
-      setAllPermissions(p);
+      setAllModules(m);
+      setAllMenuItems(mi);
     } finally {
       setLoading(false);
     }
@@ -486,7 +559,8 @@ export default function UsersPage() {
           user={editing}
           roles={roles}
           areas={areas}
-          allPermissions={allPermissions}
+          allModules={allModules}
+          allMenuItems={allMenuItems}
           onClose={closeModal}
           onSaved={handleSaved}
         />

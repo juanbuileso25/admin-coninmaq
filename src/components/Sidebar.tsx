@@ -1,153 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Package,
-  FileText,
-  Users,
-  Settings,
-  LogOut,
-  ChevronDown,
-  Truck,
-  Wrench,
-  Key,
-  HardHat,
-  DollarSign,
-  ShieldCheck,
-  Building2,
-  ContactRound,
-  Globe,
-  Info,
-  Bot,
-  MessageSquare,
-  UserCheck,
-  ReceiptText,
-  Banknote,
-  FileSpreadsheet,
-  GitMerge,
-  Star,
+  LayoutDashboard, Package, FileText, Users, Settings, LogOut, ChevronDown,
+  Truck, Wrench, Key, HardHat, DollarSign, ShieldCheck, Building2,
+  ContactRound, Globe, Info, Bot, MessageSquare, UserCheck, ReceiptText,
+  Banknote, FileSpreadsheet, GitMerge, Star, ShoppingCart, Factory,
+  Loader2, HelpCircle,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useAbility } from "../context/AbilityContext";
-import type { Subjects } from "../ability";
+import { api, type MenuItemResponse } from "../services/api";
 
-interface SubItem {
-  label: string;
-  to:    string;
-}
-
-interface NavItem {
-  label:    string;
-  to?:      string;
-  icon:     React.ElementType;
-  subject?: Subjects;
-  sub?:     SubItem[];
-}
-
-interface NavGroup {
-  section: string;
-  items:   NavItem[];
-}
-
-const NAV: NavGroup[] = [
-  {
-    section: "Principal",
-    items: [
-      { label: "Dashboard",    to: "/dashboard",    icon: LayoutDashboard, subject: "Dashboard"    },
-      {
-        label: "Inventario",
-        icon:  Package,
-        subject: "Inventory",
-        sub: [
-          { label: "Maquinaria nueva", to: "/inventario/maquinaria-nueva" },
-          { label: "Maquinaria usada", to: "/inventario/maquinaria-usada" },
-          { label: "Repuestos",        to: "/inventario/repuestos"        },
-          { label: "Renta",            to: "/inventario/renta"            },
-        ],
-      },
-      {
-        label: "Comercio exterior",
-        icon:  Globe,
-        subject: "ForeignTrade",
-        sub: [
-          { label: "Info maquinas", to: "/comercio-exterior/informacion-maquinas" },
-        ],
-      },
-      {
-        label: "Comercial",
-        icon: FileText,
-        subject: "Quote",
-        sub: [
-          { label: "Leads",           to: "/comercial/leads"           },
-          { label: "Cotizaciones",    to: "/comercial/cotizaciones"    },
-          { label: "Calificaciones",  to: "/comercial/calificaciones"  },
-        ],
-      },
-      { label: "Clientes",    to: "/clientes",    icon: ContactRound,  subject: "Client"  },
-      {
-        label: "Pagos",
-        icon: Banknote,
-        subject: "Payments",
-        sub: [
-          { label: "Comprobantes",  to: "/pagos/comprobantes"  },
-          { label: "Extracto",      to: "/pagos/extracto"      },
-          { label: "Conciliación",  to: "/pagos/conciliacion"  },
-        ],
-      },
-      {
-        label: "Renta",
-        icon:  DollarSign,
-        subject: "RentalRecord",
-        sub: [
-          { label: "Horómetro", to: "/renta/horometro" },
-        ],
-      },
-    ],
-  },
-  {
-    section: "Sistema",
-    items: [
-      {
-        label: "Coni",
-        icon: Bot,
-        subject: "BotSession",
-        sub: [
-          { label: "Conversaciones", to: "/agente/sesiones" },
-        ],
-      },
-      { label: "Usuarios",  to: "/usuarios", icon: Users,    subject: "User"     },
-      {
-        label: "Ajustes",
-        icon: Settings,
-        subject: "Settings",
-        sub: [
-          { label: "Roles",            to: "/ajustes/roles"    },
-          { label: "Áreas",            to: "/ajustes/areas"    },
-          { label: "Calificación ICP", to: "/ajustes/scoring"  },
-        ],
-      },
-    ],
-  },
-];
-
-const SUB_ICONS: Record<string, React.ElementType> = {
-  "/inventario/maquinaria-nueva": HardHat,
-  "/inventario/maquinaria-usada": Truck,
-  "/inventario/repuestos":        Wrench,
-  "/inventario/renta":            Key,
-  "/renta/horometro":             Key,
-  "/ajustes/roles":               ShieldCheck,
-  "/ajustes/areas":               Building2,
-  "/comercio-exterior/informacion-maquinas": Info,
-  "/agente/sesiones":        MessageSquare,
-  "/comercial/leads":           UserCheck,
-  "/comercial/cotizaciones":    ReceiptText,
-  "/comercial/calificaciones":  Star,
-  "/pagos/comprobantes":  Banknote,
-  "/pagos/extracto":      FileSpreadsheet,
-  "/pagos/conciliacion":  GitMerge,
-  "/ajustes/scoring":     Star,
+// ── Mapeo nombre → componente Lucide ──────────────────────────────────────────
+const ICON_MAP: Record<string, React.ElementType> = {
+  LayoutDashboard, Package, FileText, Users, Settings, Truck, Wrench, Key,
+  HardHat, DollarSign, ShieldCheck, Building2, ContactRound, Globe, Info,
+  Bot, MessageSquare, UserCheck, ReceiptText, Banknote, FileSpreadsheet,
+  GitMerge, Star, ShoppingCart, Factory,
 };
+
+function NavIcon({ name, size = 17, className }: { name: string | null; size?: number; className?: string }) {
+  const Icon = name ? (ICON_MAP[name] ?? HelpCircle) : HelpCircle;
+  return <Icon size={size} className={className} />;
+}
 
 interface SidebarProps {
   collapsed: boolean;
@@ -155,27 +29,53 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed }: SidebarProps) {
   const { user, logout } = useAuth();
-  const ability = useAbility();
   const navigate  = useNavigate();
   const location  = useLocation();
 
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => ({
-    Inventario:          location.pathname.startsWith("/inventario"),
-    Renta:               location.pathname.startsWith("/renta"),
-    "Comercio exterior": location.pathname.startsWith("/comercio-exterior"),
-    Comercial:           location.pathname.startsWith("/comercial"),
-    "Agente IA":         location.pathname.startsWith("/agente"),
-    Pagos:               location.pathname.startsWith("/pagos"),
-    Ajustes:             location.pathname.startsWith("/ajustes"),
-  }));
+  const [menuItems,   setMenuItems]   = useState<MenuItemResponse[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+  const [openMenus,   setOpenMenus]   = useState<Record<string, boolean>>({});
 
-  const toggleMenu = (label: string) =>
-    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  // Cargar menú al montar
+  useEffect(() => {
+    api.menuItems.myMenu()
+      .then((items) => {
+        setMenuItems(items);
+        // Auto-abrir el grupo activo
+        const initial: Record<string, boolean> = {};
+        for (const item of items) {
+          if (item.children.some((c) => location.pathname.startsWith(c.path ?? "__"))) {
+            initial[item.id] = true;
+          }
+          if (item.path && location.pathname.startsWith(item.path)) {
+            initial[item.id] = true;
+          }
+        }
+        setOpenMenus(initial);
+      })
+      .catch(() => setMenuItems([]))
+      .finally(() => setMenuLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+  const toggleMenu = (id: string) =>
+    setOpenMenus((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const handleLogout = () => { logout(); navigate("/"); };
+
+  // Agrupar por group
+  const groups = menuItems.reduce<Record<string, MenuItemResponse[]>>((acc, item) => {
+    const g = item.group ?? "General";
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(item);
+    return acc;
+  }, {});
+
+  // Orden de grupos (Principal primero, Sistema después)
+  const groupOrder = ["Principal", "Sistema", "General"];
+  const sortedGroups = Object.keys(groups).sort(
+    (a, b) => (groupOrder.indexOf(a) ?? 99) - (groupOrder.indexOf(b) ?? 99)
+  );
 
   return (
     <aside
@@ -193,67 +93,72 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 space-y-5">
-        {NAV.map((group) => (
-          <div key={group.section}>
-            {!collapsed && (
-              <p className="px-4 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-fg-6 font-medium">
-                {group.section}
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              {group.items.filter((item) => !item.subject || ability.can("read", item.subject)).map((item) => {
-                const Icon        = item.icon;
-                const isOpen      = !!openMenus[item.label];
-                const isSubActive = item.sub?.some((s) => location.pathname.startsWith(s.to));
+        {menuLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={16} className="animate-spin text-fg-6" />
+          </div>
+        ) : (
+          sortedGroups.map((groupName) => (
+            <div key={groupName}>
+              {!collapsed && (
+                <p className="px-4 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-fg-6 font-medium">
+                  {groupName}
+                </p>
+              )}
+              <ul className="space-y-0.5">
+                {groups[groupName].map((item) => {
+                  const isOpen      = !!openMenus[item.id];
+                  const isSubActive = item.children.some((c) =>
+                    c.path ? location.pathname.startsWith(c.path) : false
+                  );
 
-                /* ── Item con submenú ── */
-                if (item.sub) {
-                  return (
-                    <li key={item.label}>
-                      <button
-                        onClick={() => !collapsed && toggleMenu(item.label)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium
-                                    transition-all duration-150 group
-                                    ${isSubActive
-                                      ? "text-accent"
-                                      : "text-fg-4 hover:text-fg hover:bg-surface-3"
-                                    }`}
-                      >
-                        <Icon
-                          size={17}
-                          className={`flex-shrink-0 transition-colors ${
-                            isSubActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
-                          }`}
-                        />
-                        {!collapsed && (
-                          <>
-                            <span className="truncate animate-fade-in flex-1 text-left">
-                              {item.label}
-                            </span>
-                            <ChevronDown
-                              size={13}
-                              className={`flex-shrink-0 transition-transform duration-200 ${
-                                isOpen ? "rotate-180 text-accent" : "text-fg-6"
-                              }`}
-                            />
-                          </>
-                        )}
-                      </button>
-
-                      {/* Submenú */}
-                      {!collapsed && (
-                        <div
-                          className={`overflow-hidden transition-all duration-250 ${
-                            isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-                          }`}
+                  /* ── Ítem con hijos ── */
+                  if (item.children.length > 0) {
+                    return (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => !collapsed && toggleMenu(item.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium
+                                      transition-all duration-150 group
+                                      ${isSubActive
+                                        ? "text-accent"
+                                        : "text-fg-4 hover:text-fg hover:bg-surface-3"
+                                      }`}
                         >
-                          <ul className="border-l border-border ml-7 pl-0 py-1 space-y-0.5">
-                            {item.sub.map((sub) => {
-                              const SubIcon = SUB_ICONS[sub.to];
-                              return (
-                                <li key={sub.to}>
+                          <NavIcon
+                            name={item.icon}
+                            size={17}
+                            className={`flex-shrink-0 transition-colors ${
+                              isSubActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
+                            }`}
+                          />
+                          {!collapsed && (
+                            <>
+                              <span className="truncate animate-fade-in flex-1 text-left">
+                                {item.label}
+                              </span>
+                              <ChevronDown
+                                size={13}
+                                className={`flex-shrink-0 transition-transform duration-200 ${
+                                  isOpen ? "rotate-180 text-accent" : "text-fg-6"
+                                }`}
+                              />
+                            </>
+                          )}
+                        </button>
+
+                        {/* Submenú */}
+                        {!collapsed && (
+                          <div
+                            className={`overflow-hidden transition-all duration-250 ${
+                              isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                            }`}
+                          >
+                            <ul className="border-l border-border ml-7 pl-0 py-1 space-y-0.5">
+                              {item.children.map((child) => (
+                                <li key={child.id}>
                                   <NavLink
-                                    to={sub.to}
+                                    to={child.path ?? "#"}
                                     className={({ isActive }) =>
                                       `flex items-center gap-2.5 pl-3 pr-4 py-2 text-xs font-medium
                                        transition-all duration-150 border-l-2 -ml-px
@@ -265,60 +170,60 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                                   >
                                     {({ isActive }) => (
                                       <>
-                                        {SubIcon && (
-                                          <SubIcon
-                                            size={13}
-                                            className={isActive ? "text-accent" : "text-fg-6"}
-                                          />
-                                        )}
-                                        <span className="truncate">{sub.label}</span>
+                                        <NavIcon
+                                          name={child.icon}
+                                          size={13}
+                                          className={isActive ? "text-accent" : "text-fg-6"}
+                                        />
+                                        <span className="truncate">{child.label}</span>
                                       </>
                                     )}
                                   </NavLink>
                                 </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  }
+
+                  /* ── Ítem simple ── */
+                  return (
+                    <li key={item.id}>
+                      <NavLink
+                        to={item.path ?? "#"}
+                        className={({ isActive }) =>
+                          `relative flex items-center gap-3 px-4 py-2.5 text-sm font-medium
+                           transition-all duration-150 group
+                           ${isActive
+                             ? "text-accent bg-accent-muted border-r-2 border-accent"
+                             : "text-fg-4 hover:text-fg hover:bg-surface-3"
+                           }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <NavIcon
+                              name={item.icon}
+                              size={17}
+                              className={`flex-shrink-0 transition-colors ${
+                                isActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
+                              }`}
+                            />
+                            {!collapsed && (
+                              <span className="truncate animate-fade-in">{item.label}</span>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
                     </li>
                   );
-                }
-
-                /* ── Item simple ── */
-                return (
-                  <li key={item.to}>
-                    <NavLink
-                      to={item.to!}
-                      className={({ isActive }) =>
-                        `relative flex items-center gap-3 px-4 py-2.5 text-sm font-medium
-                         transition-all duration-150 group
-                         ${isActive
-                           ? "text-accent bg-accent-muted border-r-2 border-accent"
-                           : "text-fg-4 hover:text-fg hover:bg-surface-3"
-                         }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <Icon
-                            size={17}
-                            className={`flex-shrink-0 transition-colors ${
-                              isActive ? "text-accent" : "text-fg-5 group-hover:text-fg-3"
-                            }`}
-                          />
-                          {!collapsed && (
-                            <span className="truncate animate-fade-in">{item.label}</span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                })}
+              </ul>
+            </div>
+          ))
+        )}
       </nav>
 
       {/* User + logout */}

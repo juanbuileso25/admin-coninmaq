@@ -26,6 +26,11 @@ import CotizacionesPage    from "./pages/agente/CotizacionesPage";
 import CalificacionesPage  from "./pages/comercial/CalificacionesPage";
 import ScoringConfigPage   from "./pages/ajustes/ScoringConfigPage";
 import QuotationPage       from "./pages/public/QuotationPage";
+import ProveedoresPage      from "./pages/ajustes/ProveedoresPage";
+import ModulosPage          from "./pages/ajustes/ModulosPage";
+import MenuPage             from "./pages/ajustes/MenuPage";
+import PedidosMaquinasPage  from "./pages/pedidos/PedidosMaquinasPage";
+import PedidoDetailPage     from "./pages/pedidos/PedidoDetailPage";
 
 export default function App() {
   return (
@@ -56,6 +61,9 @@ export default function App() {
         {/* Comercio exterior */}
         <Route path="/comercio-exterior" element={<Navigate to="/comercio-exterior/informacion-maquinas" replace />} />
         <Route path="/comercio-exterior/informacion-maquinas" element={<InfoMaquinasPage />} />
+        {/* Pedidos de máquinas */}
+        <Route path="/comercio-exterior/pedidos" element={<PedidosMaquinasPage />} />
+        <Route path="/comercio-exterior/pedidos/:orderId" element={<PedidoDetailPage />} />
         <Route path="/clientes"    element={<ClientesPage />} />
 
         {/* Pagos */}
@@ -85,7 +93,10 @@ export default function App() {
         <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
         <Route path="/ajustes/roles"    element={<RolesPage />} />
         <Route path="/ajustes/areas"    element={<AreasPage />} />
-        <Route path="/ajustes/scoring"  element={<ScoringConfigPage />} />
+        <Route path="/ajustes/scoring"    element={<ScoringConfigPage />} />
+        <Route path="/ajustes/proveedores" element={<ProveedoresPage />} />
+        <Route path="/ajustes/modulos"     element={<ModulosPage />} />
+        <Route path="/ajustes/menu"        element={<MenuPage />} />
       </Route>
 
       {/* Fallback */}

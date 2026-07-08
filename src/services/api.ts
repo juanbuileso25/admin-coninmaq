@@ -472,11 +472,117 @@ export type OnboardingSubmit = OnboardingFormData & {
 export type SendOnboardingResponse = { message: string; expires_at: string };
 
 export type UserRoleResponse = { role: { id: string; name: string }; area_id: string | null; area_name: string | null };
-export type UserPermissionResponse = { id: string; action: string; subject: string };
-export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[]; permissions: UserPermissionResponse[] };
+export type UserActionDetail = { action_id: string; action_code: string; module_code: string };
+export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[]; user_action_ids: string[]; user_actions_detail: UserActionDetail[]; user_menu_item_ids: string[] };
 export type RoleResponse = { id: string; name: string; description: string | null };
 export type AreaResponse = { id: string; name: string; description: string | null };
 export type PermissionResponse = { id: string; action: string; subject: string; description: string | null };
+
+// ── App Modules ───────────────────────────────────────────────────────────────
+export type ActionResponse = {
+  id: string; module_id: string; code: string; name: string;
+  description: string | null; is_active: boolean; created_at: string; updated_at: string;
+};
+export type AppModuleResponse = {
+  id: string; code: string; name: string; description: string | null;
+  is_active: boolean; actions: ActionResponse[]; created_at: string; updated_at: string;
+};
+
+// ── Menu Items ────────────────────────────────────────────────────────────────
+export type MenuItemResponse = {
+  id: string; label: string; icon: string | null; path: string | null;
+  parent_id: string | null; order_index: number; group: string | null; is_active: boolean;
+  children: MenuItemResponse[]; created_at: string; updated_at: string;
+};
+
+// ── Suppliers ─────────────────────────────────────────────────────────────────
+export type SupplierResponse = {
+  id: string;
+  name: string;
+  country: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  website: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Machine Orders ────────────────────────────────────────────────────────────
+export type MachineOrderItemResponse = {
+  id: string;
+  order_id: string;
+  model: string;
+  description: string | null;
+  machine_serial: string | null;
+  engine_serial: string | null;
+  client_name: string | null;
+  invoice_number: string | null;
+  has_matricula: boolean | null;
+  fob_value_usd: number | null;
+  arrival_date_col: string | null;
+  cif_cost: number | null;
+  ddp_cost: number | null;
+  import_factor: number | null;
+  nationalization_trm: number | null;
+  sale_value_before_tax: number | null;
+  sale_iva: number | null;
+  total_sale: number | null;
+  profit_cop: number | null;
+  profit_pct: number | null;
+  machine_info_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MachineOrderPaymentResponse = {
+  id: string;
+  order_id: string;
+  payment_type: "anticipo_30pct" | "saldo";
+  installment_number: number | null;
+  amount_usd: number | null;
+  payment_date: string | null;
+  trm: number | null;
+  amount_cop: number | null;
+  notes: string | null;
+  is_active: boolean;
+  machine_item_ids: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type MachineOrderListResponse = {
+  id: string;
+  supplier_id: string;
+  supplier: { id: string; name: string };
+  factory_order_number: string;
+  order_date: string | null;
+  bl_number: string | null;
+  bl_date: string | null;
+  due_date: string | null;
+  lonking_invoice: string | null;
+  year: number | null;
+  status: string;
+  freight_agent: string | null;
+  customs_broker: string | null;
+  notes: string | null;
+  is_active: boolean;
+  items_count: number;
+  total_fob_usd: number | null;
+  total_paid_usd: number | null;
+  remaining_debt_usd: number | null;
+  payment_status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MachineOrderDetailResponse = MachineOrderListResponse & {
+  items: MachineOrderItemResponse[];
+  payments: MachineOrderPaymentResponse[];
+};
 
 export const api = {
   auth: {
@@ -505,6 +611,10 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ current_password, new_password }),
       }),
+    setActions: (id: string, action_ids: string[]) =>
+      request<UserResponse>(`/users/${id}/actions`, { method: "PUT", body: JSON.stringify({ action_ids }) }),
+    setMenuItems: (id: string, menu_item_ids: string[]) =>
+      request<UserResponse>(`/users/${id}/menu-items`, { method: "PUT", body: JSON.stringify({ menu_item_ids }) }),
   },
   roles: {
     list: () => request<RoleResponse[]>("/roles/"),
@@ -804,5 +914,65 @@ export const api = {
     },
     patch: (id: number, data: { show_as_testimonial?: boolean; reviewer_name?: string; reviewer_role?: string }) =>
       request<ReviewResponse>(`/reviews/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  },
+  suppliers: {
+    list: (params?: { is_active?: boolean; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+      if (params?.search) qs.set("search", params.search);
+      return request<SupplierResponse[]>(`/suppliers/?${qs}`);
+    },
+    get:    (id: string) => request<SupplierResponse>(`/suppliers/${id}`),
+    create: (data: object) => request<SupplierResponse>("/suppliers/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: object) => request<SupplierResponse>(`/suppliers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivate: (id: string) => request<void>(`/suppliers/${id}`, { method: "DELETE" }),
+  },
+  machineOrders: {
+    list: (params?: { is_active?: boolean; search?: string; year?: number; status?: string; supplier_id?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+      if (params?.search)      qs.set("search",      params.search);
+      if (params?.year)        qs.set("year",        String(params.year));
+      if (params?.status)      qs.set("status",      params.status);
+      if (params?.supplier_id) qs.set("supplier_id", params.supplier_id);
+      return request<MachineOrderListResponse[]>(`/machine-orders/?${qs}`);
+    },
+    get:    (id: string) => request<MachineOrderDetailResponse>(`/machine-orders/${id}`),
+    create: (data: object) => request<MachineOrderDetailResponse>("/machine-orders/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivate: (id: string) => request<void>(`/machine-orders/${id}`, { method: "DELETE" }),
+    addItem:    (orderId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items`, { method: "POST", body: JSON.stringify(data) }),
+    updateItem: (orderId: string, itemId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    removeItem: (orderId: string, itemId: string) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items/${itemId}`, { method: "DELETE" }),
+    addPayment:    (orderId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments`, { method: "POST", body: JSON.stringify(data) }),
+    updatePayment: (orderId: string, paymentId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments/${paymentId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    removePayment: (orderId: string, paymentId: string) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments/${paymentId}`, { method: "DELETE" }),
+  },
+  appModules: {
+    list: (includeInactive = false) =>
+      request<AppModuleResponse[]>(`/app-modules/?include_inactive=${includeInactive}`),
+    get: (id: string) => request<AppModuleResponse>(`/app-modules/${id}`),
+    create: (data: { code: string; name: string; description?: string }) =>
+      request<AppModuleResponse>("/app-modules/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: { code?: string; name?: string; description?: string; is_active?: boolean }) =>
+      request<AppModuleResponse>(`/app-modules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivate: (id: string) => request<void>(`/app-modules/${id}`, { method: "DELETE" }),
+    addAction: (moduleId: string, data: { code: string; name: string; description?: string }) =>
+      request<AppModuleResponse>(`/app-modules/${moduleId}/actions`, { method: "POST", body: JSON.stringify(data) }),
+    updateAction: (moduleId: string, actionId: string, data: { code?: string; name?: string; description?: string; is_active?: boolean }) =>
+      request<AppModuleResponse>(`/app-modules/${moduleId}/actions/${actionId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivateAction: (moduleId: string, actionId: string) =>
+      request<AppModuleResponse>(`/app-modules/${moduleId}/actions/${actionId}`, { method: "DELETE" }),
+  },
+  menuItems: {
+    list: () => request<MenuItemResponse[]>("/menu-items"),
+    myMenu: () => request<MenuItemResponse[]>("/menu/me"),
+    create: (data: { label: string; icon?: string; path?: string; parent_id?: string; order_index?: number; group?: string }) =>
+      request<MenuItemResponse>("/menu-items", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: { label?: string; icon?: string; path?: string; parent_id?: string; order_index?: number; group?: string; is_active?: boolean }) =>
+      request<MenuItemResponse>(`/menu-items/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/menu-items/${id}`, { method: "DELETE" }),
+    reorder: (orders: { id: string; order_index: number }[]) =>
+      request<void>("/menu-items/reorder", { method: "POST", body: JSON.stringify({ orders }) }),
   },
 };
