@@ -619,6 +619,7 @@ function MachineCard({
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             {item.client_name && <span className="text-fg-5 text-xs">{item.client_name}</span>}
+            {item.machine_serial && <span className="text-fg-6 text-xs font-mono">{item.machine_serial}</span>}
             {item.invoice_number && <span className="text-fg-6 text-xs font-mono">{item.invoice_number}</span>}
             {item.fob_value_usd != null && <span className="text-fg-4 text-xs font-mono">{fmtUSD(item.fob_value_usd)}</span>}
           </div>
