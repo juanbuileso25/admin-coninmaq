@@ -72,7 +72,7 @@ function ItemForm({ initial, parentId, parentLabel, onClose, onSaved }: ItemForm
         icon:      icon.trim() || undefined,
         path:      path.trim() || undefined,
         group:     group.trim() || undefined,
-        parent_id: isEdit ? initial.parent_id : (parentId ?? undefined),
+        parent_id: isEdit ? (initial.parent_id ?? undefined) : (parentId ?? undefined),
       };
       if (isEdit) {
         await api.menuItems.update(initial.id, data);
