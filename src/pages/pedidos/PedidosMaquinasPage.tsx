@@ -30,22 +30,30 @@ function fmtUSD(n: number | string | null | undefined) {
 }
 
 type StatCardProps = {
-  icon:    React.ReactNode;
-  label:   string;
-  value:   string;
-  sub?:    string;
-  accent?: boolean;
+  icon:     React.ReactNode;
+  label:    string;
+  value:    string;
+  sub?:     string;
+  accent?:  boolean;
+  active?:  boolean;
+  onClick?: () => void;
 };
 
-function StatCard({ icon, label, value, sub, accent }: StatCardProps) {
+function StatCard({ icon, label, value, sub, accent, active, onClick }: StatCardProps) {
+  const clickable = !!onClick;
   return (
-    <div className="bg-surface-2 border border-border px-4 py-3.5 flex items-center gap-3">
-      <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0 ${accent ? "text-accent" : "text-fg-5"}`}>
+    <div
+      onClick={onClick}
+      className={`bg-surface-2 border px-4 py-3.5 flex items-center gap-3 transition-all
+        ${clickable ? "cursor-pointer hover:bg-surface-3" : ""}
+        ${active ? "border-yellow-500/60 bg-yellow-950/20" : "border-border"}`}
+    >
+      <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0 ${active ? "text-yellow-400" : accent ? "text-accent" : "text-fg-5"}`}>
         {icon}
       </div>
       <div className="min-w-0">
         <p className="text-fg-6 text-[10px] uppercase tracking-wider font-medium">{label}</p>
-        <p className={`text-base font-semibold leading-tight ${accent ? "text-accent" : "text-fg"}`}>{value}</p>
+        <p className={`text-base font-semibold leading-tight ${active ? "text-yellow-400" : accent ? "text-accent" : "text-fg"}`}>{value}</p>
         {sub && <p className="text-fg-6 text-[10px] mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -60,6 +68,7 @@ export default function PedidosMaquinasPage() {
   const [search,       setSearch]       = useState("");
   const [yearFilter,   setYearFilter]   = useState(String(new Date().getFullYear()));
   const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [debtFilter,   setDebtFilter]   = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +98,12 @@ export default function PedidosMaquinasPage() {
     const remainingDebt = orders.reduce((s, o) => s + Number(o.remaining_debt_usd ?? 0), 0);
     return { totalFob, totalMachines, pendingBalance, remainingDebt };
   }, [orders]);
+
+  const displayedOrders = useMemo(() =>
+    debtFilter
+      ? orders.filter((o) => Number(o.remaining_debt_usd ?? 0) > 0)
+      : orders,
+  [orders, debtFilter]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -128,13 +143,17 @@ export default function PedidosMaquinasPage() {
             icon={<AlertCircle size={18} />}
             label="Saldo por cobrar"
             value={String(stats.pendingBalance)}
-            sub="anticipo pagado, saldo pendiente"
+            sub={debtFilter ? "click para limpiar filtro" : "click para filtrar"}
+            active={debtFilter}
+            onClick={() => setDebtFilter((v) => !v)}
           />
           <StatCard
             icon={<CircleDollarSign size={18} />}
             label="Deuda restante"
             value={fmtUSD(stats.remainingDebt)}
-            sub="total pendiente de pago"
+            sub={debtFilter ? "click para limpiar filtro" : "click para filtrar"}
+            active={debtFilter}
+            onClick={() => setDebtFilter((v) => !v)}
           />
         </div>
       )}
@@ -184,13 +203,13 @@ export default function PedidosMaquinasPage() {
                   <Loader2 size={16} className="animate-spin inline-block mr-2" />Cargando...
                 </td></tr>
               )}
-              {!loading && orders.length === 0 && (
+              {!loading && displayedOrders.length === 0 && (
                 <tr><td colSpan={10} className="text-center py-12 text-fg-6 text-sm">
                   <Package size={24} className="mx-auto mb-2 opacity-40" />
-                  No hay pedidos registrados
+                  {debtFilter ? "No hay pedidos con deuda pendiente" : "No hay pedidos registrados"}
                 </td></tr>
               )}
-              {!loading && orders.map((o) => {
+              {!loading && displayedOrders.map((o) => {
                 const pt = PAYMENT_LABELS[o.payment_status] ?? { label: o.payment_status, color: "text-fg-5" };
                 return (
                   <tr
@@ -230,7 +249,10 @@ export default function PedidosMaquinasPage() {
           </table>
         </div>
         <div className="px-4 py-3 border-t border-border bg-surface-3">
-          <p className="text-fg-6 text-xs"><span className="text-fg-4">{orders.length}</span> pedidos</p>
+          <p className="text-fg-6 text-xs">
+            <span className="text-fg-4">{displayedOrders.length}</span> pedidos
+            {debtFilter && <span className="ml-2 text-yellow-500 font-medium">· Filtrando por deuda pendiente</span>}
+          </p>
         </div>
       </div>
 
