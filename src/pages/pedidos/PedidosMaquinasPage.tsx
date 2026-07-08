@@ -145,7 +145,7 @@ export default function PedidosMaquinasPage() {
           <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-6" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por # pedido o BL..."
+            placeholder="# pedido, cliente, # serie máquina, # serie motor, # factura..."
             className="input-dark w-full pl-9"
           />
         </div>
