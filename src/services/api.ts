@@ -105,6 +105,71 @@ export type ReviewResponse = {
   created_at:          string;
 };
 
+// ── Prospecting types ─────────────────────────────────────────────────────────
+
+export type ProspectStatus =
+  | "nuevo" | "contactado" | "interesado"
+  | "negociacion" | "cerrado_ganado" | "cerrado_perdido" | "descartado";
+
+export type ProspectResponse = {
+  id: string;
+  source: string;
+  company_name: string;
+  contact_name: string | null;
+  position: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  address: string | null;
+  city: string | null;
+  category: string | null;
+  rating: number | null;
+  fit_score: number | null;
+  deal_type: string | null;
+  equipment: string | null;
+  score_reason: string | null;
+  status: ProspectStatus;
+  assigned_to: string | null;
+  next_followup: string | null;
+  last_contact: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type ProspectMessageResponse = {
+  id: string;
+  prospect_id: string;
+  channel: string;
+  subject: string | null;
+  body: string;
+  sequence_day: number;
+  status: string;
+  is_test: boolean;
+  sent_at: string;
+};
+
+export type RunLogResponse = {
+  id: string;
+  run_type: string;
+  source: string;
+  prospects_found: number;
+  prospects_scored: number;
+  prospects_accepted: number;
+  prospects_discarded: number;
+  messages_sent: number;
+  errors: string | null;
+  started_at: string;
+  finished_at: string | null;
+};
+
+export type RunResult = {
+  status: string;
+  prospects_found: number;
+  prospects_accepted: number;
+  messages_sent: number;
+  errors: string | null;
+};
+
 // ── Payments types ────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "pending" | "matched";
@@ -963,6 +1028,24 @@ export const api = {
       request<AppModuleResponse>(`/app-modules/${moduleId}/actions/${actionId}`, { method: "PATCH", body: JSON.stringify(data) }),
     deactivateAction: (moduleId: string, actionId: string) =>
       request<AppModuleResponse>(`/app-modules/${moduleId}/actions/${actionId}`, { method: "DELETE" }),
+  },
+  prospecting: {
+    prospects: (params?: { status?: string; min_score?: number; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status)    qs.set("status",    params.status);
+      if (params?.min_score) qs.set("min_score", String(params.min_score));
+      if (params?.limit)     qs.set("limit",     String(params.limit));
+      if (params?.offset)    qs.set("offset",    String(params.offset));
+      return request<ProspectResponse[]>(`/prospecting/prospects?${qs}`);
+    },
+    getProspect: (id: string) => request<ProspectResponse>(`/prospecting/prospects/${id}`),
+    updateProspect: (id: string, data: Partial<Pick<ProspectResponse, "status" | "assigned_to" | "next_followup" | "contact_name" | "email" | "phone">>) =>
+      request<ProspectResponse>(`/prospecting/prospects/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    messages: (prospectId: string) => request<ProspectMessageResponse[]>(`/prospecting/prospects/${prospectId}/messages`),
+    logs: (limit = 20) => request<RunLogResponse[]>(`/prospecting/logs?limit=${limit}`),
+    runScrape: () => request<RunResult>("/prospecting/run/scrape", { method: "POST" }),
+    runFollowups: () => request<RunResult>("/prospecting/run/followups", { method: "POST" }),
+    runTest: (max_results = 5) => request<RunResult>("/prospecting/run/test", { method: "POST", body: JSON.stringify({ max_results }) }),
   },
   menuItems: {
     list: () => request<MenuItemResponse[]>("/menu-items"),

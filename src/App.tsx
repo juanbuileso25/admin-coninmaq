@@ -31,6 +31,7 @@ import ModulosPage          from "./pages/ajustes/ModulosPage";
 import MenuPage             from "./pages/ajustes/MenuPage";
 import PedidosMaquinasPage  from "./pages/pedidos/PedidosMaquinasPage";
 import PedidoDetailPage     from "./pages/pedidos/PedidoDetailPage";
+import ProspectingPage      from "./pages/prospecting/ProspectingPage";
 
 export default function App() {
   return (
@@ -97,6 +98,9 @@ export default function App() {
         <Route path="/ajustes/proveedores" element={<ProveedoresPage />} />
         <Route path="/ajustes/modulos"     element={<ModulosPage />} />
         <Route path="/ajustes/menu"        element={<MenuPage />} />
+
+        {/* Prospección */}
+        <Route path="/comercial/prospectos" element={<ProspectingPage />} />
       </Route>
 
       {/* Fallback */}
