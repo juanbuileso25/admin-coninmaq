@@ -621,7 +621,6 @@ function MachineCard({
             {item.client_name && <span className="text-fg-5 text-xs">{item.client_name}</span>}
             {item.machine_serial && <span className="text-fg-6 text-xs font-mono">{item.machine_serial}</span>}
             {item.invoice_number && <span className="text-fg-6 text-xs font-mono">{item.invoice_number}</span>}
-            {item.fob_value_usd != null && <span className="text-fg-4 text-xs font-mono">{fmtUSD(item.fob_value_usd)}</span>}
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -671,8 +670,9 @@ function MachineCard({
         <div className="border-t border-border">
           {/* Básico */}
           <div className="px-4 pt-3 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-            <InfoField label="Serie máquina"  value={item.machine_serial}           mono />
+            <InfoField label="Serie máquina"  value={item.machine_serial}              mono />
             <InfoField label="Serie motor"    value={String(item.engine_serial ?? "")} mono />
+            <InfoField label="FOB"            value={fmtUSD(item.fob_value_usd)}       mono />
             <InfoField label="Llegada COL"    value={fmtDate(item.arrival_date_col)} />
             <InfoField label="# Factura"      value={item.invoice_number} mono />
             <InfoField label="Matrícula"      value={item.has_matricula === true ? "Sí" : item.has_matricula === false ? "No" : null} />
@@ -945,6 +945,10 @@ export default function PedidoDetailPage() {
           {/* Payment summary */}
           {totalFOB > 0 && (
             <div className="bg-surface-2 border border-border p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-xs pb-2.5 border-b border-border">
+                <span className="text-fg-4 font-medium">Costo total del pedido</span>
+                <span className="font-mono text-fg-2 font-semibold">{fmtUSD(totalFOB)}</span>
+              </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-fg-5">Anticipo 30%</span>
                 <div className="flex items-center gap-2">
