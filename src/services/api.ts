@@ -256,6 +256,99 @@ export interface ScoringVariable {
   rules: ScoringRule[];
 }
 
+// ── Spare Parts types ─────────────────────────────────────────────────────────
+
+export type SparePart = {
+  id: number;
+  code: string;
+  name: string;
+  brand: string | null;
+  model_compatibility: string[] | null;
+  category: string | null;
+  description: string | null;
+  sale_price: number;
+  tax_value: number;
+  unit: string;
+  stock_quantity: number;
+  reorder_level: number;
+  image_url: string | null;
+  show_price: boolean;
+  machine_id: string | null;
+  machine_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SparePartCreate = {
+  code: string;
+  name: string;
+  brand?: string | null;
+  model_compatibility?: string[] | null;
+  category?: string | null;
+  description?: string | null;
+  sale_price: number;
+  tax_value: number;
+  unit?: string;
+  stock_quantity?: number;
+  reorder_level?: number;
+  image_url?: string | null;
+  show_price?: boolean;
+  machine_id?: string | null;
+};
+
+export type SparePartUpdate = Partial<SparePartCreate> & { is_active?: boolean };
+
+export type SparePartRequest = {
+  id: number;
+  request_number: string;
+  session_id: string;
+  lead_id: number | null;
+  lead_name: string | null;
+  lead_email: string | null;
+  lead_phone: string | null;
+  lead_company: string | null;
+  lead_rut_nit: string | null;
+  lead_address: string | null;
+  machine_brand: string | null;
+  machine_model: string | null;
+  machine_serial: string | null;
+  part_description: string | null;
+  quantity: number | null;
+  photo_url: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SparePartRequestPatch = {
+  status?: string;
+  notes?: string;
+};
+
+export type EmailClickEvent = {
+  quotation_number: string;
+  click_count: number;
+  first_clicked_at: string;
+  last_clicked_at: string;
+  ip_address: string | null;
+};
+
+export type SparePartSuggestion = {
+  id: number;
+  code: string;
+  name: string;
+  brand: string | null;
+  category: string | null;
+  sale_price: number;
+  tax_value: number;
+  unit: string;
+  image_url: string | null;
+  match_score: number;
+  match_reason: string;
+};
+
 // ── Bot types ──────────────────────────────────────────────────────────────────
 
 export type BotMessageResponse = {
@@ -935,11 +1028,14 @@ export const api = {
       request<BotSessionDetail>(`/bot/sessions/${sessionId}`, { method: "PATCH", body: JSON.stringify(data) }),
     sendMessage: (sessionId: string, content: string) =>
       request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
-    leads: (params?: { industry?: string; client_type?: string; tier?: string; page?: number; page_size?: number }) => {
+    sendDocument: (sessionId: string, data: { pdf_url: string; filename: string; caption?: string }) =>
+      request<{ sent: boolean }>(`/bot/sessions/${sessionId}/send-document`, { method: "POST", body: JSON.stringify(data) }),
+    leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.industry)    qs.set("industry",    params.industry);
       if (params?.client_type) qs.set("client_type", params.client_type);
       if (params?.tier)        qs.set("tier",        params.tier);
+      if (params?.lead_type)   qs.set("lead_type",   params.lead_type);
       if (params?.page)        qs.set("page",        String(params.page));
       if (params?.page_size)   qs.set("page_size",   String(params.page_size));
       return request<PaginatedResponse<BotLeadResponse>>(`/bot/leads?${qs}`);
@@ -952,12 +1048,13 @@ export const api = {
       request<ScoringVariable>(`/bot/scoring/variables/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     patchScoringRule: (id: number, data: Partial<Pick<ScoringRule, "points" | "label" | "value_min" | "value_max" | "values_list">>) =>
       request<ScoringRule>(`/bot/scoring/rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-    quotations: (params?: { status?: string; delivery_mode?: string; page?: number; page_size?: number }) => {
+    quotations: (params?: { status?: string; delivery_mode?: string; quotation_type?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
-      if (params?.status)        qs.set("status",        params.status);
-      if (params?.delivery_mode) qs.set("delivery_mode", params.delivery_mode);
-      if (params?.page)          qs.set("page",          String(params.page));
-      if (params?.page_size)     qs.set("page_size",     String(params.page_size));
+      if (params?.status)          qs.set("status",          params.status);
+      if (params?.delivery_mode)   qs.set("delivery_mode",   params.delivery_mode);
+      if (params?.quotation_type)  qs.set("quotation_type",  params.quotation_type);
+      if (params?.page)            qs.set("page",            String(params.page));
+      if (params?.page_size)       qs.set("page_size",       String(params.page_size));
       return request<PaginatedResponse<BotQuotationResponse>>(`/bot/quotations?${qs}`);
     },
     createManualQuotation: (data: ManualQuotationRequest) =>
@@ -969,6 +1066,9 @@ export const api = {
   quotations: {
     getPage: (quotationNumber: string) =>
       request<QuotationPageData>(`/cotizacion/${quotationNumber}`),
+  },
+  track: {
+    clicks: () => request<EmailClickEvent[]>("/track/clicks"),
   },
   reviews: {
     list: (params?: { page?: number; page_size?: number }) => {
@@ -1046,6 +1146,40 @@ export const api = {
     runScrape: () => request<RunResult>("/prospecting/run/scrape", { method: "POST" }),
     runFollowups: () => request<RunResult>("/prospecting/run/followups", { method: "POST" }),
     runTest: (max_results = 5) => request<RunResult>("/prospecting/run/test", { method: "POST", body: JSON.stringify({ max_results }) }),
+  },
+  spareParts: {
+    list: (params?: { search?: string; category?: string; brand?: string; machine_id?: string; is_active?: boolean; page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.search      !== undefined) qs.set("search",      params.search);
+      if (params?.category    !== undefined) qs.set("category",    params.category);
+      if (params?.brand       !== undefined) qs.set("brand",       params.brand);
+      if (params?.machine_id  !== undefined) qs.set("machine_id",  params.machine_id);
+      if (params?.is_active   !== undefined) qs.set("is_active",   String(params.is_active));
+      if (params?.page        !== undefined) qs.set("page",        String(params.page));
+      if (params?.page_size   !== undefined) qs.set("page_size",   String(params.page_size));
+      return request<PaginatedResponse<SparePart>>(`/spare-parts/parts?${qs}`);
+    },
+    create: (data: SparePartCreate) =>
+      request<SparePart>("/spare-parts/parts", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: SparePartUpdate) =>
+      request<SparePart>(`/spare-parts/parts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    remove: (id: number) =>
+      request<SparePart>(`/spare-parts/parts/${id}`, { method: "DELETE" }),
+
+    requests: (params?: { status?: string; search?: string; page?: number; page_size?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status    !== undefined) qs.set("status",    params.status);
+      if (params?.search    !== undefined) qs.set("search",    params.search);
+      if (params?.page      !== undefined) qs.set("page",      String(params.page));
+      if (params?.page_size !== undefined) qs.set("page_size", String(params.page_size));
+      return request<PaginatedResponse<SparePartRequest>>(`/spare-parts/requests?${qs}`);
+    },
+    request: (id: number) =>
+      request<SparePartRequest>(`/spare-parts/requests/${id}`),
+    patchRequest: (id: number, data: SparePartRequestPatch) =>
+      request<SparePartRequest>(`/spare-parts/requests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    suggestions: (requestId: number, limit = 6) =>
+      request<SparePartSuggestion[]>(`/spare-parts/requests/${requestId}/suggestions?limit=${limit}`),
   },
   menuItems: {
     list: () => request<MenuItemResponse[]>("/menu-items"),

@@ -54,14 +54,25 @@ export default function Select({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Close on scroll/resize so it doesn't drift
+  // Reposition on scroll so it tracks the button; close only on resize
   useEffect(() => {
     if (!open) return;
+    const reposition = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top:      rect.bottom + 4,
+        left:     rect.left,
+        width:    rect.width,
+        zIndex:   9999,
+      });
+    };
     const close = () => setOpen(false);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", close);
     return () => {
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", close);
     };
   }, [open]);

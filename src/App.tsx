@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage            from "./pages/LoginPage";
 import DashboardPage        from "./pages/DashboardPage";
-import PlaceholderPage      from "./pages/PlaceholderPage";
 import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
 import MaquinariaUsadaPage  from "./pages/inventario/MaquinariaUsadaPage";
@@ -31,7 +30,11 @@ import ModulosPage          from "./pages/ajustes/ModulosPage";
 import MenuPage             from "./pages/ajustes/MenuPage";
 import PedidosMaquinasPage  from "./pages/pedidos/PedidosMaquinasPage";
 import PedidoDetailPage     from "./pages/pedidos/PedidoDetailPage";
-import ProspectingPage      from "./pages/prospecting/ProspectingPage";
+import ProspectingPage          from "./pages/prospecting/ProspectingPage";
+import RepuestosPage                from "./pages/agente/RepuestosPage";
+import RepuestoDetailPage           from "./pages/agente/RepuestoDetailPage";
+import RepuestosInventarioPage      from "./pages/inventario/RepuestosInventarioPage";
+import CotizacionesRepuestosPage    from "./pages/posventa/CotizacionesRepuestosPage";
 
 export default function App() {
   return (
@@ -51,7 +54,7 @@ export default function App() {
         <Route path="/inventario" element={<Navigate to="/inventario/maquinaria-nueva" replace />} />
         <Route path="/inventario/maquinaria-nueva" element={<MaquinariaNuevaPage />} />
         <Route path="/inventario/maquinaria-usada" element={<MaquinariaUsadaPage />} />
-        <Route path="/inventario/repuestos"        element={<PlaceholderPage title="Repuestos" />} />
+        <Route path="/inventario/repuestos"        element={<RepuestosInventarioPage />} />
         <Route path="/inventario/renta"            element={<MaquinariaRentaPage />} />
 
         {/* Renta */}
@@ -85,10 +88,18 @@ export default function App() {
         <Route path="/agente/sesiones"            element={<SesionesPage />} />
         <Route path="/agente/sesiones/:sessionId" element={<SesionDetailPage />} />
 
+        {/* Posventa */}
+        <Route path="/posventa" element={<Navigate to="/posventa/leads" replace />} />
+        <Route path="/posventa/leads"         element={<RepuestosPage />} />
+        <Route path="/posventa/leads/:id"     element={<RepuestoDetailPage />} />
+        <Route path="/posventa/cotizaciones"  element={<CotizacionesRepuestosPage />} />
+
         {/* Redirects de rutas antiguas */}
         <Route path="/agente/leads"                element={<Navigate to="/comercial/leads" replace />} />
         <Route path="/agente/leads/:leadId/score"  element={<Navigate to="/comercial/leads" replace />} />
         <Route path="/agente/cotizaciones"         element={<Navigate to="/comercial/cotizaciones" replace />} />
+        <Route path="/agente/repuestos"            element={<Navigate to="/posventa/leads" replace />} />
+        <Route path="/agente/repuestos/:id"        element={<Navigate to="/posventa/leads" replace />} />
 
         <Route path="/usuarios"     element={<UsersPage />} />
         <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
