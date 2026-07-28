@@ -176,19 +176,20 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
 
   const submit = async () => {
     if (!clienteNombre.trim()) return toast.error("Ingresa el nombre del contacto");
-    if (!fromLead && modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
+    if (fromLead && modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
     if (items.length === 0) return toast.error("Agrega al menos un equipo");
 
     setSubmitting(true);
     try {
-      const entrega = fromLead ? "chat" : modoEntrega;
-      const sendEmail = fromLead
-        ? !!clienteEmail.trim()
-        : entrega === "email" || entrega === "ambas";
+      const hasEmail = !!clienteEmail.trim();
+      const entrega = fromLead ? "chat" : (hasEmail ? "email" : "chat");
+      const sendEmail = hasEmail;
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
         client_company: clienteEmpresa.trim() || undefined,
+        client_tax_id:  clienteTaxId.trim() || undefined,
+        client_address: clienteAddress.trim() || undefined,
         lead_id:        prefill?.lead_id,
         items: items.map(i => ({
           machine_code: i.codigo,
@@ -483,8 +484,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                 </div>
               </section>
 
-              {/* Entrega */}
-              {fromLead ? (
+              {/* Entrega — solo visible desde una conversación de WhatsApp */}
+              {fromLead && (
                 <section>
                   <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
                   <div className="space-y-2.5">
@@ -504,16 +505,6 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                       </div>
                     )}
                   </div>
-                </section>
-              ) : (
-                <section>
-                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                  <select className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
-                    value={modoEntrega} onChange={e => setModo(e.target.value as "email" | "chat" | "ambas")}>
-                    <option value="email">Enviar por email</option>
-                    <option value="chat">Solo generar (link)</option>
-                    <option value="ambas">Email + link</option>
-                  </select>
                 </section>
               )}
 

@@ -462,6 +462,8 @@ export type ManualQuotationRequest = {
   client_name: string;
   client_email: string;
   client_company?: string;
+  client_tax_id?: string;
+  client_address?: string;
   client_type?: string;
   lead_id?: number;
   items: ManualQuotationItem[];
