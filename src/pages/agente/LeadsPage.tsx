@@ -40,6 +40,7 @@ export default function LeadsPage() {
     setLoading(true);
     try {
       const res = await api.bot.leads({
+        lead_type: "maquinaria",
         industry: industryFilter || undefined,
         client_type: typeFilter || undefined,
         tier: tierFilter || undefined,

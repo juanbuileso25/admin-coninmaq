@@ -182,6 +182,9 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     setSubmitting(true);
     try {
       const entrega = fromLead ? "chat" : modoEntrega;
+      const sendEmail = fromLead
+        ? !!clienteEmail.trim()
+        : entrega === "email" || entrega === "ambas";
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
@@ -194,7 +197,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
           tax_value:    i.tax_value,
         })),
         delivery_mode: entrega,
-        send_email:    entrega === "email" || entrega === "ambas",
+        send_email:    sendEmail,
       });
 
       // Enviar link al WhatsApp de la conversación si aplica
@@ -484,15 +487,23 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
               {fromLead ? (
                 <section>
                   <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={sendToWa}
-                      onChange={e => setSendToWa(e.target.checked)}
-                      className="w-4 h-4 accent-accent"
-                    />
-                    <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
-                  </label>
+                  <div className="space-y-2.5">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={sendToWa}
+                        onChange={e => setSendToWa(e.target.checked)}
+                        className="w-4 h-4 accent-accent"
+                      />
+                      <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
+                    </label>
+                    {clienteEmail.trim() && (
+                      <div className="flex items-center gap-2 pl-7 text-xs text-fg-4">
+                        <span>✉</span>
+                        <span>También se enviará por correo a <span className="text-fg-3 font-medium">{clienteEmail.trim()}</span></span>
+                      </div>
+                    )}
+                  </div>
                 </section>
               ) : (
                 <section>

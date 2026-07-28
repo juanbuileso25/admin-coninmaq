@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, FileText, Download, Plus, ExternalLink } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, FileText, Download, Plus, ExternalLink, MousePointerClick } from "lucide-react";
 import StatCard from "../../components/StatCard";
-import { api, type BotQuotationResponse, type BotMetrics } from "../../services/api";
+import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function CotizacionesPage() {
   const [quotes, setQuotes]       = useState<BotQuotationResponse[]>([]);
   const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
+  const [clicks, setClicks]       = useState<Map<string, EmailClickEvent>>(new Map());
   const [total, setTotal]         = useState(0);
   const [page, setPage]           = useState(1);
   const [loading, setLoading]     = useState(true);
@@ -39,6 +40,7 @@ export default function CotizacionesPage() {
     setLoading(true);
     try {
       const res = await api.bot.quotations({
+        quotation_type: "maquinaria",
         status: statusFilter || undefined,
         delivery_mode: modeFilter || undefined,
         page,
@@ -55,6 +57,9 @@ export default function CotizacionesPage() {
 
   useEffect(() => {
     api.bot.metrics().then(setMetrics).catch(() => null);
+    api.track.clicks()
+      .then(data => setClicks(new Map(data.map(e => [e.quotation_number, e]))))
+      .catch(() => null);
   }, []);
 
   const filtered = search
@@ -133,15 +138,17 @@ export default function CotizacionesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
+              {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
-            {!loading && filtered.length === 0 && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones</td></tr>}
-            {!loading && filtered.map(q => (
+            {loading && <tr><td colSpan={13} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
+            {!loading && filtered.length === 0 && <tr><td colSpan={13} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones</td></tr>}
+            {!loading && filtered.map(q => {
+              const clickEvent = clicks.get(q.quotation_number);
+              return (
               <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
                 <td className="px-4 py-3">
@@ -160,6 +167,19 @@ export default function CotizacionesPage() {
                     ? <span className="text-emerald-400 text-xs">✓</span>
                     : <span className="text-fg-6 text-xs">—</span>
                   }
+                </td>
+                <td className="px-4 py-3">
+                  {clickEvent ? (
+                    <div
+                      className="flex items-center gap-1 text-accent text-xs cursor-default"
+                      title={`${clickEvent.click_count} clic${clickEvent.click_count !== 1 ? "s" : ""} · Último: ${new Date(clickEvent.last_clicked_at).toLocaleString("es-CO")}`}
+                    >
+                      <MousePointerClick size={12} />
+                      <span>{clickEvent.click_count}×</span>
+                    </div>
+                  ) : (
+                    <span className="text-fg-6 text-xs">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${STATUS_COLORS[q.status] ?? "bg-surface-4 text-fg-5 border-border"}`}>
@@ -197,7 +217,8 @@ export default function CotizacionesPage() {
                   }
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
