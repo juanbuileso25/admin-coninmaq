@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Loader2, Package, DollarSign, Pencil, Plus, Trash2, X,
   AlertTriangle, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp,
+  Upload, ExternalLink,
 } from "lucide-react";
 import { api, type MachineOrderDetailResponse, type MachineOrderItemResponse, type MachineOrderPaymentResponse, type SupplierResponse } from "../../services/api";
 import DatePicker from "../../components/ui/DatePicker";
@@ -593,16 +594,27 @@ function EditItemModal({ orderId, item, onClose, onSaved }: {
 // ── Machine Item Card ─────────────────────────────────────────────────────────
 
 function MachineCard({
-  item, expanded, onToggle, onEdit, onRemove, removing, removeLoading,
+  item, expanded, onToggle, onEdit, onRemove, onUploadMatricula, removing, removeLoading,
 }: {
   item: MachineOrderItemResponse;
   expanded: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onRemove: () => void;
+  onUploadMatricula: (file: File) => Promise<void>;
   removing: boolean;
   removeLoading: boolean;
 }) {
+  const [uploadingMatricula, setUploadingMatricula] = useState(false);
+
+  const handleMatriculaFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploadingMatricula(true);
+    try { await onUploadMatricula(file); } finally { setUploadingMatricula(false); }
+  };
+
   return (
     <div className="bg-surface-2 border border-border overflow-hidden">
       {/* Header row */}
@@ -615,7 +627,7 @@ function MachineCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-accent font-semibold text-sm">{item.model}</span>
             {item.description && <span className="text-fg-5 text-xs">{item.description}</span>}
-            {item.has_matricula && <span className="text-[9px] px-1.5 py-0.5 bg-green-400/10 text-green-400 font-semibold uppercase">Matrícula</span>}
+            {(item.has_matricula || item.matricula_url) && <span className="text-[9px] px-1.5 py-0.5 bg-green-400/10 text-green-400 font-semibold uppercase">Matrícula</span>}
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             {item.client_name && <span className="text-fg-5 text-xs">{item.client_name}</span>}
@@ -675,7 +687,26 @@ function MachineCard({
             <InfoField label="FOB"            value={fmtUSD(item.fob_value_usd)}       mono />
             <InfoField label="Llegada COL"    value={fmtDate(item.arrival_date_col)} />
             <InfoField label="# Factura"      value={item.invoice_number} mono />
-            <InfoField label="Matrícula"      value={item.has_matricula === true ? "Sí" : item.has_matricula === false ? "No" : null} />
+            <div className="space-y-1">
+              <p className="text-[10px] text-fg-6 uppercase tracking-wider font-medium">Matrícula</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-mono ${item.matricula_url ? "text-green-400" : "text-fg-4"}`}>
+                  {item.matricula_url ? "Sí" : item.has_matricula === false ? "No" : "—"}
+                </span>
+                {item.matricula_url && (
+                  <a href={item.matricula_url} target="_blank" rel="noopener noreferrer"
+                    title="Ver matrícula"
+                    className="w-6 h-6 flex items-center justify-center text-fg-6 hover:text-accent transition-colors rounded-sm hover:bg-surface-3">
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+                <label title={item.matricula_url ? "Reemplazar matrícula" : "Subir matrícula"}
+                  className={`w-6 h-6 flex items-center justify-center rounded-sm transition-colors cursor-pointer ${uploadingMatricula ? "opacity-40 pointer-events-none" : "text-fg-6 hover:text-accent hover:bg-surface-3"}`}>
+                  {uploadingMatricula ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleMatriculaFile} />
+                </label>
+              </div>
+            </div>
           </div>
           {/* Importación */}
           <div className="px-4 pt-2 pb-3 border-t border-border grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
@@ -918,6 +949,10 @@ export default function PedidoDetailPage() {
               onRemove={() => {
                 if (removingItemId === item.id) confirmRemoveItem(item.id);
                 else setRemovingItemId(item.id);
+              }}
+              onUploadMatricula={async (file) => {
+                const updated = await api.machineOrders.uploadMatricula(order.id, item.id, file);
+                setOrder(updated);
               }}
               removing={removingItemId === item.id}
               removeLoading={removeLoading}

@@ -681,6 +681,7 @@ export type MachineOrderItemResponse = {
   client_name: string | null;
   invoice_number: string | null;
   has_matricula: boolean | null;
+  matricula_url: string | null;
   fob_value_usd: number | null;
   arrival_date_col: string | null;
   cif_cost: number | null;
@@ -1111,6 +1112,11 @@ export const api = {
     addItem:    (orderId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items`, { method: "POST", body: JSON.stringify(data) }),
     updateItem: (orderId: string, itemId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
     removeItem: (orderId: string, itemId: string) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items/${itemId}`, { method: "DELETE" }),
+    uploadMatricula: (orderId: string, itemId: string, file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/items/${itemId}/matricula`, { method: "POST", body: fd });
+    },
     addPayment:    (orderId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments`, { method: "POST", body: JSON.stringify(data) }),
     updatePayment: (orderId: string, paymentId: string, data: object) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments/${paymentId}`, { method: "PATCH", body: JSON.stringify(data) }),
     removePayment: (orderId: string, paymentId: string) => request<MachineOrderDetailResponse>(`/machine-orders/${orderId}/payments/${paymentId}`, { method: "DELETE" }),
