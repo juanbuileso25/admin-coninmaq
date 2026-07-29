@@ -126,12 +126,6 @@ export default function QuotationPage() {
         .s-features__card { padding: 32px 28px; background: #1A1A1A; }
         .s-features__name { font-size: 14px; font-weight: 600; color: var(--white); }
 
-        .s-gallery { padding: 80px 0; }
-        .s-gallery__grid { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 240px 240px; gap: 8px; border-radius: var(--radius); overflow: hidden; }
-        .s-gallery__item { overflow: hidden; }
-        .s-gallery__item:first-child { grid-row: 1 / 3; }
-        .s-gallery__item img { width: 100%; height: 100%; object-fit: cover; }
-
         .s-video { padding: 80px 0; background: var(--black); }
         .s-video .section-header__num { background: var(--yellow); color: var(--black); }
         .s-video .section-header__label { color: rgba(255,255,255,.35); }
@@ -191,9 +185,6 @@ export default function QuotationPage() {
           .s-carta { padding: 56px 0; } .s-carta__inner { padding: 0 20px; }
           .s-about { padding: 56px 0; } .s-about__grid { grid-template-columns: 1fr; gap: 36px; }
           .s-features { padding: 56px 0; } .s-features__grid { grid-template-columns: 1fr 1fr; }
-          .s-gallery { padding: 56px 0; }
-          .s-gallery__grid { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
-          .s-gallery__item:first-child { grid-row: auto; }
           .s-video { padding: 56px 0; }
           .s-brochure { padding: 56px 0; }
           .s-investment { padding: 56px 0; }
@@ -373,32 +364,11 @@ export default function QuotationPage() {
             </section>
           )}
 
-          {item.machine.images.length > 0 && (
-            <section className="s-gallery">
-              <div className="container">
-                <div className="section-header">
-                  <div className="section-header__num">3</div>
-                  <div>
-                    <p className="section-header__label">Galería</p>
-                    <h2 className="section-header__title">Vista del equipo</h2>
-                  </div>
-                </div>
-                <div className="s-gallery__grid">
-                  {item.machine.images.slice(0, 5).map((img, i) => (
-                    <div key={i} className="s-gallery__item">
-                      <img src={img.url} alt={item.machine!.model} loading="lazy" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
           {item.machine.videos.length > 0 && (
             <section className="s-video">
               <div className="container">
                 <div className="section-header">
-                  <div className="section-header__num">4</div>
+                  <div className="section-header__num">3</div>
                   <div>
                     <p className="section-header__label">En acción</p>
                     <h2 className="section-header__title">Véala trabajar</h2>
@@ -415,7 +385,7 @@ export default function QuotationPage() {
             <section className="s-brochure">
               <div className="container">
                 <div className="section-header">
-                  <div className="section-header__num">5</div>
+                  <div className="section-header__num">4</div>
                   <div>
                     <p className="section-header__label">Documentación</p>
                     <h2 className="section-header__title">Ficha técnica completa</h2>
@@ -439,7 +409,7 @@ export default function QuotationPage() {
       <section className="s-investment">
         <div className="container">
           <div className="section-header">
-            <div className="section-header__num">6</div>
+            <div className="section-header__num">5</div>
             <div>
               <p className="section-header__label">Propuesta económica</p>
               <h2 className="section-header__title">Inversión</h2>
@@ -490,7 +460,7 @@ export default function QuotationPage() {
       <section className="s-conditions">
         <div className="container">
           <div className="section-header">
-            <div className="section-header__num">7</div>
+            <div className="section-header__num">6</div>
             <div>
               <p className="section-header__label">Términos</p>
               <h2 className="section-header__title">Condiciones y garantía</h2>

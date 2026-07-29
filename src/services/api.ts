@@ -484,18 +484,31 @@ export type ManualQuotationResponse = {
 
 export type PhaseCount = { phase: string; count: number };
 export type BotMetrics = {
-  total_sessions: number;
+  date_from: string;
+  date_to: string;
+  // Estado actual
+  total_machines: number;
+  machines_visible_web: number;
+  total_clients: number;
   active_sessions: number;
-  bot_paused_sessions: number;
-  sessions_by_phase: PhaseCount[];
+  payments_pending: number;
   total_leads: number;
-  leads_last_7_days: number;
+  total_quotations: number;
+  total_revenue: number;
+  // Período
+  quotations_period: number;
+  revenue_period: number;
+  leads_period: number;
+  leads_tier_a_period: number;
+  email_sent_period: number;
+  // Distribuciones período
   top_equipment_interest: { equipment: string; count: number }[];
   top_industries: { industry: string; count: number }[];
-  total_quotations: number;
-  quotations_email_sent: number;
-  total_revenue: number;
   quotations_by_delivery: { mode: string; count: number }[];
+  // Bot
+  total_sessions: number;
+  bot_paused_sessions: number;
+  sessions_by_phase: PhaseCount[];
 };
 
 export type PaginatedResponse<T> = {
@@ -1016,7 +1029,13 @@ export const api = {
     },
   },
   bot: {
-    metrics: () => request<BotMetrics>("/bot/metrics"),
+    metrics: (params?: { date_from?: string; date_to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      const q = qs.toString();
+      return request<BotMetrics>(`/bot/metrics${q ? `?${q}` : ""}`);
+    },
     sessions: (params?: { phase?: string; bot_active?: boolean; is_active?: boolean; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.phase !== undefined)      qs.set("phase",      params.phase);
@@ -1033,12 +1052,13 @@ export const api = {
       request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
     sendDocument: (sessionId: string, data: { pdf_url: string; filename: string; caption?: string }) =>
       request<{ sent: boolean }>(`/bot/sessions/${sessionId}/send-document`, { method: "POST", body: JSON.stringify(data) }),
-    leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; page?: number; page_size?: number }) => {
+    leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; search?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.industry)    qs.set("industry",    params.industry);
       if (params?.client_type) qs.set("client_type", params.client_type);
       if (params?.tier)        qs.set("tier",        params.tier);
       if (params?.lead_type)   qs.set("lead_type",   params.lead_type);
+      if (params?.search)      qs.set("search",      params.search);
       if (params?.page)        qs.set("page",        String(params.page));
       if (params?.page_size)   qs.set("page_size",   String(params.page_size));
       return request<PaginatedResponse<BotLeadResponse>>(`/bot/leads?${qs}`);

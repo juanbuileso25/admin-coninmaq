@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, FileText, Download, Plus, ExternalLink, MousePointerClick } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
@@ -36,6 +36,13 @@ export default function CotizacionesPage() {
 
   const PAGE_SIZE = 20;
 
+  const loadMetrics = () => {
+    api.bot.metrics().then(setMetrics).catch(() => null);
+    api.track.clicks()
+      .then(data => setClicks(new Map(data.map(e => [e.quotation_number, e]))))
+      .catch(() => null);
+  };
+
   const load = async () => {
     setLoading(true);
     try {
@@ -55,12 +62,7 @@ export default function CotizacionesPage() {
 
   useEffect(() => { load(); }, [page, statusFilter, modeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    api.bot.metrics().then(setMetrics).catch(() => null);
-    api.track.clicks()
-      .then(data => setClicks(new Map(data.map(e => [e.quotation_number, e]))))
-      .catch(() => null);
-  }, []);
+  useEffect(() => { loadMetrics(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = search
     ? quotes.filter(q =>
@@ -76,7 +78,7 @@ export default function CotizacionesPage() {
     <NuevaCotizacionDrawer
       open={drawerOpen}
       onClose={() => setDrawer(false)}
-      onCreated={() => { setPage(1); load(); }}
+      onCreated={() => { setPage(1); load(); loadMetrics(); }}
     />
     <div className="space-y-5">
 
@@ -94,10 +96,9 @@ export default function CotizacionesPage() {
 
       {metrics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Total cotizaciones" value={String(metrics.total_quotations)}    icon={ReceiptText} accent delay={0}   />
-          <StatCard label="Enviadas por email" value={String(metrics.quotations_email_sent)} icon={Mail}     delay={50}  />
-          <StatCard label="Revenue total"      value={COP(metrics.total_revenue)}           icon={DollarSign} delay={100} />
-          <StatCard label="Con PDF"            value={String(quotes.filter(q => q.pdf_url).length)} icon={FileText} delay={150} />
+          <StatCard label="Total cotizaciones" value={String(total)}                         icon={ReceiptText} accent delay={0}   />
+          <StatCard label="Enviadas por email" value={String(metrics.email_sent_period)}      icon={Mail}        delay={50}  />
+          <StatCard label="Revenue total"      value={COP(metrics.total_revenue)}            icon={DollarSign}  delay={100} />
         </div>
       )}
 

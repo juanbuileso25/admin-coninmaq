@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Trash2, Loader2, Search, UserCheck } from "lucide-react";
+import { X, Plus, Trash2, Loader2, Search, UserCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { api, type ClientResponse, type MachineResponse, type ManualQuotationResponse } from "../../services/api";
+import { api, type BotLeadResponse, type ClientResponse, type MachineResponse, type ManualQuotationResponse } from "../../services/api";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
@@ -50,6 +50,13 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [showClientSearch, setShowClientSearch] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Buscar contacto previo (leads)
+  const [leadSearch, setLeadSearch]       = useState("");
+  const [leadResults, setLeadResults]     = useState<BotLeadResponse[]>([]);
+  const [leadLoading, setLeadLoading]     = useState(false);
+  const [showLeadSearch, setShowLeadSearch] = useState(false);
+  const debounceL = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Datos del cliente
   const [clienteNombre,    setNombre]    = useState("");
   const [clienteEmail,     setEmail]     = useState("");
@@ -94,6 +101,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       setItems([]); setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
       setModo("email"); setSendToWa(true); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
+      setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
     } else if (prefill) {
       if (prefill.name)    setNombre(prefill.name);
       if (prefill.email)   setEmail(prefill.email);
@@ -120,6 +128,23 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     }, 300);
   }, [clientSearch, showClientSearch]);
 
+  // Buscar contactos previos (leads) con debounce
+  useEffect(() => {
+    if (!showLeadSearch) return;
+    if (debounceL.current) clearTimeout(debounceL.current);
+    debounceL.current = setTimeout(async () => {
+      setLeadLoading(true);
+      try {
+        const data = await api.bot.leads({ search: leadSearch || undefined, page_size: 10 });
+        setLeadResults(data.data);
+      } catch {
+        toast.error("No se pudo buscar contactos");
+      } finally {
+        setLeadLoading(false);
+      }
+    }, 300);
+  }, [leadSearch, showLeadSearch]);
+
   const selectClient = (c: ClientResponse) => {
     setSelectedClient(c);
     setEmpresa(c.name);
@@ -127,6 +152,16 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     setNombre(c.purchasing_contact ?? "");
     setShowClientSearch(false);
     setClientSearch("");
+  };
+
+  const selectLead = (l: BotLeadResponse) => {
+    if (l.name)           setNombre(l.name);
+    if (l.email)          setEmail(l.email);
+    if (l.company)        setEmpresa(l.company);
+    if (l.rut_nit)        setTaxId(l.rut_nit);
+    if (l.rut_direccion)  setAddress(l.rut_direccion);
+    setShowLeadSearch(false);
+    setLeadSearch("");
   };
 
   const clearClient = () => {
@@ -392,15 +427,57 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Datos del cliente</h3>
-                  {!selectedClient && (
-                    <button type="button" onClick={() => setShowClientSearch(s => !s)}
-                      className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
-                      <UserCheck size={12} /> Buscar cliente
+                  <div className="flex items-center gap-3">
+                    {!selectedClient && (
+                      <button type="button"
+                        onClick={() => { setShowLeadSearch(false); setShowClientSearch(s => !s); }}
+                        className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
+                        <UserCheck size={12} /> Buscar cliente
+                      </button>
+                    )}
+                    <button type="button"
+                      onClick={() => { setShowClientSearch(false); setSelectedClient(null); setShowLeadSearch(s => !s); }}
+                      className="flex items-center gap-1 text-fg-4 text-xs hover:text-fg transition-colors">
+                      <Clock size={12} /> Contacto previo
                     </button>
-                  )}
+                  </div>
                 </div>
 
-                {/* Buscador */}
+                {/* Buscador de contactos previos (leads) */}
+                {showLeadSearch && (
+                  <div className="mb-3 border border-border bg-surface-3">
+                    <div className="relative border-b border-border">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-6 pointer-events-none" />
+                      <input autoFocus
+                        className="w-full bg-transparent text-fg pl-9 pr-4 py-2.5 text-sm placeholder:text-fg-6 outline-none"
+                        placeholder="Nombre, email, empresa o NIT..."
+                        value={leadSearch} onChange={e => setLeadSearch(e.target.value)} />
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {leadLoading && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm flex items-center justify-center gap-2">
+                          <Loader2 size={14} className="animate-spin" /> Buscando...
+                        </div>
+                      )}
+                      {!leadLoading && leadResults.length === 0 && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm">Sin resultados</div>
+                      )}
+                      {!leadLoading && leadResults.map(l => (
+                        <button key={l.id} type="button" onClick={() => selectLead(l)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-surface-4 border-b border-border last:border-0 transition-colors">
+                          <p className="text-fg text-sm font-medium">{l.name ?? "Sin nombre"}</p>
+                          <p className="text-fg-5 text-xs">{[l.email, l.company].filter(Boolean).join(" · ")}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2 border-t border-border">
+                      <button type="button" onClick={() => { setShowLeadSearch(false); setLeadSearch(""); }}
+                        className="text-fg-5 text-xs hover:text-fg transition-colors">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Buscador de clientes */}
                 {showClientSearch && !selectedClient && (
                   <div className="mb-3 border border-border bg-surface-3">
                     <div className="relative border-b border-border">
