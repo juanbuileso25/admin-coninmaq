@@ -82,7 +82,7 @@ export default function LeadsPage() {
       {metrics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard label="Total leads"         value={String(metrics.total_leads)}          icon={UserCheck}  accent delay={0}   />
-          <StatCard label="Últimos 7 días"      value={String(metrics.leads_last_7_days)}    icon={TrendingUp} delay={50}  />
+          <StatCard label="Este mes"             value={String(metrics.leads_period)}         icon={TrendingUp} delay={50}  />
           <StatCard label="Top equipo"          value={metrics.top_equipment_interest[0]?.equipment ?? "—"} icon={Hammer} delay={100} />
           <StatCard label="Top industria"       value={metrics.top_industries[0]?.industry ?? "—"}          icon={UserCheck} delay={150} />
         </div>
