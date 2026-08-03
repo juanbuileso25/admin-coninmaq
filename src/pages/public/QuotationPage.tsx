@@ -98,17 +98,37 @@ export default function QuotationPage() {
         .section-header__title { font-size: 28px; font-weight: 700; color: var(--black); line-height: 1.2; }
         .s-divider { border: none; border-top: 1px solid var(--gray-4); margin: 0; }
 
-        .s-carta { padding: 80px 0; background: var(--white); }
-        .s-carta__inner { max-width: 720px; margin: 0 auto; }
-        .s-carta__date { font-size: 12px; color: var(--gray-3); margin-bottom: 36px; }
-        .s-carta__saludo { font-size: 20px; font-weight: 600; margin-bottom: 28px; }
-        .s-carta__body { font-size: 15px; color: var(--gray-1); line-height: 1.9; }
-        .s-carta__body p + p { margin-top: 20px; }
-        .s-carta__firma { margin-top: 48px; padding-top: 36px; border-top: 1px solid var(--gray-4); }
-        .s-carta__firma-nombre { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-        .s-carta__firma-cargo { font-size: 12px; color: var(--gray-3); margin-bottom: 20px; }
-        .s-carta__firma-contacto { display: flex; flex-wrap: wrap; gap: 6px 24px; }
-        .s-carta__firma-contacto a { font-size: 13px; color: var(--gray-2); text-decoration: none; }
+        .s-statband { background: var(--black); border-top: 1px solid rgba(255,255,255,.06); }
+        .s-statband__inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+        .s-statband__stat { padding: 44px 32px; border-right: 1px solid rgba(255,255,255,.07); text-align: center; }
+        .s-statband__stat:last-child { border-right: none; }
+        .s-statband__value { font-size: clamp(28px,3.5vw,48px); font-weight: 900; color: var(--yellow); line-height: 1; letter-spacing: -1px; margin-bottom: 10px; }
+        .s-statband__label { font-size: 10px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.35); }
+
+        .s-intro { background: var(--white); overflow: hidden; }
+        .s-intro__inner { display: grid; grid-template-columns: 1fr 1fr; min-height: 520px; }
+        .s-intro__image { overflow: hidden; background: var(--gray-4); position: relative; }
+        .s-intro__image img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+        .s-intro__overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.18) 55%, transparent 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 36px 32px; }
+        .s-intro__badge { display: inline-flex; align-items: center; gap: 6px; background: var(--yellow); color: var(--black); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 14px; border-radius: 100px; width: fit-content; margin-bottom: 20px; }
+        .s-intro__content { padding: 56px 52px; display: flex; flex-direction: column; justify-content: space-between; }
+        .s-intro__ministats { display: flex; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--gray-4); }
+        .s-intro__ministat { flex: 1; padding: 0 20px; border-right: 1px solid var(--gray-4); }
+        .s-intro__ministat:first-child { padding-left: 0; }
+        .s-intro__ministat:last-child { border-right: none; }
+        .s-intro__ministat-value { font-size: 26px; font-weight: 900; color: var(--black); line-height: 1; margin-bottom: 5px; }
+        .s-intro__ministat-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-3); }
+        .s-intro__hi { font-size: 24px; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
+        .s-intro__sub { font-size: 14px; color: var(--gray-1); line-height: 1.8; margin-bottom: 28px; }
+        .s-intro__bullets { list-style: none; display: flex; flex-direction: column; }
+        .s-intro__bullets li { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--gray-4); font-size: 13px; color: var(--gray-1); line-height: 1.5; }
+        .s-intro__bullets li:last-child { border-bottom: none; }
+        .s-intro__check { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--black); color: var(--white); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+        .s-intro__firma { padding-top: 24px; border-top: 1px solid var(--gray-4); margin-top: 8px; }
+        .s-intro__firma-nombre { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .s-intro__firma-cargo { font-size: 11px; color: var(--gray-3); margin-bottom: 10px; }
+        .s-intro__firma-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+        .s-intro__firma-links a { font-size: 12px; color: var(--gray-2); text-decoration: none; }
 
         .s-about { padding: 80px 0; }
         .s-about__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
@@ -122,9 +142,11 @@ export default function QuotationPage() {
         .s-features .section-header__num { background: var(--yellow); color: var(--black); }
         .s-features .section-header__label { color: rgba(255,255,255,.35); }
         .s-features .section-header__title { color: var(--white); }
-        .s-features__grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
-        .s-features__card { padding: 32px 28px; background: #1A1A1A; }
-        .s-features__name { font-size: 14px; font-weight: 600; color: var(--white); }
+        .s-features__intro { font-size: 15px; color: rgba(255,255,255,.45); max-width: 540px; margin-bottom: 40px; line-height: 1.75; }
+        .s-features__grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1px; }
+        .s-features__card { padding: 40px 36px; background: #161616; border: 1px solid rgba(255,255,255,.06); border-left: 3px solid var(--yellow); min-height: 140px; display: flex; align-items: center; transition: background .25s; }
+        .s-features__card:hover { background: #1e1e1e; }
+        .s-features__name { font-size: 18px; font-weight: 600; color: var(--white); line-height: 1.45; }
 
         .s-video { padding: 80px 0; background: var(--black); }
         .s-video .section-header__num { background: var(--yellow); color: var(--black); }
@@ -182,26 +204,41 @@ export default function QuotationPage() {
           .hero__left { min-height: 55vw; }
           .hero__right { padding: 32px 24px; }
           .container { padding: 0 20px; }
-          .s-carta { padding: 56px 0; } .s-carta__inner { padding: 0 20px; }
-          .s-about { padding: 56px 0; } .s-about__grid { grid-template-columns: 1fr; gap: 36px; }
-          .s-features { padding: 56px 0; } .s-features__grid { grid-template-columns: 1fr 1fr; }
-          .s-video { padding: 56px 0; }
-          .s-brochure { padding: 56px 0; }
-          .s-investment { padding: 56px 0; }
-          .s-investment__card { grid-template-columns: 1fr; padding: 36px 24px; }
-          .s-investment__total-amount { font-size: 44px; }
+          .s-statband__inner { grid-template-columns: 1fr 1fr; }
+          .s-statband__stat { padding: 32px 20px; }
+          .s-intro__inner { grid-template-columns: 1fr; min-height: auto; }
+          .s-intro__image { min-height: 260px; max-height: 320px; }
+          .s-intro__content { padding: 32px 20px; }
+          .s-intro__ministats { flex-direction: column; gap: 0; border-bottom: none; margin-bottom: 20px; padding-bottom: 0; }
+          .s-intro__ministat { padding: 10px 0; border-right: none; border-bottom: 1px solid var(--gray-4); }
+          .s-intro__ministat:last-child { border-bottom: none; }
+          .s-intro__ministat-value { font-size: 20px; }
+          .s-intro__hi { font-size: 20px; }
+          .section-header__title { font-size: 22px; }
+          .s-about { padding: 48px 0; } .s-about__grid { grid-template-columns: 1fr; gap: 32px; }
+          .s-features { padding: 48px 0; } .s-features__grid { grid-template-columns: 1fr !important; }
+          .s-features__card { padding: 28px 24px; min-height: auto; }
+          .s-features__name { font-size: 15px; }
+          .s-video { padding: 48px 0; }
+          .s-brochure { padding: 48px 0; }
+          .s-investment { padding: 48px 0; }
+          .s-investment__card { grid-template-columns: 1fr; padding: 32px 20px; gap: 32px; }
+          .s-investment__total-amount { font-size: 40px; }
           .s-investment__right { align-items: flex-start; }
           .s-investment__validity-note { text-align: left; max-width: none; }
+          .s-conditions { padding: 48px 0; }
           .s-conditions__grid { grid-template-columns: 1fr; gap: 16px; }
-          .s-conditions__warranty { padding: 32px 24px; }
+          .s-conditions__warranty { padding: 32px 20px; }
           .s-footer__inner { padding: 0 20px; }
           .s-footer__top { flex-direction: column; gap: 32px; }
           .s-footer__tagline { max-width: none; }
         }
         @media (max-width: 480px) {
-          .s-features__grid { grid-template-columns: 1fr; }
+          .s-features__grid { grid-template-columns: 1fr !important; }
           .s-gallery__grid { grid-template-columns: 1fr; }
           .hero__machine { font-size: 36px; }
+          .s-intro__sub { font-size: 13px; }
+          .s-intro__bullets li { font-size: 12px; }
         }
       `}</style>
 
@@ -215,96 +252,54 @@ export default function QuotationPage() {
         <span className="topbar__meta">{data.quotation_number} · Válida hasta {fmtDateShort(data.expires_at)}</span>
       </nav>
 
-      {/* Hero */}
-      {firstMachine && (
-        <div className="hero">
-          <div className="hero__left">
-            {heroImage && <img src={heroImage} alt={firstMachine.code} />}
-          </div>
-          <div className="hero__right">
-            <div>
-              {data.client && (
-                <p className="hero__greeting">
-                  Estimado/a <strong>{data.client.representative ?? data.client.name ?? "cliente"}</strong>,<br /><br />
-                  A continuación encontrará nuestra propuesta comercial preparada especialmente para usted —
-                  con condiciones de inversión, ficha técnica detallada y toda la información que necesita
-                  para tomar su decisión con confianza. Nuestro equipo comercial está disponible para
-                  acompañarle en cada paso del proceso.
-                </p>
-              )}
-              <div>
-                {data.client?.company && (
-                  <div className="hero__detail">
-                    <span className="hero__detail-label">Razón social</span>
-                    <span className="hero__detail-value">{data.client.company}</span>
-                  </div>
-                )}
-                {data.client?.tax_id && (
-                  <div className="hero__detail">
-                    <span className="hero__detail-label">NIT</span>
-                    <span className="hero__detail-value">{data.client.tax_id}</span>
-                  </div>
-                )}
-                {data.client?.address && (
-                  <div className="hero__detail">
-                    <span className="hero__detail-label">Dirección</span>
-                    <span className="hero__detail-value">{data.client.address}</span>
-                  </div>
-                )}
-                {data.client?.representative && (
-                  <div className="hero__detail">
-                    <span className="hero__detail-label">Representante</span>
-                    <span className="hero__detail-value">{data.client.representative}</span>
-                  </div>
-                )}
-                <div className="hero__detail">
-                  <span className="hero__detail-label">Equipo</span>
-                  <span className="hero__detail-value">
-                    {data.items.map((it, i) => (
-                      <span key={i}>{it.producto} · Und. {it.cantidad}{i < data.items.length - 1 ? <br /> : null}</span>
-                    ))}
-                  </span>
-                </div>
-                {data.advisor && (
-                  <div className="hero__detail">
-                    <span className="hero__detail-label">Asesor</span>
-                    <span className="hero__detail-value">
-                      {data.advisor.name}<br />
-                      <small style={{ color: "#9CA3AF" }}>{data.advisor.email}</small>
-                    </span>
-                  </div>
-                )}
-                <div className="hero__detail">
-                  <span className="hero__detail-label">N° Cotización</span>
-                  <span className="hero__detail-value" style={{ fontFamily: "monospace", fontSize: 12 }}>{data.quotation_number}</span>
-                </div>
-              </div>
-            </div>
-            <div className="hero__validity">
-              <strong>Vigencia:</strong> Esta cotización es válida hasta el <strong>{fmtDate(data.expires_at)}</strong>.
-              Precio sujeto a disponibilidad de divisas.
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Carta */}
-      <section className="s-carta">
-        <div className="s-carta__inner">
-          <p className="s-carta__date">Medellín, {fmtDate(data.quotation_date)}</p>
-          <p className="s-carta__saludo">Estimado/a {primerNombre(data.client?.representative ?? data.client?.name ?? null)},</p>
-          <div className="s-carta__body">
-            <p>Agradecemos sinceramente su interés en nuestros equipos LONKING. En CONINMAQ S.A.S llevamos más de 10 años siendo líderes en maquinaria pesada en Colombia, respaldando a empresas constructoras, mineras e industriales con equipos de alta calidad, soporte técnico especializado y acompañamiento postventa a nivel nacional.</p>
-            <p>Nuestra misión es entregar soluciones confiables y eficientes que impulsen la productividad de cada obra. Cada equipo LONKING que comercializamos cuenta con garantía oficial, capacitación al operador y red de repuestos disponible en todo el país.</p>
-            <p>A continuación le presentamos nuestra propuesta comercial para el equipo de su interés. Hemos preparado esta cotización con las condiciones más favorables disponibles a la fecha, y quedamos a su entera disposición para resolver cualquier inquietud, gestionar una visita de demostración o avanzar en el proceso de negociación.</p>
+      {/* Intro con imagen */}
+      <section className="s-intro">
+        <div className="s-intro__inner">
+          <div className="s-intro__image">
+            {firstMachine?.image_url
+              ? <img src={firstMachine.image_url} alt={firstMachine.code} />
+              : <div style={{ background: "var(--gray-4)", width: "100%", height: "100%" }} />
+            }
           </div>
-          <div className="s-carta__firma">
-            <p className="s-carta__firma-nombre">{advisorName} · CONINMAQ S.A.S</p>
-            <p className="s-carta__firma-cargo">Cordialmente,</p>
-            <div className="s-carta__firma-contacto">
-              <a href={`tel:${advisorPhone}`}>{advisorPhone}</a>
-              <a href={`mailto:${advisorEmail}`}>{advisorEmail}</a>
-              <a href="https://coninmaqsas.com" target="_blank" rel="noopener">coninmaqsas.com</a>
+          <div className="s-intro__content">
+            <div>
+              <p className="s-intro__hi">Hola, <strong>{primerNombre(data.client?.representative ?? data.client?.name ?? null)}</strong> 👋</p>
+              <p className="s-intro__sub">Todo lo que necesitas para decir sí con confianza está en esta oferta comercial: precio, ficha técnica, garantía y el respaldo de quienes más saben de maquinaria pesada en Colombia. Nuestro equipo comercial está listo para acompañarle en cada paso.</p>
+              <div className="s-intro__ministats">
+                {[
+                  { value: "+10",  label: "Años de experiencia" },
+                  { value: "+500", label: "Máquinas vendidas" },
+                  { value: "#1",   label: "En posventa en Colombia" },
+                ].map((s, i) => (
+                  <div key={i} className="s-intro__ministat">
+                    <p className="s-intro__ministat-value">{s.value}</p>
+                    <p className="s-intro__ministat-label">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <ul className="s-intro__bullets">
+                {[
+                  <>Equipos de <strong>alta calidad probados en Colombia</strong> — minas, canteras y obras de las condiciones más severas del país</>,
+                  <>Componentes <strong>compatibles con el mercado nacional</strong>: motor, bombas hidráulicas y motores de traslación de marcas reconocidas</>,
+                  <>Soporte técnico <strong>profesional y especializado</strong> — técnicos certificados, respuesta oportuna y seguimiento real postventa</>,
+                  <>Más de <strong>10 años</strong> respaldando operaciones en construcción, minería e industria a nivel nacional</>,
+                  <><strong>Repuestos originales</strong> disponibles en todo el país — para que su equipo no pare cuando más lo necesita</>,
+                ].map((txt, i) => (
+                  <li key={i}>
+                    <span className="s-intro__check">✓</span>
+                    <span>{txt}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="s-intro__firma">
+              <p className="s-intro__firma-nombre">{advisorName}</p>
+              <p className="s-intro__firma-cargo">Asesor Comercial · CONINMAQ S.A.S</p>
+              <div className="s-intro__firma-links">
+                <a href={`tel:${advisorPhone}`}>{advisorPhone}</a>
+                <a href={`mailto:${advisorEmail}`}>{advisorEmail}</a>
+              </div>
             </div>
           </div>
         </div>
@@ -315,10 +310,39 @@ export default function QuotationPage() {
       {/* Secciones por equipo */}
       {data.items.map((item, idx) => item.machine && (
         <div key={idx}>
+          {item.machine.highlights.length > 0 && (
+            <section className="s-features">
+              <div className="container">
+                <div className="section-header">
+                  <div className="section-header__num">1</div>
+                  <div>
+                    <p className="section-header__label">Características</p>
+                    <h2 className="section-header__title">Lo que la diferencia</h2>
+                  </div>
+                </div>
+                <p className="s-features__intro">
+                  No todas las máquinas están hechas para lo mismo. Esto es lo que hace que la {item.machine.brand} {item.machine.code} trabaje cuando otros paran.
+                </p>
+                <div
+                  className="s-features__grid"
+                  style={{ gridTemplateColumns: `repeat(${item.machine.highlights.length <= 3 ? item.machine.highlights.length : 2}, 1fr)` }}
+                >
+                  {item.machine.highlights.map((h, i) => (
+                    <div key={i} className="s-features__card">
+                      <p className="s-features__name">{h.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          <hr className="s-divider" />
+
           <section className="s-about">
             <div className="container">
               <div className="section-header">
-                <div className="section-header__num">1</div>
+                <div className="section-header__num">2</div>
                 <div>
                   <p className="section-header__label">El equipo</p>
                   <h2 className="section-header__title">{item.machine.brand} {item.machine.code}</h2>
@@ -342,27 +366,6 @@ export default function QuotationPage() {
           </section>
 
           <hr className="s-divider" />
-
-          {item.machine.highlights.length > 0 && (
-            <section className="s-features">
-              <div className="container">
-                <div className="section-header">
-                  <div className="section-header__num">2</div>
-                  <div>
-                    <p className="section-header__label">Características</p>
-                    <h2 className="section-header__title">Lo que la diferencia</h2>
-                  </div>
-                </div>
-                <div className="s-features__grid">
-                  {item.machine.highlights.map((h, i) => (
-                    <div key={i} className="s-features__card">
-                      <p className="s-features__name">{h.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
 
           {item.machine.videos.length > 0 && (
             <section className="s-video">
