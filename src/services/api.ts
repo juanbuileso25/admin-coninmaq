@@ -388,6 +388,51 @@ export interface BotQuotationSummary {
   created_at: string;
 }
 
+export type PipelineStage =
+  | "interesado"
+  | "contactado"
+  | "calificado"
+  | "cotizacion_propuesta"
+  | "seguimiento"
+  | "cierre"
+  | "referido";
+
+export const PIPELINE_STAGES: PipelineStage[] = [
+  "interesado",
+  "contactado",
+  "calificado",
+  "cotizacion_propuesta",
+  "seguimiento",
+  "cierre",
+  "referido",
+];
+
+export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
+  interesado:           "Interesado",
+  contactado:           "Contactado",
+  calificado:           "Calificado",
+  cotizacion_propuesta: "Cotización y propuesta",
+  seguimiento:          "Seguimiento y negociación",
+  cierre:               "Cierre",
+  referido:             "Referido",
+};
+
+export type LeadStageHistoryResponse = {
+  id: number;
+  lead_id: number;
+  from_stage: string | null;
+  to_stage: string;
+  changed_by: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type PipelineColumnResponse = {
+  stage: PipelineStage;
+  leads: BotLeadResponse[];
+  count: number;
+};
+
 export type BotLeadResponse = {
   id: number;
   session_id: string;
@@ -406,6 +451,8 @@ export type BotLeadResponse = {
   rut_direccion: string | null;
   rut_representante: string | null;
   rut_received: boolean;
+  pipeline_stage: PipelineStage;
+  close_result: "ganado" | "perdido" | null;
   created_at: string;
   score?: LeadScoreResponse | null;
   latest_quotation?: BotQuotationSummary | null;
@@ -1085,6 +1132,16 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    pipeline: (params?: { lead_type?: string; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.lead_type) qs.set("lead_type", params.lead_type);
+      if (params?.search)    qs.set("search",    params.search);
+      return request<PipelineColumnResponse[]>(`/bot/leads/pipeline?${qs}`);
+    },
+    patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; note?: string }) =>
+      request<BotLeadResponse>(`/bot/leads/${leadId}/stage`, { method: "PATCH", body: JSON.stringify(data) }),
+    leadStageHistory: (leadId: number) =>
+      request<LeadStageHistoryResponse[]>(`/bot/leads/${leadId}/stage-history`),
   },
   quotations: {
     getPage: (quotationNumber: string) =>
