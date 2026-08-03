@@ -54,7 +54,6 @@ export default function QuotationPage() {
 
   const firstItem    = data.items[0] ?? null;
   const firstMachine = firstItem?.machine ?? null;
-  const heroImage    = firstMachine?.image_url ?? "";
   const advisorName  = data.advisor?.name  ?? "Equipo Comercial";
   const advisorEmail = data.advisor?.email ?? "comercial@coninmaq.com";
   const advisorPhone = data.advisor?.phone ?? "+57 316 381 5694";
