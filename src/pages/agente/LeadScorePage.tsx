@@ -86,7 +86,7 @@ export default function LeadScorePage() {
         onCreated={() => setDrawerOpen(false)}
         prefill={lead ? {
           lead_id:      lead.id,
-          session_id:   lead.session_id.startsWith("wa_") ? lead.session_id : null,
+          session_id:   lead.session_id?.startsWith("wa_") ? lead.session_id : null,
           name:         lead.rut_representante ?? lead.name,
           email:        lead.email,
           company:      lead.rut_razon_social  ?? lead.company,
