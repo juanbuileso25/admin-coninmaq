@@ -157,7 +157,7 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {lead.phone_number ? (
+                {lead.lead_source === "whatsapp_bot" ? (
                   <span title={`WhatsApp · ${lead.phone_number}`} className="text-green-400">
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -280,7 +280,6 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                   ) : null
                 } />
                 <InfoRow label="Industria" value={lead.industry} />
-                <InfoRow label="Tipo cliente" value={lead.client_type} />
               </div>
             </Section>
 
@@ -438,22 +437,24 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
             </Section>
 
             {/* ── Sesión del bot ───────────────────────────────────────────── */}
-            <Section title="Sesión bot">
-              <div className="space-y-2">
-                <InfoRow label="ID sesión" value={
-                  <span className="font-mono text-[11px] text-fg-5 break-all">{lead.session_id}</span>
-                } />
-                <InfoRow label="Creado" value={
-                  new Date(lead.created_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })
-                } />
-              </div>
-              <a
-                href={`/agente/sesiones/${lead.session_id}`}
-                className="mt-3 flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
-              >
-                <ExternalLink size={12} /> Ver conversación completa
-              </a>
-            </Section>
+            {lead.lead_source === "whatsapp_bot" && (
+              <Section title="Sesión bot">
+                <div className="space-y-2">
+                  <InfoRow label="ID sesión" value={
+                    <span className="font-mono text-[11px] text-fg-5 break-all">{lead.session_id}</span>
+                  } />
+                  <InfoRow label="Creado" value={
+                    new Date(lead.created_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })
+                  } />
+                </div>
+                <a
+                  href={`/agente/sesiones/${lead.session_id}`}
+                  className="mt-3 flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
+                >
+                  <ExternalLink size={12} /> Ver conversación completa
+                </a>
+              </Section>
+            )}
 
           </div>
 

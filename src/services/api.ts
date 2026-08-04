@@ -142,6 +142,7 @@ export type ProspectMessageResponse = {
   channel: string;
   subject: string | null;
   body: string;
+  html_body: string | null;
   sequence_day: number;
   status: string;
   is_test: boolean;
@@ -435,7 +436,8 @@ export type PipelineColumnResponse = {
 
 export type BotLeadResponse = {
   id: number;
-  session_id: string;
+  session_id: string | null;
+  lead_source: string;
   phone_number: string | null;
   name: string | null;
   email: string | null;

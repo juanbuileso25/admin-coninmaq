@@ -14,7 +14,43 @@ const STATUS_OPTIONS: { value: ProspectStatus; label: string }[] = [
   { value: "descartado",     label: "Descartado" },
 ];
 
-const SEQ_LABELS: Record<number, string> = { 1: "Día 1", 3: "Día 3", 7: "Día 7", 14: "Día 14" };
+const SEQ_LABELS: Record<number, string> = { 1: "Primer contacto", 15: "Seguimiento" };
+
+function MessageCard({ msg }: { msg: import("../../services/api").ProspectMessageResponse }) {
+  return (
+    <div className="bg-surface-2 border border-border space-y-2">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4">
+        <span className="text-xs font-semibold text-fg-4">
+          {SEQ_LABELS[msg.sequence_day] ?? `Día ${msg.sequence_day}`}
+        </span>
+        <div className="flex items-center gap-2">
+          {msg.is_test && (
+            <span className="px-1.5 py-0.5 text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-sm">TEST</span>
+          )}
+          <span className="text-fg-6 text-[11px]">
+            {new Date(msg.sent_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+          </span>
+        </div>
+      </div>
+
+      {msg.subject && (
+        <p className="px-4 text-fg text-sm font-medium">{msg.subject}</p>
+      )}
+
+      {msg.html_body ? (
+        <iframe
+          srcDoc={msg.html_body}
+          sandbox="allow-same-origin"
+          className="w-full border-t border-border"
+          style={{ height: 520 }}
+          title={`Email ${msg.id}`}
+        />
+      ) : (
+        <p className="px-4 pb-4 text-fg-4 text-xs whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   prospect: ProspectResponse;
@@ -210,21 +246,7 @@ export default function ProspectDrawer({ prospect, onClose, onUpdated }: Props) 
                 </div>
               )}
               {messages.map(msg => (
-                <div key={msg.id} className="bg-surface-2 border border-border p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-fg-4">{SEQ_LABELS[msg.sequence_day] ?? `Día ${msg.sequence_day}`}</span>
-                    <div className="flex items-center gap-2">
-                      {msg.is_test && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-sm">TEST</span>
-                      )}
-                      <span className="text-fg-6 text-[11px]">
-                        {new Date(msg.sent_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
-                      </span>
-                    </div>
-                  </div>
-                  {msg.subject && <p className="text-fg text-sm font-medium">{msg.subject}</p>}
-                  <p className="text-fg-4 text-xs whitespace-pre-wrap leading-relaxed">{msg.body}</p>
-                </div>
+                <MessageCard key={msg.id} msg={msg} />
               ))}
             </div>
           )}
