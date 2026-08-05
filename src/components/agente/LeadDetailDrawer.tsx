@@ -135,6 +135,7 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
           company:   lead.company ?? undefined,
           tax_id:    lead.rut_nit ?? undefined,
           address:   lead.rut_direccion ?? undefined,
+          num_units: lead.num_units ?? undefined,
         }}
       />
 
@@ -284,12 +285,17 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
             </Section>
 
             {/* ── Interés comercial ────────────────────────────────────────── */}
-            {(lead.equipment_interest || lead.budget_text || lead.timeline) && (
+            {(lead.equipment_interest || lead.budget_text || lead.timeline || lead.num_units) && (
               <Section title="Interés comercial">
                 <div className="space-y-2">
                   <InfoRow label="Equipo de interés" value={
                     lead.equipment_interest ? (
                       <span className="flex items-center gap-1"><Briefcase size={11} />{lead.equipment_interest}</span>
+                    ) : null
+                  } />
+                  <InfoRow label="Unidades solicitadas" value={
+                    lead.num_units != null ? (
+                      <span className="font-semibold text-accent">{lead.num_units} {lead.num_units === 1 ? "unidad" : "unidades"}</span>
                     ) : null
                   } />
                   <InfoRow label="Presupuesto" value={

@@ -328,6 +328,26 @@ export type SparePartRequestPatch = {
   notes?: string;
 };
 
+export const SPARE_PART_STAGES = [
+  "solicitudes_recibidas",
+  "cotizado",
+  "esperando_respuesta",
+  "negociacion",
+  "venta_ganada",
+  "venta_perdida",
+] as const;
+
+export type SparePartStage = typeof SPARE_PART_STAGES[number];
+
+export const SPARE_PART_STAGE_LABELS: Record<SparePartStage, string> = {
+  solicitudes_recibidas: "Solicitudes recibidas",
+  cotizado:              "Cotizado",
+  esperando_respuesta:   "Esperando respuesta",
+  negociacion:           "Negociación",
+  venta_ganada:          "Venta ganada",
+  venta_perdida:         "Venta perdida",
+};
+
 export type EmailClickEvent = {
   quotation_number: string;
   click_count: number;
@@ -455,6 +475,7 @@ export type BotLeadResponse = {
   rut_received: boolean;
   pipeline_stage: PipelineStage;
   close_result: "ganado" | "perdido" | null;
+  num_units: number | null;
   created_at: string;
   score?: LeadScoreResponse | null;
   latest_quotation?: BotQuotationSummary | null;
@@ -1267,6 +1288,21 @@ export const api = {
       request<SparePartRequest>(`/spare-parts/requests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     suggestions: (requestId: number, limit = 6) =>
       request<SparePartSuggestion[]>(`/spare-parts/requests/${requestId}/suggestions?limit=${limit}`),
+    pipeline: async (search?: string): Promise<Record<string, SparePartRequest[]>> => {
+      const qs = new URLSearchParams({ page_size: "500" });
+      if (search) qs.set("search", search);
+      const res = await request<PaginatedResponse<SparePartRequest>>(`/spare-parts/requests?${qs}`);
+      const grouped: Record<string, SparePartRequest[]> = {};
+      SPARE_PART_STAGES.forEach(s => { grouped[s] = []; });
+      res.data.forEach(r => {
+        const stage = SPARE_PART_STAGES.includes(r.status as SparePartStage)
+          ? r.status
+          : "solicitudes_recibidas";
+        if (!grouped[stage]) grouped[stage] = [];
+        grouped[stage].push(r);
+      });
+      return grouped;
+    },
   },
   menuItems: {
     list: () => request<MenuItemResponse[]>("/menu-items"),
