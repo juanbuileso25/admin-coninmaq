@@ -165,7 +165,8 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
 
     setSubmitting(true);
     try {
-      const entrega = fromLead ? "chat" : modoEntrega;
+      const hasEmail = !!clienteEmail.trim();
+      const entrega  = fromLead ? "chat" : modoEntrega;
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
@@ -178,7 +179,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
           tax_value:    i.tax_value,
         })),
         delivery_mode: entrega,
-        send_email:    entrega === "email" || entrega === "ambas",
+        send_email:    hasEmail,
         // Extra fields forwarded to the API
         ...(prefill?.session_id        ? { session_id:              prefill.session_id }   : {}),
         ...(prefill?.request_id != null ? { spare_part_request_id: prefill.request_id }   : {}),
