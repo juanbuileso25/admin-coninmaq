@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Bot, BotOff, Send, User, Headphones, RefreshCw,
+  ArrowLeft, Bot, BotOff, Send, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type BotSessionDetail, type BotMessageResponse } from "../../services/api";
 import { useAbility } from "../../context/AbilityContext";
+import { ChatMessageGroup } from "../../components/agente/ChatViewer";
 
 const PHASE_LABELS: Record<string, string> = {
   calificar:            "Calificando",
@@ -18,85 +19,16 @@ const PHASE_LABELS: Record<string, string> = {
   despedida:            "Despedida",
 };
 
-// ── Burbuja individual ────────────────────────────────────────────────────────
-
-function Bubble({
-  msg,
-  isFirst,
-  isLast,
-}: {
-  msg: BotMessageResponse;
-  isFirst: boolean;
-  isLast: boolean;
-}) {
-  const isUser    = msg.role === "usuario";
-  const isAdvisor = msg.role === "advisor";
-  const isAgent   = !isUser && !isAdvisor;
-
-  const align = isAdvisor ? "items-end" : "items-start";
-
-  // Border-radius según posición en el grupo (estilo chat moderno)
-  const radius = isAdvisor
-    ? `rounded-2xl ${isFirst ? "rounded-tr-sm" : ""} ${isLast ? "rounded-br-sm" : ""}`
-    : `rounded-2xl ${isFirst ? "rounded-tl-sm" : ""} ${isLast ? "rounded-bl-sm" : ""}`;
-
-  const bubbleBg = isUser
-    ? "bg-surface-3 border border-border text-fg"
-    : isAdvisor
-      ? "bg-accent text-black"
-      : "bg-surface-4 border border-border-light text-fg";
-
-  const timeColor = isAdvisor ? "text-black/50" : "text-fg-6";
-
-  const timestamp = new Date(msg.created_at).toLocaleString("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-
-  return (
-    <div className={`flex flex-col gap-0.5 ${align}`}>
-      {/* Etiqueta de rol — solo en el primero del grupo */}
-      {isFirst && (
-        <div className={`flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold mb-0.5 ${
-          isUser ? "text-fg-5" : isAdvisor ? "text-accent" : "text-emerald-400"
-        }`}>
-          {isUser    && <User       size={10} />}
-          {isAgent   && <Bot        size={10} />}
-          {isAdvisor && <Headphones size={10} />}
-          {isUser ? "Cliente" : isAdvisor ? "Asesor" : "Coni"}
-        </div>
-      )}
-
-      <div className={`px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap ${radius} ${bubbleBg}`}>
-        {msg.content}
-      </div>
-
-      {/* Timestamp — solo en el último del grupo */}
-      {isLast && (
-        <span className={`text-[10px] mt-0.5 ${timeColor}`}>{timestamp}</span>
-      )}
-    </div>
-  );
+function formatDateLabel(d: string) {
+  const date  = new Date(d);
+  const today = new Date();
+  const yest  = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Hoy";
+  if (date.toDateString() === yest.toDateString())  return "Ayer";
+  return date.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
 }
-
-// ── Grupo de mensajes consecutivos del mismo rol ──────────────────────────────
-
-function MessageGroup({ messages }: { messages: BotMessageResponse[] }) {
-  const isAdvisor = messages[0].role === "advisor";
-
-  return (
-    <div className={`flex flex-col gap-0.5 max-w-[75%] ${isAdvisor ? "self-end" : "self-start"}`}>
-      {messages.map((msg, i) => (
-        <Bubble
-          key={msg.id}
-          msg={msg}
-          isFirst={i === 0}
-          isLast={i === messages.length - 1}
-        />
-      ))}
-    </div>
-  );
-}
+function getDateKey(d: string) { return new Date(d).toLocaleDateString("es-CO"); }
 
 // ── Página principal ──────────────────────────────────────────────────────────
 
@@ -273,15 +205,27 @@ export default function SesionDetailPage() {
 
   const dc = session.client_data_cache ?? {};
 
-  // Agrupar mensajes consecutivos del mismo rol
+  // Agrupar mensajes consecutivos del mismo rol + separadores de fecha
   const groups: BotMessageResponse[][] = [];
   for (const msg of session.messages) {
     const last = groups[groups.length - 1];
-    if (last && last[0].role === msg.role) {
-      last.push(msg);
-    } else {
-      groups.push([msg]);
+    if (last && last[0].role === msg.role) last.push(msg);
+    else groups.push([msg]);
+  }
+
+  type ChatItem =
+    | { kind: "date"; label: string }
+    | { kind: "group"; messages: BotMessageResponse[] };
+
+  const chatItems: ChatItem[] = [];
+  let lastDateKey = "";
+  for (const group of groups) {
+    const key = getDateKey(group[0].created_at);
+    if (key !== lastDateKey) {
+      chatItems.push({ kind: "date", label: formatDateLabel(group[0].created_at) });
+      lastDateKey = key;
     }
+    chatItems.push({ kind: "group", messages: group });
   }
 
   return (
@@ -339,11 +283,13 @@ export default function SesionDetailPage() {
       <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0 overflow-hidden">
 
         {/* Chat */}
-        <div className="flex-1 flex flex-col bg-surface-2 border border-border min-h-0 lg:min-h-[400px]">
-
+        <div
+          className="flex-1 flex flex-col border border-border min-h-0 lg:min-h-[400px] overflow-hidden"
+          style={{ backgroundColor: "#0b1014" }}
+        >
           {/* Banner bot pausado */}
           {!session.bot_active && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-400 text-xs font-medium">
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-400 text-xs font-medium flex-shrink-0">
               <BotOff size={12} />
               Bot pausado — los mensajes que escribas se envían directamente al cliente por WhatsApp
             </div>
@@ -352,22 +298,37 @@ export default function SesionDetailPage() {
           {/* Mensajes */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="flex flex-col gap-3">
-              {groups.map((group, i) => (
-                <MessageGroup key={i} messages={group} />
-              ))}
+              {chatItems.map((item, i) =>
+                item.kind === "date" ? (
+                  <div key={`d${i}`} className="flex justify-center my-1">
+                    <span
+                      className="text-[11px] px-3 py-1 rounded-full"
+                      style={{ backgroundColor: "#182229", color: "#8696a0" }}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                ) : (
+                  <ChatMessageGroup key={`g${i}`} messages={item.messages} />
+                )
+              )}
               <div ref={bottomRef} />
             </div>
           </div>
 
           {/* Input */}
           {canUpdate && (
-            <div className="border-t border-border p-3 flex gap-2">
+            <div
+              className="border-t border-white/5 p-3 flex gap-2 flex-shrink-0"
+              style={{ backgroundColor: "#111b21" }}
+            >
               <textarea
                 rows={2}
-                className="flex-1 bg-surface-3 border border-border text-fg text-sm px-3 py-2 resize-none outline-none focus:border-accent placeholder:text-fg-6 rounded-sm"
+                className="flex-1 text-[#e9edef] text-sm px-3 py-2 resize-none outline-none placeholder:text-[#8696a0] rounded-sm"
+                style={{ backgroundColor: "#2a3942", border: "none" }}
                 placeholder={
                   session.bot_active
-                    ? "El bot está activo. Pausa el bot para escribir al cliente."
+                    ? "El bot está activo — pausa el bot para escribir al cliente."
                     : "Escribir mensaje como asesor (Enter para enviar)..."
                 }
                 value={message}

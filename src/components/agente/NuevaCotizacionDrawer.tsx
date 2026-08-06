@@ -25,6 +25,7 @@ interface PrefillLead {
   tax_id?:       string | null;
   address?:      string | null;
   machine_code?: string | null;
+  num_units?:    number | null;
 }
 
 interface Props {
@@ -83,7 +84,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
             const sp   = found.sale_price ?? 0;
             const tv   = found.tax_value  ?? 0;
             const rate = sp > 0 ? tv / sp : 0.19;
-            setItems([{ codigo: found.code, nombre: found.model, cantidad: 1, sale_price: sp, tax_rate: rate, tax_value: tv }]);
+            const qty  = prefill.num_units && prefill.num_units > 0 ? prefill.num_units : 1;
+            setItems([{ codigo: found.code, nombre: found.model, cantidad: qty, sale_price: sp, tax_rate: rate, tax_value: tv }]);
             setShowCatalog(false);
           } else {
             setShowCatalog(true);
@@ -177,10 +179,11 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const addMachine = (m: MachineResponse) => {
     setItems(prev => {
       if (prev.length > 0) return prev;
-      const sp = m.sale_price ?? 0;
-      const tv = m.tax_value  ?? 0;
+      const sp  = m.sale_price ?? 0;
+      const tv  = m.tax_value  ?? 0;
       const rate = sp > 0 ? tv / sp : 0.19;
-      return [{ codigo: m.code, nombre: m.model, cantidad: 1, sale_price: sp, tax_rate: rate, tax_value: tv }];
+      const qty  = prefill?.num_units && prefill.num_units > 0 ? prefill.num_units : 1;
+      return [{ codigo: m.code, nombre: m.model, cantidad: qty, sale_price: sp, tax_rate: rate, tax_value: tv }];
     });
     setShowCatalog(false);
     setMSearch("");
@@ -263,7 +266,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[60] flex justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       <div className="relative z-10 w-full max-w-xl bg-surface-2 border-l border-border flex flex-col h-full overflow-hidden shadow-2xl">

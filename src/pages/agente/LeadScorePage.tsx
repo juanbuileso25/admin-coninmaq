@@ -245,9 +245,9 @@ export default function LeadScorePage() {
 
       {/* ── TAB: Conversación ─────────────────────────────────────────────── */}
       {tab === "conversacion" && (
-        <div className="bg-surface-2 border border-border min-h-[400px]">
+        <div className="border border-border min-h-[400px] overflow-hidden" style={{ backgroundColor: "#0b1014" }}>
           {loadingChat ? (
-            <div className="flex items-center justify-center h-40 text-fg-5 text-sm">
+            <div className="flex items-center justify-center h-40 text-sm" style={{ color: "#8696a0" }}>
               Cargando conversación...
             </div>
           ) : (
