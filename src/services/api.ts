@@ -402,9 +402,11 @@ export type BotSessionDetail = BotSessionListItem & {
 };
 
 export interface BotQuotationSummary {
+  id: number;
   quotation_number: string;
   total: number;
   pdf_url: string | null;
+  page_url: string | null;
   email_sent: boolean;
   created_at: string;
 }
