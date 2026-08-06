@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { api, type BotSessionDetail, type BotMessageResponse } from "../../services/api";
 import { useAbility } from "../../context/AbilityContext";
-import { ChatBubble, ChatMessageGroup } from "../../components/agente/ChatViewer";
+import { ChatMessageGroup } from "../../components/agente/ChatViewer";
 
 const PHASE_LABELS: Record<string, string> = {
   calificar:            "Calificando",
