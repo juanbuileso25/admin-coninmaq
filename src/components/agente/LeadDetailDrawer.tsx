@@ -374,7 +374,12 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                             <Download size={14} />
                           </a>
                         )}
-                        <ChevronRight size={14} className="text-fg-6" />
+                        {q.page_url && (
+                          <a href={q.page_url} target="_blank" rel="noopener noreferrer"
+                            className="text-fg-5 hover:text-accent transition-colors" title="Ver cotización">
+                            <ExternalLink size={14} />
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}
