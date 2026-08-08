@@ -399,6 +399,10 @@ export type BotSessionDetail = BotSessionListItem & {
   client_data_cache: Record<string, unknown> | null;
   qualification_cache: Record<string, unknown> | null;
   messages: BotMessageResponse[];
+  lead_name: string | null;
+  lead_company: string | null;
+  lead_email: string | null;
+  lead_phone: string | null;
 };
 
 export interface BotQuotationSummary {

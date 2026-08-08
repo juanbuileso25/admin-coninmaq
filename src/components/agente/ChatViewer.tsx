@@ -35,11 +35,112 @@ function formatDateLabel(d: string) {
   yest.setDate(yest.getDate() - 1);
   if (date.toDateString() === today.toDateString()) return "Hoy";
   if (date.toDateString() === yest.toDateString())  return "Ayer";
-  return date.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+  const thisYear = today.getFullYear();
+  const opts: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+  if (date.getFullYear() !== thisYear) opts.year = "numeric";
+  return date.toLocaleDateString("es-CO", opts);
 }
 
 function formatTime(d: string) {
   return new Date(d).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ── Media content parser ───────────────────────────────────────────────────────
+type MediaContent =
+  | { kind: "text" }
+  | { kind: "audio"; url: string }
+  | { kind: "image"; url: string; name: string }
+  | { kind: "video"; url: string }
+  | { kind: "pdf"; url: string; name: string }
+  | { kind: "document"; url: string; name: string }
+  | { kind: "contact"; name: string };
+
+const MEDIA_RE = /^\[(Audio|Foto|PDF|Video|Contacto|Documento|Adjunto)\] (.+)$/;
+
+function parseMedia(content: string): MediaContent {
+  const m = MEDIA_RE.exec(content.trim());
+  if (!m) return { kind: "text" };
+  const [, label, rest] = m;
+  const isUrl = rest.startsWith("http");
+  switch (label) {
+    case "Audio":    return isUrl ? { kind: "audio", url: rest } : { kind: "text" };
+    case "Foto":     return isUrl ? { kind: "image", url: rest, name: "Foto" } : { kind: "text" };
+    case "Video":    return isUrl ? { kind: "video", url: rest } : { kind: "text" };
+    case "PDF":      return { kind: "pdf",      url: isUrl ? rest : "", name: rest };
+    case "Documento":return { kind: "document", url: isUrl ? rest : "", name: rest };
+    case "Contacto": return { kind: "contact",  name: rest };
+    default:         return { kind: "text" };
+  }
+}
+
+function MediaBubble({ media, txtColor, bgColor }: { media: MediaContent; txtColor: string; bgColor: string }) {
+  if (media.kind === "audio") {
+    return (
+      <div style={{ width: 280 }}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg">🎵</span>
+          <span className="text-xs opacity-60" style={{ color: txtColor }}>Nota de voz</span>
+        </div>
+        <audio
+          controls
+          src={media.url}
+          style={{ width: 280, height: 36, colorScheme: "dark", display: "block" }}
+        />
+      </div>
+    );
+  }
+  if (media.kind === "image") {
+    return (
+      <a href={media.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", maxWidth: 280 }}>
+        <img src={media.url} alt="Foto" style={{ maxWidth: 280, borderRadius: 6, display: "block" }} loading="lazy" />
+      </a>
+    );
+  }
+  if (media.kind === "video") {
+    return (
+      <video controls src={media.url} style={{ maxWidth: 280, borderRadius: 6, display: "block" }} />
+    );
+  }
+  if (media.kind === "pdf" || media.kind === "document") {
+    const icon = media.kind === "pdf" ? "📄" : "📎";
+    const shortName = media.name.replace(/^https?:\/\/[^\s/]+\/[^\s/]+\/[^\s/]+\//, "");
+    return (
+      <div style={{ width: 240 }}>
+        {media.url ? (
+          <a
+            href={media.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-start gap-2 text-sm no-underline"
+            style={{ color: txtColor }}
+          >
+            <span className="text-2xl flex-shrink-0">{icon}</span>
+            <span className="break-all leading-snug">{shortName}</span>
+          </a>
+        ) : (
+          <div className="flex items-start gap-2 text-sm" style={{ color: txtColor }}>
+            <span className="text-2xl flex-shrink-0">{icon}</span>
+            <span className="break-all leading-snug opacity-70">{shortName}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (media.kind === "contact") {
+    const name = media.name.replace(/\.[^.]+$/, "").replace(/^\d+-/, "");
+    return (
+      <div className="flex items-center gap-2 text-sm" style={{ color: txtColor }}>
+        <span
+          className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0"
+          style={{ backgroundColor: bgColor === C.userBg ? "#2a3942" : "rgba(255,255,255,0.1)" }}
+        >
+          👤
+        </span>
+        <span>{name}</span>
+      </div>
+    );
+  }
+  return null;
 }
 
 // ── Tail (cola de burbuja) ─────────────────────────────────────────────────────
@@ -72,7 +173,7 @@ export function ChatBubble({
   isFirst: boolean;
   isLast: boolean;
 }) {
-  const isUser    = msg.role === "usuario";
+  const isUser    = msg.role === "usuario" || msg.role === "user";
   const isAdvisor = msg.role === "advisor";
   const isRight   = !isUser;
 
@@ -95,25 +196,30 @@ export function ChatBubble({
         </span>
       )}
 
-      <div
-        className={`relative max-w-[85%] px-3 pt-2 pb-1.5 ${radius}`}
-        style={{ backgroundColor: bgColor }}
-      >
-        {isFirst && <Tail side={isRight ? "right" : "left"} color={bgColor} />}
-
-        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: txtColor }}>
-          {msg.content}
-        </p>
-
-        {isLast && (
-          <span
-            className="block text-right text-[10px] mt-0.5"
-            style={{ color: tsColor }}
+      {(() => {
+        const media = parseMedia(msg.content);
+        const isMedia = media.kind !== "text";
+        return (
+          <div
+            className={`relative px-3 pt-2 pb-1.5 ${radius} ${isMedia ? "" : "max-w-[85%]"}`}
+            style={{ backgroundColor: bgColor, minWidth: isMedia ? undefined : 220 }}
           >
-            {formatTime(msg.created_at)}
-          </span>
-        )}
-      </div>
+            {isFirst && <Tail side={isRight ? "right" : "left"} color={bgColor} />}
+            {isMedia
+              ? <MediaBubble media={media} txtColor={txtColor} bgColor={bgColor} />
+              : <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: txtColor }}>{msg.content}</p>
+            }
+            {isLast && (
+              <span
+                className="block text-right text-[10px] mt-0.5"
+                style={{ color: tsColor }}
+              >
+                {formatTime(msg.created_at)}
+              </span>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -121,7 +227,7 @@ export function ChatBubble({
 // ── Grupo de mensajes del mismo rol ───────────────────────────────────────────
 export function ChatMessageGroup({ messages }: { messages: BotMessageResponse[] }) {
   const role    = messages[0].role;
-  const isUser  = role === "usuario";
+  const isUser  = role === "usuario" || role === "user";
   const isRight = !isUser;
 
   const avatarBg =
