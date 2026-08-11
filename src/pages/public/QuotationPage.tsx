@@ -476,6 +476,12 @@ export default function QuotationPage() {
                 no incluido en el precio cotizado. Este será definido por el Departamento de Servicios una vez
                 se concrete el lugar de entrega.
               </p>
+              {data.observations && (
+                <>
+                  <span style={{ display: "block", marginTop: 16, fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--yellow)", marginBottom: 6 }}>Observaciones</span>
+                  <span style={{ display: "block", fontSize: 14, color: "var(--gray-1)", lineHeight: 1.8, whiteSpace: "pre-line" }}>{data.observations}</span>
+                </>
+              )}
             </div>
             <div className="s-conditions__card">
               <p className="s-conditions__card-title">Soporte al producto</p>

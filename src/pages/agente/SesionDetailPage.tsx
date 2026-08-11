@@ -26,7 +26,10 @@ function formatDateLabel(d: string) {
   yest.setDate(yest.getDate() - 1);
   if (date.toDateString() === today.toDateString()) return "Hoy";
   if (date.toDateString() === yest.toDateString())  return "Ayer";
-  return date.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+  const thisYear = today.getFullYear();
+  const opts: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+  if (date.getFullYear() !== thisYear) opts.year = "numeric";
+  return date.toLocaleDateString("es-CO", opts);
 }
 function getDateKey(d: string) { return new Date(d).toLocaleDateString("es-CO"); }
 
@@ -242,7 +245,7 @@ export default function SesionDetailPage() {
           </button>
           <div className="min-w-0">
             <h1 className="text-fg font-bold text-xl truncate">
-              {(dc as Record<string, string>)["cliente_nombre"] ?? session.phone_number ?? session.session_id}
+              {(dc as Record<string, string>)["cliente_nombre"] ?? session.lead_name ?? session.phone_number ?? session.session_id}
             </h1>
             <p className="text-fg-5 text-sm mt-0.5">
               {PHASE_LABELS[session.phase] ?? session.phase}

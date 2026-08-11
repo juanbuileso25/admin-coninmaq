@@ -65,6 +65,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [clienteTaxId,  setTaxId]  = useState("");
   const [clienteAddress, setAddress] = useState("");
 
+  const [observations, setObservations] = useState("");
+
   // Opciones
   const [modoEntrega, setModo]      = useState<"email" | "chat" | "ambas">("email");
   const [sendToWa, setSendToWa]     = useState(true);
@@ -101,6 +103,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   useEffect(() => {
     if (!open) {
       setItems([]); setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
+      setObservations("");
       setModo("email"); setSendToWa(true); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
@@ -235,8 +238,9 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
           sale_price:   i.sale_price,
           tax_value:    i.tax_value,
         })),
-        delivery_mode: entrega,
-        send_email:    sendEmail,
+        delivery_mode:         entrega,
+        send_email:            sendEmail,
+        observations: observations.trim() || undefined,
       });
 
       // Enviar link al WhatsApp de la conversación si aplica
@@ -562,6 +566,18 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                       value={clienteAddress} onChange={e => setAddress(e.target.value)} />
                   </div>
                 </div>
+              </section>
+
+              {/* Observaciones */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Observaciones (opcional)</h3>
+                <textarea
+                  rows={4}
+                  className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent resize-none"
+                  placeholder="Ej: Garantía 12 meses, entrega 30 días hábiles, flete por cuenta del cliente..."
+                  value={observations}
+                  onChange={e => setObservations(e.target.value)}
+                />
               </section>
 
               {/* Entrega — solo visible desde una conversación de WhatsApp */}

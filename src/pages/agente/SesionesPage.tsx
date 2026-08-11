@@ -41,15 +41,18 @@ function avatarColor(seed: string): string {
 }
 
 function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const date = new Date(dateStr);
+  const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return "Ahora";
-  if (mins < 60)  return `${mins}m`;
+  if (mins < 1)  return "Ahora";
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs}h`;
+  if (hrs < 24)  return `${hrs}h`;
   const days = Math.floor(hrs / 24);
-  if (days < 7)   return `${days}d`;
-  return new Date(dateStr).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+  if (days < 7)  return `${days}d`;
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  if (date.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return date.toLocaleDateString("es-CO", opts);
 }
 
 function Avatar({ session }: { session: BotSessionListItem }) {
@@ -214,11 +217,11 @@ export default function SesionesPage() {
 
               <div className="flex items-center justify-between gap-2 mt-0.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  {s.client_company && (
-                    <span className="text-fg-5 text-xs truncate">{s.client_company}</span>
-                  )}
-                  {!s.client_company && s.phone_number && (
+                  {s.phone_number && (
                     <span className="text-fg-6 text-xs font-mono">{s.phone_number}</span>
+                  )}
+                  {s.client_company && (
+                    <span className="text-fg-5 text-xs truncate">· {s.client_company}</span>
                   )}
                 </div>
 
