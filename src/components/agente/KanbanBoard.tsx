@@ -16,7 +16,8 @@ const STAGE_COLORS: Record<PipelineStage, { col: string; badge: string; badgeAct
   calificado:           { col: "border-t-violet-400",  badge: "bg-violet-500/15 text-violet-300 border-violet-500/30", badgeActive: "bg-violet-500/30 text-violet-200 border-violet-400", dot: "bg-violet-400"  },
   cotizacion_propuesta: { col: "border-t-amber-400",   badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",   badgeActive: "bg-amber-500/30 text-amber-200 border-amber-400",   dot: "bg-amber-400"   },
   seguimiento:          { col: "border-t-orange-400",  badge: "bg-orange-500/15 text-orange-300 border-orange-500/30", badgeActive: "bg-orange-500/30 text-orange-200 border-orange-400", dot: "bg-orange-400"  },
-  cierre:               { col: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", badgeActive: "bg-emerald-500/30 text-emerald-200 border-emerald-400", dot: "bg-emerald-400" },
+  cerrado:              { col: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", badgeActive: "bg-emerald-500/30 text-emerald-200 border-emerald-400", dot: "bg-emerald-400" },
+  perdido:              { col: "border-t-red-400",     badge: "bg-red-500/15 text-red-300 border-red-500/30",         badgeActive: "bg-red-500/30 text-red-200 border-red-400",         dot: "bg-red-400"     },
   referido:             { col: "border-t-pink-400",    badge: "bg-pink-500/15 text-pink-300 border-pink-500/30",      badgeActive: "bg-pink-500/30 text-pink-200 border-pink-400",      dot: "bg-pink-400"    },
 };
 

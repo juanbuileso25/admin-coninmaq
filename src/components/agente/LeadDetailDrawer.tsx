@@ -23,7 +23,8 @@ const STAGE_COLORS: Record<PipelineStage, string> = {
   calificado:           "bg-violet-500/15 text-violet-300 border-violet-500/30",
   cotizacion_propuesta: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   seguimiento:          "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  cierre:               "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  cerrado:              "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  perdido:              "bg-red-500/15 text-red-300 border-red-500/30",
   referido:             "bg-pink-500/15 text-pink-300 border-pink-500/30",
 };
 
@@ -33,7 +34,8 @@ const STAGE_DOT: Record<PipelineStage, string> = {
   calificado:           "bg-violet-400",
   cotizacion_propuesta: "bg-amber-400",
   seguimiento:          "bg-orange-400",
-  cierre:               "bg-emerald-400",
+  cerrado:              "bg-emerald-400",
+  perdido:              "bg-red-400",
   referido:             "bg-pink-400",
 };
 
@@ -73,16 +75,14 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const [historyLoading, setHL]       = useState(false);
   const [stageChanging, setSC]        = useState(false);
   const [selectedStage, setSelStage]  = useState<PipelineStage | "">("");
-  const [closeResult, setCloseResult] = useState<"ganado" | "perdido" | "">("");
   const [note, setNote]               = useState("");
   const [quotationDrawer, setQD]      = useState(false);
 
   const open = !!lead;
 
   useEffect(() => {
-    if (!lead) { setHistory([]); setSelStage(""); setCloseResult(""); setNote(""); return; }
+    if (!lead) { setHistory([]); setSelStage(""); setNote(""); return; }
     setSelStage(lead.pipeline_stage);
-    setCloseResult((lead.close_result as "ganado" | "perdido" | "") ?? "");
     setHL(true);
     api.bot.leadStageHistory(lead.id)
       .then(setHistory)
@@ -94,15 +94,10 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
 
   const handleStageChange = async () => {
     if (!selectedStage || selectedStage === lead.pipeline_stage) return;
-    if (selectedStage === "cierre" && !closeResult) {
-      toast.error("Selecciona si el cierre fue ganado o perdido");
-      return;
-    }
     setSC(true);
     try {
       await api.bot.patchLeadStage(lead.id, {
         stage: selectedStage,
-        close_result: selectedStage === "cierre" ? closeResult || null : null,
         note: note.trim() || undefined,
       });
       toast.success(`Etapa actualizada a "${PIPELINE_STAGE_LABELS[selectedStage]}"`);
@@ -173,15 +168,6 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                 <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${STAGE_COLORS[lead.pipeline_stage]}`}>
                   {PIPELINE_STAGE_LABELS[lead.pipeline_stage]}
                 </span>
-                {lead.close_result && (
-                  <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${
-                    lead.close_result === "ganado"
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                      : "bg-red-500/15 text-red-400 border-red-500/30"
-                  }`}>
-                    {lead.close_result === "ganado" ? "✓ Ganado" : "✗ Perdido"}
-                  </span>
-                )}
               </div>
             </div>
             <button onClick={onClose} className="text-fg-5 hover:text-fg transition-colors p-1 ml-3 shrink-0">
@@ -200,40 +186,13 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                   <select
                     className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
                     value={selectedStage}
-                    onChange={e => {
-                      setSelStage(e.target.value as PipelineStage);
-                      if (e.target.value !== "cierre") setCloseResult("");
-                    }}
+                    onChange={e => setSelStage(e.target.value as PipelineStage)}
                   >
                     {PIPELINE_STAGES.map(s => (
                       <option key={s} value={s}>{PIPELINE_STAGE_LABELS[s]}</option>
                     ))}
                   </select>
                 </div>
-
-                {selectedStage === "cierre" && (
-                  <div>
-                    <label className="text-fg-5 text-xs mb-1.5 block">Resultado del cierre *</label>
-                    <div className="flex gap-2">
-                      {(["ganado", "perdido"] as const).map(r => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setCloseResult(r)}
-                          className={`flex-1 py-2 text-sm font-medium border transition-colors ${
-                            closeResult === r
-                              ? r === "ganado"
-                                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                                : "bg-red-500/20 border-red-500/50 text-red-400"
-                              : "border-border text-fg-4 hover:bg-surface-3"
-                          }`}
-                        >
-                          {r === "ganado" ? "✓ Ganado" : "✗ Perdido"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <label className="text-fg-5 text-xs mb-1.5 block">Nota (opcional)</label>

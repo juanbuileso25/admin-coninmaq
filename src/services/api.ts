@@ -421,7 +421,8 @@ export type PipelineStage =
   | "calificado"
   | "cotizacion_propuesta"
   | "seguimiento"
-  | "cierre"
+  | "cerrado"
+  | "perdido"
   | "referido";
 
 export const PIPELINE_STAGES: PipelineStage[] = [
@@ -430,7 +431,8 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   "calificado",
   "cotizacion_propuesta",
   "seguimiento",
-  "cierre",
+  "cerrado",
+  "perdido",
   "referido",
 ];
 
@@ -440,7 +442,8 @@ export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
   calificado:           "Calificado",
   cotizacion_propuesta: "Cotización y propuesta",
   seguimiento:          "Seguimiento y negociación",
-  cierre:               "Cierre",
+  cerrado:              "Cerrado ✓",
+  perdido:              "Perdido",
   referido:             "Referido",
 };
 
@@ -533,6 +536,7 @@ export type QuotationPageData = {
   subtotal: number; iva_total: number; total: number; discount_total: number;
   delivery_mode: string; status: string; pdf_url: string | null; page_url: string | null;
   items: QuotationItem[]; client: QuotationClient | null; advisor: QuotationAdvisor | null;
+  observations: string | null;
 };
 export type ManualQuotationRequest = {
   client_name: string;
@@ -545,6 +549,7 @@ export type ManualQuotationRequest = {
   items: ManualQuotationItem[];
   delivery_mode: string;
   send_email: boolean;
+  observations?: string;
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
