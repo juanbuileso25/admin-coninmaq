@@ -187,7 +187,7 @@ export default function CotizacionesPage() {
             <>
               <StatCard label="Total leads"    value={String(totalLeads)}               icon={ReceiptText} accent delay={0}  />
               <StatCard label="En seguimiento" value={String(pipeline.find(c => c.stage === "seguimiento")?.count ?? 0)} icon={Mail} delay={50} />
-              <StatCard label="Cerrados"       value={String(pipeline.find(c => c.stage === "cierre")?.count ?? 0)}      icon={DollarSign} delay={100} />
+              <StatCard label="Cerrados"       value={String(pipeline.find(c => c.stage === "cerrado")?.count ?? 0)}     icon={DollarSign} delay={100} />
             </>
           )}
         </div>
