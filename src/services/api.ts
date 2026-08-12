@@ -846,7 +846,7 @@ export type VehicleDocumentOut = {
   id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
 };
 export type VehicleOut = {
-  id: number; plate: string; created_at: string; updated_at: string;
+  id: number; plate: string; tipo: string; created_at: string; updated_at: string;
   documents: VehicleDocumentOut[];
 };
 export type EmployeeDocumentOut = {
@@ -1342,9 +1342,9 @@ export const api = {
   },
   companyDocs: {
     listVehicles: () => request<VehicleOut[]>("/company-docs/vehicles"),
-    createVehicle: (data: { plate: string }) =>
+    createVehicle: (data: { plate: string; tipo: string }) =>
       request<VehicleOut>("/company-docs/vehicles", { method: "POST", body: JSON.stringify(data) }),
-    updateVehicle: (id: number, data: { name?: string; plate?: string }) =>
+    updateVehicle: (id: number, data: { name?: string; plate?: string; tipo?: string }) =>
       request<VehicleOut>(`/company-docs/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteVehicle: (id: number) =>
       request<void>(`/company-docs/vehicles/${id}`, { method: "DELETE" }),
