@@ -550,6 +550,7 @@ export type ManualQuotationRequest = {
   delivery_mode: string;
   send_email: boolean;
   observations?: string;
+  extra_emails?: string[];
 };
 export type ManualQuotationResponse = {
   quotation_number: string;

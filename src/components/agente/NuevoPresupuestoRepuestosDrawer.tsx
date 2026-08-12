@@ -51,6 +51,10 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [clienteNIT,     setNIT]     = useState("");
   const [clienteDir,     setDir]     = useState("");
 
+  // Extra emails
+  const [extraEmails,     setExtraEmails]     = useState<string[]>([]);
+  const [extraEmailInput, setExtraEmailInput] = useState("");
+
   // Delivery
   const [modoEntrega, setModo]  = useState<"email" | "chat" | "ambas">("email");
   const [sendToWa, setSendToWa] = useState(true);
@@ -70,6 +74,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
     if (!open) {
       setItems([]); setSpSearch(""); setSpResults([]); setShowSearch(true);
       setNombre(""); setEmail(""); setEmpresa(""); setNIT(""); setDir("");
+      setExtraEmails([]); setExtraEmailInput("");
       setModo("email"); setSendToWa(true); setResult(null);
       setSuggestions([]); setSuggestionsLoading(false);
     }
@@ -154,6 +159,14 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
 
   const removeItem = (id: number) => setItems(prev => prev.filter(i => i.id !== id));
 
+  const addExtraEmail = (raw: string) => {
+    const email = raw.trim().toLowerCase().replace(/,/g, "");
+    if (!email || !email.includes("@")) return;
+    if (!extraEmails.includes(email) && email !== clienteEmail.trim().toLowerCase())
+      setExtraEmails(prev => [...prev, email]);
+    setExtraEmailInput("");
+  };
+
   const subtotal = items.reduce((acc, i) => acc + i.sale_price * i.cantidad, 0);
   const iva      = items.reduce((acc, i) => acc + i.tax_value  * i.cantidad, 0);
   const total    = subtotal + iva;
@@ -180,6 +193,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
         })),
         delivery_mode: entrega,
         send_email:    hasEmail,
+        extra_emails:  extraEmails.length > 0 ? extraEmails : undefined,
         // Extra fields forwarded to the API
         ...(prefill?.session_id        ? { session_id:              prefill.session_id }   : {}),
         ...(prefill?.request_id != null ? { spare_part_request_id: prefill.request_id }   : {}),
@@ -247,7 +261,11 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
             <div>
               <p className="text-fg font-semibold text-lg">{result.quotation_number}</p>
               <p className="text-fg-4 text-sm mt-1">Total: {COP(result.total)}</p>
-              {result.email_sent && <p className="text-emerald-400 text-xs mt-1">Email enviado a {clienteEmail}</p>}
+              {result.email_sent && (
+                <p className="text-emerald-400 text-xs mt-1">
+                  Email enviado a {clienteEmail}{extraEmails.length > 0 ? ` y ${extraEmails.length} más` : ""}
+                </p>
+              )}
               {result.not_found.length > 0 && (
                 <p className="text-amber-400 text-xs mt-2">Códigos omitidos: {result.not_found.join(", ")}</p>
               )}
@@ -511,6 +529,29 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                       value={clienteEmail}
                       onChange={e => setEmail(e.target.value)}
                     />
+                    {/* Correos adicionales */}
+                    <div className="mt-2">
+                      {extraEmails.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {extraEmails.map(em => (
+                            <span key={em} className="flex items-center gap-1 text-xs bg-surface-3 border border-border text-fg-3 px-2 py-1">
+                              {em}
+                              <button type="button" onClick={() => setExtraEmails(prev => prev.filter(e => e !== em))} className="text-fg-6 hover:text-fg ml-0.5">
+                                <X size={10} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <input type="email"
+                        className="w-full bg-surface-3 border border-dashed border-fg-6 text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
+                        placeholder="Agregar otro destinatario (Enter o coma)"
+                        value={extraEmailInput}
+                        onChange={e => setExtraEmailInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtraEmail(extraEmailInput); } }}
+                        onBlur={() => { if (extraEmailInput.trim()) addExtraEmail(extraEmailInput); }}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-fg-4 text-xs mb-1.5 block">Empresa (opcional)</label>
