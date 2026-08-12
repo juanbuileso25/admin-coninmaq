@@ -839,6 +839,25 @@ export type MachineOrderDetailResponse = MachineOrderListResponse & {
   payments: MachineOrderPaymentResponse[];
 };
 
+// ── Company Docs types ────────────────────────────────────────────────────────
+
+export type VehicleDocumentOut = {
+  id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
+};
+export type VehicleOut = {
+  id: number; plate: string; created_at: string; updated_at: string;
+  documents: VehicleDocumentOut[];
+};
+export type EmployeeDocumentOut = {
+  id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
+};
+export type EmployeeOut = {
+  id: number; full_name: string; cc: string | null; phone: string | null;
+  email: string | null; address: string | null; emergency_contact: string | null;
+  emergency_phone: string | null; created_at: string; updated_at: string;
+  documents: EmployeeDocumentOut[];
+};
+
 export const api = {
   auth: {
     login: (email: string, password: string, remember_me = false) =>
@@ -1314,6 +1333,35 @@ export const api = {
       });
       return grouped;
     },
+  },
+  companyDocs: {
+    listVehicles: () => request<VehicleOut[]>("/company-docs/vehicles"),
+    createVehicle: (data: { plate: string }) =>
+      request<VehicleOut>("/company-docs/vehicles", { method: "POST", body: JSON.stringify(data) }),
+    updateVehicle: (id: number, data: { name?: string; plate?: string }) =>
+      request<VehicleOut>(`/company-docs/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteVehicle: (id: number) =>
+      request<void>(`/company-docs/vehicles/${id}`, { method: "DELETE" }),
+    uploadVehicleDoc: (id: number, docType: string, file: File) => {
+      const form = new FormData(); form.append("file", file);
+      return request<VehicleOut>(`/company-docs/vehicles/${id}/documents/${docType}`, { method: "POST", body: form, headers: {} });
+    },
+    deleteVehicleDoc: (id: number, docType: string) =>
+      request<void>(`/company-docs/vehicles/${id}/documents/${docType}`, { method: "DELETE" }),
+
+    listEmployees: () => request<EmployeeOut[]>("/company-docs/employees"),
+    createEmployee: (data: Partial<Omit<EmployeeOut, "id" | "created_at" | "updated_at" | "documents">>) =>
+      request<EmployeeOut>("/company-docs/employees", { method: "POST", body: JSON.stringify(data) }),
+    updateEmployee: (id: number, data: Partial<Omit<EmployeeOut, "id" | "created_at" | "updated_at" | "documents">>) =>
+      request<EmployeeOut>(`/company-docs/employees/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteEmployee: (id: number) =>
+      request<void>(`/company-docs/employees/${id}`, { method: "DELETE" }),
+    uploadEmployeeDoc: (id: number, docType: string, file: File) => {
+      const form = new FormData(); form.append("file", file);
+      return request<EmployeeOut>(`/company-docs/employees/${id}/documents/${docType}`, { method: "POST", body: form, headers: {} });
+    },
+    deleteEmployeeDoc: (id: number, docType: string) =>
+      request<void>(`/company-docs/employees/${id}/documents/${docType}`, { method: "DELETE" }),
   },
   menuItems: {
     list: () => request<MenuItemResponse[]>("/menu-items"),

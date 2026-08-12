@@ -5,7 +5,7 @@ import {
   Truck, Wrench, Key, HardHat, DollarSign, ShieldCheck, Building2,
   ContactRound, Globe, Info, Bot, MessageSquare, UserCheck, ReceiptText,
   Banknote, FileSpreadsheet, GitMerge, Star, ShoppingCart, Factory,
-  Loader2, HelpCircle,
+  Loader2, HelpCircle, FolderOpen, FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { api, type MenuItemResponse } from "../services/api";
@@ -15,7 +15,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, Package, FileText, Users, Settings, Truck, Wrench, Key,
   HardHat, DollarSign, ShieldCheck, Building2, ContactRound, Globe, Info,
   Bot, MessageSquare, UserCheck, ReceiptText, Banknote, FileSpreadsheet,
-  GitMerge, Star, ShoppingCart, Factory,
+  GitMerge, Star, ShoppingCart, Factory, FolderOpen, FolderKanban,
 };
 
 function NavIcon({ name, size = 17, className }: { name: string | null; size?: number; className?: string }) {
