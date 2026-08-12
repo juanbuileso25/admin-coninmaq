@@ -124,8 +124,6 @@ export default function VehiculosPage() {
 
   const docsCount = selected?.documents.length ?? 0;
 
-  // En móvil: si hay seleccionado, mostrar sólo el panel derecho
-  const showList   = !selected || typeof window !== "undefined" && window.innerWidth >= 768;
   const showDetail = !!selected;
 
   return (
