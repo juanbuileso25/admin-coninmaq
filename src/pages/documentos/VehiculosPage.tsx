@@ -38,7 +38,7 @@ export default function VehiculosPage() {
 
   const fileRef        = useRef<HTMLInputElement>(null);
   const [uploadType,   setUploadType]   = useState<string | null>(null);
-  const [deletingType, setDeletingType] = useState<string | null>(null);
+  const [deletingId,   setDeletingId]   = useState<number | null>(null);
   const [deletingVeh,  setDeletingVeh]  = useState(false);
 
   const load = async () => {
@@ -99,17 +99,17 @@ export default function VehiculosPage() {
     finally { setUploadType(null); }
   };
 
-  const handleDeleteDoc = async (docType: string) => {
+  const handleDeleteDoc = async (docId: number) => {
     if (!selected) return;
-    setDeletingType(docType);
+    setDeletingId(docId);
     try {
-      await api.companyDocs.deleteVehicleDoc(selected.id, docType);
-      const updated = { ...selected, documents: selected.documents.filter(d => d.doc_type !== docType) };
+      await api.companyDocs.deleteVehicleDoc(selected.id, docId);
+      const updated = { ...selected, documents: selected.documents.filter(d => d.id !== docId) };
       setVehicles(prev => prev.map(v => v.id === selected.id ? updated : v));
       setSelected(updated);
       toast.success("Documento eliminado");
     } catch (e: any) { toast.error(e.detail ?? "Error"); }
-    finally { setDeletingType(null); }
+    finally { setDeletingId(null); }
   };
 
   const handleDeleteVehicle = async () => {
@@ -124,9 +124,9 @@ export default function VehiculosPage() {
     finally { setDeletingVeh(false); }
   };
 
-  const docsCount = selected?.documents.length ?? 0;
-
-  const showDetail = !!selected;
+  const uniqueTypes = (v: VehicleOut) => new Set(v.documents.map(d => d.doc_type)).size;
+  const docsCount   = selected ? uniqueTypes(selected) : 0;
+  const showDetail  = !!selected;
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -160,7 +160,7 @@ export default function VehiculosPage() {
           ) : filtered.length === 0 ? (
             <p className="text-center text-fg-6 text-xs py-10">Sin resultados</p>
           ) : filtered.map(v => {
-            const pct = (v.documents.length / TOTAL_TYPES) * 100;
+            const pct = (uniqueTypes(v) / TOTAL_TYPES) * 100;
             const isSelected = selected?.id === v.id;
             return (
               <button
@@ -185,7 +185,7 @@ export default function VehiculosPage() {
                     <div className="flex-1 h-1 bg-surface-3 rounded-full overflow-hidden">
                       <div className="h-1 bg-accent/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-fg-6">{v.documents.length}/{TOTAL_TYPES}</span>
+                    <span className="text-[10px] text-fg-6">{uniqueTypes(v)}/{TOTAL_TYPES}</span>
                   </div>
                 </div>
                 <ChevronRight size={12} className="text-fg-6 flex-shrink-0" />
@@ -200,7 +200,6 @@ export default function VehiculosPage() {
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 md:px-6 py-4 border-b border-border bg-surface-2 flex-shrink-0">
-            {/* Botón volver — solo móvil */}
             <button onClick={() => setSelected(null)} className="md:hidden p-1.5 text-fg-5 hover:text-fg transition-colors flex-shrink-0">
               <ArrowLeft size={18} />
             </button>
@@ -238,7 +237,7 @@ export default function VehiculosPage() {
                     <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
                     <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1.5 py-0.5 rounded-sm">{selected.tipo}</span>
                   </div>
-                  <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {TOTAL_TYPES} documentos</p>
+                  <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {TOTAL_TYPES} tipos · {selected.documents.length} archivo{selected.documents.length !== 1 ? "s" : ""}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="hidden sm:flex items-center gap-2">
@@ -261,36 +260,54 @@ export default function VehiculosPage() {
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
             <div className="space-y-2">
               {Object.entries(VEHICLE_DOC_LABELS).map(([docType, label]) => {
-                const doc = selected.documents.find(d => d.doc_type === docType);
-                const isUp = uploadType === docType;
-                const isDel = deletingType === docType;
+                const docs = selected.documents.filter(d => d.doc_type === docType);
+                const hasAny = docs.length > 0;
+                const isUp   = uploadType === docType;
                 return (
-                  <div key={docType} className="flex items-center gap-3 px-3 md:px-4 py-3 bg-surface-2 border border-border">
-                    {doc
-                      ? <CheckCircle2 size={15} className="text-emerald-400 flex-shrink-0" />
-                      : <div className="w-[15px] h-[15px] rounded-full border-2 border-fg-6 flex-shrink-0" />
-                    }
-                    <span className="text-xs md:text-sm text-fg-3 flex-1 min-w-0 leading-snug">{label}</span>
-                    {doc ? (
-                      <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs px-2 md:px-2.5 py-1.5 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors whitespace-nowrap">
-                          Ver
-                        </a>
-                        <button onClick={() => handleUploadClick(docType)} disabled={isUp} title="Reemplazar" className="p-2 text-fg-5 hover:text-fg border border-border hover:border-fg-4 transition-colors">
-                          {isUp ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-                        </button>
-                        <button onClick={() => handleDeleteDoc(docType)} disabled={isDel} title="Eliminar" className="p-2 text-fg-5 hover:text-red-400 border border-border hover:border-red-500/30 transition-colors">
-                          {isDel ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => handleUploadClick(docType)} disabled={isUp}
-                        className="flex-shrink-0 flex items-center gap-1.5 text-xs px-2 md:px-2.5 py-1.5 border border-dashed border-fg-6 text-fg-5 hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
+                  <div key={docType} className="bg-surface-2 border border-border">
+                    {/* Fila principal del tipo */}
+                    <div className="flex items-center gap-3 px-3 md:px-4 py-3">
+                      {hasAny
+                        ? <CheckCircle2 size={15} className="text-emerald-400 flex-shrink-0" />
+                        : <div className="w-[15px] h-[15px] rounded-full border-2 border-fg-6 flex-shrink-0" />
+                      }
+                      <span className="text-xs md:text-sm text-fg-3 flex-1 min-w-0 leading-snug">
+                        {label}
+                        {docs.length > 1 && (
+                          <span className="ml-1.5 text-[10px] text-fg-6 bg-surface-3 px-1 py-0.5 rounded-sm">{docs.length}</span>
+                        )}
+                      </span>
+                      <button
+                        onClick={() => handleUploadClick(docType)} disabled={isUp}
+                        className="flex-shrink-0 flex items-center gap-1.5 text-xs px-2 md:px-2.5 py-1.5 border border-dashed border-fg-6 text-fg-5 hover:border-accent hover:text-accent transition-colors whitespace-nowrap"
+                      >
                         {isUp ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
-                        Subir
+                        {hasAny ? "Agregar" : "Subir"}
                       </button>
-                    )}
+                    </div>
+                    {/* Lista de archivos */}
+                    {docs.map(doc => (
+                      <div key={doc.id} className="flex items-center gap-2 px-3 md:px-4 py-2 border-t border-border/50 bg-surface-3/30 pl-9 md:pl-11">
+                        <span className="text-[11px] text-fg-5 flex-1 min-w-0 truncate" title={doc.file_name}>
+                          {doc.file_name}
+                        </span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <a
+                            href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs px-2 py-1 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors whitespace-nowrap"
+                          >
+                            Ver
+                          </a>
+                          <button
+                            onClick={() => handleDeleteDoc(doc.id)} disabled={deletingId === doc.id}
+                            title="Eliminar"
+                            className="p-1.5 text-fg-5 hover:text-red-400 border border-border hover:border-red-500/30 transition-colors"
+                          >
+                            {deletingId === doc.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 );
               })}
