@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
+import { toast } from "sonner";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
@@ -33,6 +34,49 @@ export default function CotizacionesPage() {
   const [statusFilter, setStatus] = useState("");
   const [modeFilter, setMode]     = useState("");
   const [drawerOpen, setDrawer]   = useState(false);
+
+  // Modal reenvío de email
+  const [sendModal,       setSendModal]       = useState<BotQuotationResponse | null>(null);
+  const [sendEmails,      setSendEmails]      = useState<string[]>([]);
+  const [sendInput,       setSendInput]       = useState("");
+  const [sending,         setSending]         = useState(false);
+  const sendInputRef = useRef<HTMLInputElement>(null);
+
+  const openSendModal = (q: BotQuotationResponse) => {
+    const initial = q.lead_email ? [q.lead_email] : [];
+    setSendEmails(initial);
+    setSendInput("");
+    setSendModal(q);
+    setTimeout(() => sendInputRef.current?.focus(), 50);
+  };
+
+  const closeSendModal = () => { setSendModal(null); setSendEmails([]); setSendInput(""); };
+
+  const addSendEmail = (raw: string) => {
+    const email = raw.trim().toLowerCase().replace(/,/g, "");
+    if (!email || !email.includes("@")) return;
+    if (!sendEmails.includes(email)) setSendEmails(prev => [...prev, email]);
+    setSendInput("");
+  };
+
+  const handleSendEmail = async () => {
+    if (!sendModal || sendEmails.length === 0) return;
+    setSending(true);
+    try {
+      const res = await api.bot.sendQuotationEmail(sendModal.quotation_number, sendEmails);
+      if (res.sent) {
+        toast.success(`Cotización enviada a ${sendEmails.length} correo${sendEmails.length > 1 ? "s" : ""}`);
+        closeSendModal();
+        loadQuotations();
+      } else {
+        toast.error("No se pudo enviar el correo");
+      }
+    } catch {
+      toast.error("Error al enviar");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const PAGE_SIZE = 20;
 
@@ -143,7 +187,7 @@ export default function CotizacionesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
+                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -221,6 +265,15 @@ export default function CotizacionesPage() {
                         : <span className="text-fg-6 text-xs">—</span>
                       }
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => openSendModal(q)}
+                        title="Enviar por correo"
+                        className="p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors"
+                      >
+                        <Send size={13} />
+                      </button>
+                    </td>
                   </tr>
                   );
                 })}
@@ -248,6 +301,60 @@ export default function CotizacionesPage() {
       </>
 
     </div>
+
+    {/* ── Modal reenvío de email ── */}
+    {sendModal && (
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && closeSendModal()}>
+        <div className="bg-surface-2 border border-border w-full max-w-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg">Enviar cotización</h3>
+              <p className="text-xs text-fg-5 mt-0.5 font-mono">{sendModal.quotation_number}</p>
+            </div>
+            <button onClick={closeSendModal} className="text-fg-5 hover:text-fg"><X size={16} /></button>
+          </div>
+
+          {/* Chips */}
+          <label className="text-xs text-fg-4 block mb-2">Destinatarios</label>
+          {sendEmails.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {sendEmails.map(em => (
+                <span key={em} className="flex items-center gap-1 text-xs bg-surface-3 border border-border text-fg-3 px-2 py-1">
+                  {em}
+                  <button type="button" onClick={() => setSendEmails(prev => prev.filter(e => e !== em))} className="text-fg-6 hover:text-fg ml-0.5">
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            ref={sendInputRef}
+            type="email"
+            className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+            placeholder="correo@empresa.com — Enter o coma para agregar"
+            value={sendInput}
+            onChange={e => setSendInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSendEmail(sendInput); }
+              if (e.key === "Backspace" && !sendInput && sendEmails.length > 0)
+                setSendEmails(prev => prev.slice(0, -1));
+            }}
+            onBlur={() => { if (sendInput.trim()) addSendEmail(sendInput); }}
+          />
+          <p className="text-[11px] text-fg-6 mt-1.5">Presiona Enter o coma para agregar cada correo. Backspace elimina el último.</p>
+
+          <button
+            onClick={handleSendEmail}
+            disabled={sending || sendEmails.length === 0}
+            className="mt-4 w-full bg-accent text-black text-sm font-semibold py-2.5 hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+            {sending ? "Enviando..." : `Enviar a ${sendEmails.length} correo${sendEmails.length !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      </div>
+    )}
     </>
   );
 }

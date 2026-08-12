@@ -1186,6 +1186,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    sendQuotationEmail: (quotationNumber: string, emails: string[]) =>
+      request<{ sent: boolean; emails: string[] }>(`/quotations/${quotationNumber}/send-email`, {
+        method: "POST",
+        body: JSON.stringify({ emails }),
+      }),
     pipeline: (params?: { lead_type?: string; search?: string }) => {
       const qs = new URLSearchParams();
       if (params?.lead_type) qs.set("lead_type", params.lead_type);
