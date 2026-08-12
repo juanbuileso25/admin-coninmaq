@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Upload, Trash2, X, Pencil, Truck, ChevronRight, Loader2, Search, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Plus, Upload, Trash2, X, Pencil, Truck, Bike, ChevronRight, Loader2, Search, CheckCircle2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { api, type VehicleOut } from "../../services/api";
 
@@ -28,10 +28,12 @@ export default function VehiculosPage() {
 
   const [showNew,   setShowNew]   = useState(false);
   const [newPlate,  setNewPlate]  = useState("");
+  const [newTipo,   setNewTipo]   = useState<"carro" | "moto">("carro");
   const [creating,  setCreating]  = useState(false);
 
   const [editing,   setEditing]   = useState(false);
   const [editPlate, setEditPlate] = useState("");
+  const [editTipo,  setEditTipo]  = useState<"carro" | "moto">("carro");
   const [saving,    setSaving]    = useState(false);
 
   const fileRef        = useRef<HTMLInputElement>(null);
@@ -57,10 +59,10 @@ export default function VehiculosPage() {
     if (!newPlate.trim()) return;
     setCreating(true);
     try {
-      const created = await api.companyDocs.createVehicle({ plate: newPlate.trim().toUpperCase() });
+      const created = await api.companyDocs.createVehicle({ plate: newPlate.trim().toUpperCase(), tipo: newTipo });
       setVehicles(prev => [created, ...prev]);
       setSelected(created);
-      setShowNew(false); setNewPlate("");
+      setShowNew(false); setNewPlate(""); setNewTipo("carro");
       toast.success("Vehículo creado");
     } catch (e: any) { toast.error(e.detail ?? "Error al crear"); }
     finally { setCreating(false); }
@@ -70,10 +72,10 @@ export default function VehiculosPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      const updated = await api.companyDocs.updateVehicle(selected.id, { plate: editPlate.trim().toUpperCase() });
+      const updated = await api.companyDocs.updateVehicle(selected.id, { plate: editPlate.trim().toUpperCase(), tipo: editTipo });
       setVehicles(prev => prev.map(v => v.id === updated.id ? updated : v));
       setSelected(updated); setEditing(false);
-      toast.success("Placa actualizada");
+      toast.success("Vehículo actualizado");
     } catch (e: any) { toast.error(e.detail ?? "Error al guardar"); }
     finally { setSaving(false); }
   };
@@ -169,10 +171,16 @@ export default function VehiculosPage() {
                 }`}
               >
                 <div className={`w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-accent/20" : "bg-surface-3"}`}>
-                  <Truck size={14} className={isSelected ? "text-accent" : "text-fg-5"} />
+                  {v.tipo === "moto"
+                    ? <Bike size={14} className={isSelected ? "text-accent" : "text-fg-5"} />
+                    : <Truck size={14} className={isSelected ? "text-accent" : "text-fg-5"} />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-mono font-semibold text-fg">{v.plate}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-mono font-semibold text-fg">{v.plate}</p>
+                    <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1 py-0.5 rounded-sm">{v.tipo}</span>
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 h-1 bg-surface-3 rounded-full overflow-hidden">
                       <div className="h-1 bg-accent/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -204,6 +212,20 @@ export default function VehiculosPage() {
                   value={editPlate} onChange={e => setEditPlate(e.target.value.toUpperCase())}
                   onKeyDown={e => e.key === "Enter" && handleSaveEdit()} autoFocus
                 />
+                <div className="flex gap-1">
+                  <button
+                    type="button" onClick={() => setEditTipo("carro")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
+                  >
+                    <Truck size={11} /> Carro
+                  </button>
+                  <button
+                    type="button" onClick={() => setEditTipo("moto")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
+                  >
+                    <Bike size={11} /> Moto
+                  </button>
+                </div>
                 <button onClick={handleSaveEdit} disabled={saving} className="px-3 py-1.5 bg-accent text-black text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-1">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : "Guardar"}
                 </button>
@@ -212,7 +234,10 @@ export default function VehiculosPage() {
             ) : (
               <>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
+                    <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1.5 py-0.5 rounded-sm">{selected.tipo}</span>
+                  </div>
                   <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {TOTAL_TYPES} documentos</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -221,7 +246,7 @@ export default function VehiculosPage() {
                       <div className="h-1.5 bg-accent rounded-full transition-all" style={{ width: `${(docsCount / TOTAL_TYPES) * 100}%` }} />
                     </div>
                   </div>
-                  <button onClick={() => { setEditPlate(selected.plate); setEditing(true); }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
+                  <button onClick={() => { setEditPlate(selected.plate); setEditTipo(selected.tipo as "carro" | "moto"); setEditing(true); }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
                     <Pencil size={16} />
                   </button>
                   <button onClick={handleDeleteVehicle} disabled={deletingVeh} className="p-2 text-fg-5 hover:text-red-400 hover:bg-red-950/20 rounded-sm transition-colors">
@@ -291,6 +316,21 @@ export default function VehiculosPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-sm font-semibold text-fg">Nuevo vehículo</h3>
               <button onClick={() => setShowNew(false)} className="text-fg-5 hover:text-fg"><X size={16} /></button>
+            </div>
+            <label className="text-xs text-fg-5 block mb-1.5">Tipo *</label>
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button" onClick={() => setNewTipo("carro")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
+              >
+                <Truck size={13} /> Carro
+              </button>
+              <button
+                type="button" onClick={() => setNewTipo("moto")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
+              >
+                <Bike size={13} /> Moto
+              </button>
             </div>
             <label className="text-xs text-fg-5 block mb-1.5">Placa *</label>
             <input
