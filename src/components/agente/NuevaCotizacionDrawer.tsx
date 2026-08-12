@@ -66,6 +66,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [clienteAddress, setAddress] = useState("");
 
   const [observations, setObservations] = useState("");
+  const [extraEmails,     setExtraEmails]     = useState<string[]>([]);
+  const [extraEmailInput, setExtraEmailInput] = useState("");
 
   // Opciones
   const [modoEntrega, setModo]      = useState<"email" | "chat" | "ambas">("email");
@@ -104,6 +106,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     if (!open) {
       setItems([]); setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
       setObservations("");
+      setExtraEmails([]); setExtraEmailInput("");
       setModo("email"); setSendToWa(true); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
@@ -174,6 +177,14 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
   };
 
+  const addExtraEmail = (raw: string) => {
+    const email = raw.trim().toLowerCase().replace(/,/g, "");
+    if (!email || !email.includes("@")) return;
+    if (!extraEmails.includes(email) && email !== clienteEmail.trim().toLowerCase())
+      setExtraEmails(prev => [...prev, email]);
+    setExtraEmailInput("");
+  };
+
   // Catálogo
   const filtered = machines.filter(m =>
     `${m.code} ${m.model} ${m.brand} ${m.category}`.toLowerCase().includes(machineSearch.toLowerCase())
@@ -241,6 +252,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         delivery_mode:         entrega,
         send_email:            sendEmail,
         observations: observations.trim() || undefined,
+        extra_emails: extraEmails.length > 0 ? extraEmails : undefined,
       });
 
       // Enviar link al WhatsApp de la conversación si aplica
@@ -295,7 +307,11 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
             <div>
               <p className="text-fg font-semibold text-lg">{result.quotation_number}</p>
               <p className="text-fg-4 text-sm mt-1">Total: {COP(result.total)}</p>
-              {result.email_sent && <p className="text-emerald-400 text-xs mt-1">Email enviado a {clienteEmail}</p>}
+              {result.email_sent && (
+                <p className="text-emerald-400 text-xs mt-1">
+                  Email enviado a {clienteEmail}{extraEmails.length > 0 ? ` y ${extraEmails.length} más` : ""}
+                </p>
+              )}
               {result.not_found.length > 0 && <p className="text-amber-400 text-xs mt-2">Códigos omitidos: {result.not_found.join(", ")}</p>}
             </div>
             {result.page_url && (
@@ -546,6 +562,29 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                       className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
                       placeholder="correo@empresa.com"
                       value={clienteEmail} onChange={e => setEmail(e.target.value)} />
+                    {/* Correos adicionales */}
+                    <div className="mt-2">
+                      {extraEmails.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {extraEmails.map(em => (
+                            <span key={em} className="flex items-center gap-1 text-xs bg-surface-3 border border-border text-fg-3 px-2 py-1">
+                              {em}
+                              <button type="button" onClick={() => setExtraEmails(prev => prev.filter(e => e !== em))} className="text-fg-6 hover:text-fg ml-0.5">
+                                <X size={10} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <input type="email"
+                        className="w-full bg-surface-3 border border-dashed border-fg-6 text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
+                        placeholder="Agregar otro destinatario (Enter o coma)"
+                        value={extraEmailInput}
+                        onChange={e => setExtraEmailInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtraEmail(extraEmailInput); } }}
+                        onBlur={() => { if (extraEmailInput.trim()) addExtraEmail(extraEmailInput); }}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-fg-4 text-xs mb-1.5 block">Razón social (opcional)</label>
