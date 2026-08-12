@@ -20,11 +20,6 @@ function fmtDateShort(s: string | null): string {
   return `${d.getUTCDate()} ${MESES[d.getUTCMonth() + 1]?.slice(0, 3)} ${d.getUTCFullYear()}`;
 }
 
-function primerNombre(name: string | null): string {
-  if (!name) return "cliente";
-  return name.trim().split(" ")[0];
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function QuotationPage() {
@@ -117,7 +112,8 @@ export default function QuotationPage() {
         .s-intro__ministat:last-child { border-right: none; }
         .s-intro__ministat-value { font-size: 26px; font-weight: 900; color: var(--black); line-height: 1; margin-bottom: 5px; }
         .s-intro__ministat-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-3); }
-        .s-intro__hi { font-size: 24px; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
+        .s-intro__hi { font-size: 24px; font-weight: 700; margin-bottom: 8px; line-height: 1.2; }
+        .s-intro__company { font-size: 13px; font-weight: 600; color: var(--gray-2); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
         .s-intro__sub { font-size: 14px; color: var(--gray-1); line-height: 1.8; margin-bottom: 28px; }
         .s-intro__bullets { list-style: none; display: flex; flex-direction: column; }
         .s-intro__bullets li { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--gray-4); font-size: 13px; color: var(--gray-1); line-height: 1.5; }
@@ -263,7 +259,10 @@ export default function QuotationPage() {
           </div>
           <div className="s-intro__content">
             <div>
-              <p className="s-intro__hi">Hola, <strong>{primerNombre(data.client?.representative ?? data.client?.name ?? null)}</strong> 👋</p>
+              <p className="s-intro__hi">Hola, <strong>{data.client?.representative ?? data.client?.name ?? "cliente"}</strong> 👋</p>
+              {data.client?.company && (
+                <p className="s-intro__company">{data.client.company}</p>
+              )}
               <p className="s-intro__sub">Todo lo que necesitas para decir sí con confianza está en esta oferta comercial: precio, ficha técnica, garantía y el respaldo de quienes más saben de maquinaria pesada en Colombia. Nuestro equipo comercial está listo para acompañarle en cada paso.</p>
               <div className="s-intro__ministats">
                 {[
