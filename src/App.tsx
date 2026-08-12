@@ -35,6 +35,8 @@ import RepuestosPage                from "./pages/agente/RepuestosPage";
 import RepuestoDetailPage           from "./pages/agente/RepuestoDetailPage";
 import RepuestosInventarioPage      from "./pages/inventario/RepuestosInventarioPage";
 import CotizacionesRepuestosPage    from "./pages/posventa/CotizacionesRepuestosPage";
+import VehiculosPage                from "./pages/documentos/VehiculosPage";
+import EmpleadosPage                from "./pages/documentos/EmpleadosPage";
 
 export default function App() {
   return (
@@ -112,6 +114,11 @@ export default function App() {
 
         {/* Prospección */}
         <Route path="/comercial/prospectos" element={<ProspectingPage />} />
+
+        {/* Documentos */}
+        <Route path="/documentos" element={<Navigate to="/documentos/vehiculos" replace />} />
+        <Route path="/documentos/vehiculos" element={<VehiculosPage />} />
+        <Route path="/documentos/empleados" element={<EmpleadosPage />} />
       </Route>
 
       {/* Fallback */}

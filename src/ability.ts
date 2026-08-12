@@ -16,6 +16,7 @@ export type Subjects =
   | "BotSession"
   | "Payments"
   | "Prospecting"
+  | "CompanyDocs"
   | "all";
 
 export type AppAbility = MongoAbility<[Actions, Subjects]>;
