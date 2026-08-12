@@ -1352,8 +1352,8 @@ export const api = {
       const form = new FormData(); form.append("file", file);
       return request<VehicleOut>(`/company-docs/vehicles/${id}/documents/${docType}`, { method: "POST", body: form, headers: {} });
     },
-    deleteVehicleDoc: (id: number, docType: string) =>
-      request<void>(`/company-docs/vehicles/${id}/documents/${docType}`, { method: "DELETE" }),
+    deleteVehicleDoc: (vehicleId: number, docId: number) =>
+      request<void>(`/company-docs/vehicles/${vehicleId}/documents/${docId}`, { method: "DELETE" }),
 
     listEmployees: () => request<EmployeeOut[]>("/company-docs/employees"),
     createEmployee: (data: Partial<Omit<EmployeeOut, "id" | "created_at" | "updated_at" | "documents">>) =>
