@@ -217,6 +217,15 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     ));
   };
 
+  const updateTotal = (codigo: string, raw: string) => {
+    const total = parseCOP(raw);
+    setItems(prev => prev.map(i => {
+      if (i.codigo !== codigo) return i;
+      const sp = Math.round(total / i.cantidad / (1 + i.tax_rate));
+      return { ...i, sale_price: sp, tax_value: Math.round(sp * i.tax_rate) };
+    }));
+  };
+
 
   const removeItem = (codigo: string) => setItems(prev => prev.filter(i => i.codigo !== codigo));
 
@@ -416,9 +425,12 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                             </div>
                             <div>
                               <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">A pagar</label>
-                              <div className="w-full bg-surface-2 border border-border text-accent text-xs px-2 py-1.5 font-semibold">
-                                {itemTotal > 0 ? COP(itemTotal) : "—"}
-                              </div>
+                              <input
+                                className="w-full bg-surface-2 border border-border text-accent text-xs px-2 py-1.5 font-semibold outline-none focus:border-accent"
+                                value={fmtInput(itemTotal)}
+                                onChange={e => updateTotal(item.codigo, e.target.value)}
+                                placeholder="0"
+                              />
                             </div>
                           </div>
                         </div>
