@@ -482,6 +482,7 @@ export type BotLeadResponse = {
   rut_direccion: string | null;
   rut_representante: string | null;
   rut_received: boolean;
+  rut_file_url: string | null;
   pipeline_stage: PipelineStage;
   close_result: "ganado" | "perdido" | null;
   num_units: number | null;
