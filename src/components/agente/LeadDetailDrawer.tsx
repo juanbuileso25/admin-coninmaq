@@ -275,6 +275,19 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                   <InfoRow label="Razón social" value={lead.rut_razon_social} />
                   <InfoRow label="Dirección" value={lead.rut_direccion} />
                   <InfoRow label="Representante" value={lead.rut_representante} />
+                  {lead.rut_file_url && (
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-fg-4 text-xs">Documento RUT</span>
+                      <a
+                        href={lead.rut_file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-500 hover:text-blue-400 underline"
+                      >
+                        Ver documento
+                      </a>
+                    </div>
+                  )}
                 </div>
               </Section>
             )}
