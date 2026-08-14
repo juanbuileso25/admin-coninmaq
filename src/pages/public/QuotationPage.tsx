@@ -259,7 +259,7 @@ export default function QuotationPage() {
           </div>
           <div className="s-intro__content">
             <div>
-              <p className="s-intro__hi">Hola, <strong>{data.client?.representative ?? data.client?.name ?? "cliente"}</strong> 👋</p>
+              <p className="s-intro__hi">Hola, <strong>{data.client?.name ?? data.client?.representative ?? "cliente"}</strong> 👋</p>
               {data.client?.company && (
                 <p className="s-intro__company">{data.client.company}</p>
               )}
