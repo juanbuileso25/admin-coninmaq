@@ -527,7 +527,7 @@ export type QuotationMachine = {
 };
 export type QuotationItem = {
   producto: string; cantidad: number; precio_base: number;
-  codigo: string; sale_price: number; tax_value: number;
+  codigo: string; sale_price: number; tax_value: number; tax_rate: number;
   machine: QuotationMachine | null;
 };
 export type QuotationClient  = { name: string | null; email: string | null; company: string | null; phone_number: string | null; tax_id: string | null; address: string | null; representative: string | null };

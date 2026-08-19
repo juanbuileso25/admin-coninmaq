@@ -426,7 +426,10 @@ export default function QuotationPage() {
               ))}
               {data.iva_total > 0 && (
                 <div className="s-investment__row">
-                  <span>IVA 19%</span><span>{COP(data.iva_total)}</span>
+                  <span>IVA {(() => {
+                    const rates = [...new Set(data.items.filter(i => i.tax_value > 0).map(i => Math.round(i.tax_rate * 100)))];
+                    return rates.length === 1 ? `${rates[0]}%` : "mixto";
+                  })()}</span><span>{COP(data.iva_total)}</span>
                 </div>
               )}
               {data.discount_total > 0 && (
