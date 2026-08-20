@@ -42,16 +42,22 @@ interface KanbanCardProps {
 function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick }: KanbanCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos]   = useState({ top: 0, left: 0 });
-  const btnRef   = useRef<HTMLButtonElement>(null);
-  const cardRef  = useRef<HTMLDivElement>(null);
-  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const btnRef    = useRef<HTMLButtonElement>(null);
+  const menuRef   = useRef<HTMLDivElement>(null);
+  const cardRef   = useRef<HTMLDivElement>(null);
+  const ghostRef  = useRef<HTMLDivElement | null>(null);
   const touchState = useRef({ offsetX: 0, offsetY: 0, dragging: false });
   const tier = lead.score?.tier_final;
 
   useEffect(() => {
     if (!menuOpen) return;
     const close = (e: MouseEvent) => {
-      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setMenuOpen(false);
+      const target = e.target as Node;
+      if (
+        btnRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) return;
+      setMenuOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -195,6 +201,7 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick }: Ka
             </button>
             {menuOpen && (
               <div
+                ref={menuRef}
                 style={{ position: "fixed", top: menuPos.top, right: `calc(100vw - ${menuPos.left}px)` }}
                 className="z-[9999] bg-surface-3 border border-border shadow-xl min-w-[180px]"
               >
