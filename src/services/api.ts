@@ -521,7 +521,7 @@ export type QuotationMachineImage     = { url: string; is_primary: boolean; orde
 export type QuotationMachineMedia     = { url: string; media_type: string; title: string | null; order: number };
 export type QuotationMachine = {
   code: string; model: string; brand: string; category: string;
-  description: string; pdf_url: string; image_url: string;
+  description: string; pdf_url: string; image_url: string; warranty: string;
   specs: QuotationMachineSpec[]; highlights: QuotationMachineHighlight[];
   images: QuotationMachineImage[]; videos: QuotationMachineMedia[];
 };
