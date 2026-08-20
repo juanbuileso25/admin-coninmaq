@@ -495,7 +495,7 @@ export default function QuotationPage() {
           </div>
           <div className="s-conditions__warranty">
             <p className="s-conditions__warranty-title">Garantía comercial LONKING</p>
-            <p className="s-conditions__warranty-heading">Garantía de 12 meses o 2.000 horas de operación</p>
+            <p className="s-conditions__warranty-heading">{data.items.find(i => i.machine?.warranty)?.machine?.warranty ?? "Garantía de 12 meses o 2.000 horas de operación"}</p>
             <p className="s-conditions__warranty-body">
               Cubre la reparación y reposición de partes o componentes por defectos de diseño, fabricación o ensamble
               a expensas del fabricante, durante un período previamente establecido, bajo condiciones normales de
