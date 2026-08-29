@@ -1027,7 +1027,7 @@ export const api = {
     list: () => request<UserResponse[]>("/users/"),
     create: (data: { first_name: string; last_name: string; email: string; role_id?: string; area_id?: string }) =>
       request<UserResponse>("/users/", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: string, data: { first_name?: string; last_name?: string; is_active?: boolean }) =>
+    update: (id: string, data: { first_name?: string; last_name?: string; is_active?: boolean; license_category?: string | null; license_number?: string | null }) =>
       request<UserResponse>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     remove: (id: string) => request<void>(`/users/${id}`, { method: "DELETE" }),
     assignRole: (id: string, role_id: string, area_id?: string) =>
