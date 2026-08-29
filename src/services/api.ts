@@ -764,7 +764,7 @@ export type SendOnboardingResponse = { message: string; expires_at: string };
 
 export type UserRoleResponse = { role: { id: string; name: string }; area_id: string | null; area_name: string | null };
 export type UserActionDetail = { action_id: string; action_code: string; module_code: string };
-export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; created_at: string; role_assignments: UserRoleResponse[]; user_action_ids: string[]; user_actions_detail: UserActionDetail[]; user_menu_item_ids: string[] };
+export type UserResponse = { id: string; first_name: string; last_name: string; email: string; is_active: boolean; license_category: string | null; license_number: string | null; created_at: string; role_assignments: UserRoleResponse[]; user_action_ids: string[]; user_actions_detail: UserActionDetail[]; user_menu_item_ids: string[] };
 export type RoleResponse = { id: string; name: string; description: string | null };
 export type AreaResponse = { id: string; name: string; description: string | null };
 export type PermissionResponse = { id: string; action: string; subject: string; description: string | null };
@@ -882,9 +882,19 @@ export type VehicleDocumentOut = {
   id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
 };
 export type VehicleOut = {
-  id: number; plate: string; tipo: string; modelo: string | null;
+  id: number; plate: string; tipo: string;
+  modelo: string | null; marca: string | null; cilindraje: string | null; color: string | null;
   created_at: string; updated_at: string;
   documents: VehicleDocumentOut[];
+};
+
+export type VehicleWritableFields = {
+  plate?: string;
+  tipo?: string;
+  modelo?: string | null;
+  marca?: string | null;
+  cilindraje?: string | null;
+  color?: string | null;
 };
 export type EmployeeDocumentOut = {
   id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
@@ -1487,9 +1497,9 @@ export const api = {
   },
   companyDocs: {
     listVehicles: () => request<VehicleOut[]>("/company-docs/vehicles"),
-    createVehicle: (data: { plate: string; tipo: string; modelo?: string | null }) =>
+    createVehicle: (data: VehicleWritableFields & { plate: string; tipo: string }) =>
       request<VehicleOut>("/company-docs/vehicles", { method: "POST", body: JSON.stringify(data) }),
-    updateVehicle: (id: number, data: { plate?: string; tipo?: string; modelo?: string | null }) =>
+    updateVehicle: (id: number, data: VehicleWritableFields) =>
       request<VehicleOut>(`/company-docs/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteVehicle: (id: number) =>
       request<void>(`/company-docs/vehicles/${id}`, { method: "DELETE" }),

@@ -9,6 +9,8 @@ interface User {
   email: string;
   role: string;
   avatar: string;
+  license_category: string | null;
+  license_number: string | null;
   actionsDetail: UserActionDetail[];
 }
 
@@ -56,6 +58,8 @@ export function useAuth() {
         email: me.email,
         role: roles[0] ?? "Usuario",
         avatar: me.first_name[0].toUpperCase(),
+        license_category: me.license_category,
+        license_number: me.license_number,
         actionsDetail: me.user_actions_detail ?? [],
       };
 

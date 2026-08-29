@@ -18,12 +18,18 @@ export default function VehiculosPage() {
   const [newPlate, setNewPlate] = useState("");
   const [newTipo, setNewTipo] = useState<"carro" | "moto">("carro");
   const [newModelo, setNewModelo] = useState("");
+  const [newMarca, setNewMarca] = useState("");
+  const [newCilindraje, setNewCilindraje] = useState("");
+  const [newColor, setNewColor] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [editPlate, setEditPlate] = useState("");
   const [editTipo, setEditTipo] = useState<"carro" | "moto">("carro");
   const [editModelo, setEditModelo] = useState("");
+  const [editMarca, setEditMarca] = useState("");
+  const [editCilindraje, setEditCilindraje] = useState("");
+  const [editColor, setEditColor] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingVeh, setDeletingVeh] = useState(false);
 
@@ -49,10 +55,15 @@ export default function VehiculosPage() {
         plate: newPlate.trim().toUpperCase(),
         tipo: newTipo,
         modelo: newModelo.trim() || null,
+        marca: newMarca.trim() || null,
+        cilindraje: newCilindraje.trim() || null,
+        color: newColor.trim() || null,
       });
       setVehicles(prev => [created, ...prev]);
       setSelected(created);
-      setShowNew(false); setNewPlate(""); setNewTipo("carro"); setNewModelo("");
+      setShowNew(false);
+      setNewPlate(""); setNewTipo("carro"); setNewModelo("");
+      setNewMarca(""); setNewCilindraje(""); setNewColor("");
       toast.success("Vehículo creado");
     } catch (e: any) { toast.error(e.detail ?? "Error al crear"); }
     finally { setCreating(false); }
@@ -66,6 +77,9 @@ export default function VehiculosPage() {
         plate: editPlate.trim().toUpperCase(),
         tipo: editTipo,
         modelo: editModelo.trim() || null,
+        marca: editMarca.trim() || null,
+        cilindraje: editCilindraje.trim() || null,
+        color: editColor.trim() || null,
       });
       setVehicles(prev => prev.map(v => v.id === updated.id ? updated : v));
       setSelected(updated); setEditing(false);
@@ -169,58 +183,41 @@ export default function VehiculosPage() {
               <ArrowLeft size={18} />
             </button>
 
-            {editing ? (
-              <div className="flex items-center gap-2 flex-1 flex-wrap">
-                <input
-                  className="bg-surface-3 border border-border text-fg text-sm px-3 py-1.5 outline-none focus:border-accent w-36 font-mono uppercase"
-                  value={editPlate} onChange={e => setEditPlate(e.target.value.toUpperCase())}
-                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()} autoFocus placeholder="Placa"
-                />
-                <input
-                  className="bg-surface-3 border border-border text-fg text-sm px-3 py-1.5 outline-none focus:border-accent w-40"
-                  value={editModelo} onChange={e => setEditModelo(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()} placeholder="Modelo (ej: Hilux 2020)"
-                />
-                <div className="flex gap-1">
-                  <button type="button" onClick={() => setEditTipo("carro")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
-                    <Truck size={11} /> Carro
-                  </button>
-                  <button type="button" onClick={() => setEditTipo("moto")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
-                    <Bike size={11} /> Moto
-                  </button>
-                </div>
-                <button onClick={handleSaveEdit} disabled={saving} className="px-3 py-1.5 bg-accent text-black text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-1">
-                  {saving ? <Loader2 size={12} className="animate-spin" /> : "Guardar"}
-                </button>
-                <button onClick={() => setEditing(false)} className="text-fg-5 hover:text-fg p-1"><X size={15} /></button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
+                <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1.5 py-0.5 rounded-sm">{selected.tipo}</span>
+                {(selected.marca || selected.modelo) && (
+                  <span className="text-[11px] text-fg-4">
+                    · {[selected.marca, selected.modelo].filter(Boolean).join(" ")}
+                  </span>
+                )}
+                {selected.cilindraje && <span className="text-[10px] text-fg-6">· {selected.cilindraje}</span>}
+                {selected.color && <span className="text-[10px] text-fg-6">· {selected.color}</span>}
               </div>
-            ) : (
-              <>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
-                    <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1.5 py-0.5 rounded-sm">{selected.tipo}</span>
-                    {selected.modelo && <span className="text-[11px] text-fg-4">· {selected.modelo}</span>}
-                  </div>
-                  <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {VEHICLE_DOC_TYPES_COUNT} tipos · {selected.documents.length} archivo{selected.documents.length !== 1 ? "s" : ""}</p>
+              <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {VEHICLE_DOC_TYPES_COUNT} tipos · {selected.documents.length} archivo{selected.documents.length !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-24 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-accent rounded-full transition-all" style={{ width: `${(docsCount / VEHICLE_DOC_TYPES_COUNT) * 100}%` }} />
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="hidden sm:flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                      <div className="h-1.5 bg-accent rounded-full transition-all" style={{ width: `${(docsCount / VEHICLE_DOC_TYPES_COUNT) * 100}%` }} />
-                    </div>
-                  </div>
-                  <button onClick={() => { setEditPlate(selected.plate); setEditTipo(selected.tipo as "carro" | "moto"); setEditModelo(selected.modelo ?? ""); setEditing(true); }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
-                    <Pencil size={16} />
-                  </button>
-                  <button onClick={handleDeleteVehicle} disabled={deletingVeh} className="p-2 text-fg-5 hover:text-red-400 hover:bg-red-950/20 rounded-sm transition-colors">
-                    {deletingVeh ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                  </button>
-                </div>
-              </>
-            )}
+              </div>
+              <button onClick={() => {
+                setEditPlate(selected.plate);
+                setEditTipo(selected.tipo as "carro" | "moto");
+                setEditModelo(selected.modelo ?? "");
+                setEditMarca(selected.marca ?? "");
+                setEditCilindraje(selected.cilindraje ?? "");
+                setEditColor(selected.color ?? "");
+                setEditing(true);
+              }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
+                <Pencil size={16} />
+              </button>
+              <button onClick={handleDeleteVehicle} disabled={deletingVeh} className="p-2 text-fg-5 hover:text-red-400 hover:bg-red-950/20 rounded-sm transition-colors">
+                {deletingVeh ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -268,7 +265,7 @@ export default function VehiculosPage() {
       {/* Modal nuevo */}
       {showNew && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setShowNew(false)}>
-          <div className="bg-surface-2 border border-border w-full max-w-xs p-6">
+          <div className="bg-surface-2 border border-border w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-sm font-semibold text-fg">Nuevo vehículo</h3>
               <button onClick={() => setShowNew(false)} className="text-fg-5 hover:text-fg"><X size={16} /></button>
@@ -290,21 +287,118 @@ export default function VehiculosPage() {
               className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6 font-mono uppercase"
               placeholder="Ej: ABC-123"
               value={newPlate} onChange={e => setNewPlate(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === "Enter" && handleCreate()}
             />
-            <label className="text-xs text-fg-5 block mt-3 mb-1.5">Modelo</label>
-            <input
-              className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
-              placeholder="Ej: Hilux 2020"
-              value={newModelo} onChange={e => setNewModelo(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleCreate()}
-            />
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Marca</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  placeholder="Ej: Toyota"
+                  value={newMarca} onChange={e => setNewMarca(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Modelo</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  placeholder="Ej: Hilux 2020"
+                  value={newModelo} onChange={e => setNewModelo(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">
+                  {newTipo === "moto" ? "Cilindraje" : "Cilindraje / Motor"}
+                </label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  placeholder={newTipo === "moto" ? "Ej: 125cc" : "Opcional"}
+                  value={newCilindraje} onChange={e => setNewCilindraje(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Color</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  placeholder="Ej: Blanco"
+                  value={newColor} onChange={e => setNewColor(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleCreate()}
+                />
+              </div>
+            </div>
             <button
               onClick={handleCreate} disabled={creating || !newPlate.trim()}
               className="mt-4 w-full bg-accent text-black text-sm font-semibold py-2.5 hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {creating ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
               Crear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar */}
+      {editing && selected && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setEditing(false)}>
+          <div className="bg-surface-2 border border-border w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-semibold text-fg">Editar vehículo</h3>
+              <button onClick={() => setEditing(false)} className="text-fg-5 hover:text-fg"><X size={16} /></button>
+            </div>
+            <label className="text-xs text-fg-5 block mb-1.5">Tipo *</label>
+            <div className="flex gap-2 mb-4">
+              <button type="button" onClick={() => setEditTipo("carro")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${editTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
+                <Truck size={13} /> Carro
+              </button>
+              <button type="button" onClick={() => setEditTipo("moto")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${editTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
+                <Bike size={13} /> Moto
+              </button>
+            </div>
+            <label className="text-xs text-fg-5 block mb-1.5">Placa *</label>
+            <input
+              autoFocus
+              className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6 font-mono uppercase"
+              value={editPlate} onChange={e => setEditPlate(e.target.value.toUpperCase())}
+            />
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Marca</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  value={editMarca} onChange={e => setEditMarca(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Modelo</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  value={editModelo} onChange={e => setEditModelo(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">
+                  {editTipo === "moto" ? "Cilindraje" : "Cilindraje / Motor"}
+                </label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  value={editCilindraje} onChange={e => setEditCilindraje(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-fg-5 block mb-1.5">Color</label>
+                <input
+                  className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                  value={editColor} onChange={e => setEditColor(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()}
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleSaveEdit} disabled={saving || !editPlate.trim()}
+              className="mt-4 w-full bg-accent text-black text-sm font-semibold py-2.5 hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {saving ? <Loader2 size={15} className="animate-spin" /> : "Guardar cambios"}
             </button>
           </div>
         </div>
