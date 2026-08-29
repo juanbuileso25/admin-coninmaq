@@ -55,6 +55,8 @@ function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSa
   const [roleId,    setRoleId]    = useState(user?.role_assignments[0]?.role.id ?? "");
   const [areaId,    setAreaId]    = useState(user?.role_assignments[0]?.area_id ?? "");
   const [isActive,  setIsActive]  = useState(user?.is_active ?? true);
+  const [licenseCategory, setLicenseCategory] = useState(user?.license_category ?? "");
+  const [licenseNumber,   setLicenseNumber]   = useState(user?.license_number ?? "");
 
   const [selectedActionIds,   setSelectedActionIds]   = useState<Set<string>>(
     () => new Set(user?.user_action_ids ?? [])
@@ -102,7 +104,13 @@ function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSa
       let userId = user?.id ?? "";
 
       if (isEdit) {
-        await api.users.update(user.id, { first_name: firstName, last_name: lastName, is_active: isActive });
+        await api.users.update(user.id, {
+          first_name: firstName,
+          last_name: lastName,
+          is_active: isActive,
+          license_category: licenseCategory || null,
+          license_number: licenseNumber || null,
+        });
         const currentRole = user.role_assignments[0];
         const roleChanged = currentRole?.role.id !== roleId || currentRole?.area_id !== (areaId || null);
         if (roleChanged) {
@@ -207,17 +215,40 @@ function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSa
                   )}
                 </div>
                 {isEdit && (
-                  <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                    <div className="relative flex-shrink-0">
-                      <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="peer sr-only" />
-                      <div className="w-4 h-4 border border-border-light bg-surface-3 peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
-                        <svg className="w-2.5 h-2.5 text-zinc-900 opacity-0 peer-checked:opacity-100 transition-opacity absolute" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                  <>
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+                      <div className="space-y-1.5">
+                        <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">Categoría licencia</label>
+                        <select value={licenseCategory} onChange={(e) => setLicenseCategory(e.target.value)} className="input-dark w-full appearance-none">
+                          <option value="">Sin categoría</option>
+                          <option value="A1">A1 — Motos ≤125 cc</option>
+                          <option value="A2">A2 — Motos &gt;125 cc</option>
+                          <option value="B1">B1 — Automóviles particulares</option>
+                          <option value="B2">B2 — Camiones/busetas particulares</option>
+                          <option value="B3">B3 — Vehículos articulados particulares</option>
+                          <option value="C1">C1 — Automóviles servicio público</option>
+                          <option value="C2">C2 — Camiones/busetas servicio público</option>
+                          <option value="C3">C3 — Vehículos articulados servicio público</option>
+                        </select>
+                        <p className="text-fg-6 text-[11px]">Se pre-carga al crear inspecciones preoperacionales.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-fg-4 text-xs font-medium uppercase tracking-wider">N° licencia</label>
+                        <input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className="input-dark w-full" placeholder="Ej: 1234567890" />
                       </div>
                     </div>
-                    <span className="text-fg-4 text-xs group-hover:text-fg-3 transition-colors select-none">Usuario activo</span>
-                  </label>
+                    <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                      <div className="relative flex-shrink-0">
+                        <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="peer sr-only" />
+                        <div className="w-4 h-4 border border-border-light bg-surface-3 peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
+                          <svg className="w-2.5 h-2.5 text-zinc-900 opacity-0 peer-checked:opacity-100 transition-opacity absolute" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                      <span className="text-fg-4 text-xs group-hover:text-fg-3 transition-colors select-none">Usuario activo</span>
+                    </label>
+                  </>
                 )}
               </div>
             )}

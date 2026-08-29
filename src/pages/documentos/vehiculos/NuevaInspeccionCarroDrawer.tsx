@@ -8,9 +8,18 @@ import { useAuth } from "../../../hooks/useAuth";
 
 interface Props {
   vehicle: VehicleOut;
+  previousInspection?: VehicleInspectionOut | null;
   onClose: () => void;
   onCreated: (inspection: VehicleInspectionOut) => void;
 }
+
+// Mapeo doc_type → item del checklist que debe pre-marcarse
+const DOC_TO_ITEM: Record<string, [string, string]> = {
+  matricula:                 ["documentos", "licencia_transito"],
+  soat:                      ["documentos", "seguro_obligatorio"],
+  revision_tecnico_mecanica: ["documentos", "revision_tecnico_mecanica"],
+  poliza_seguros:            ["documentos", "seguro_terceros"],
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   documentos:          "Documentos",
@@ -61,7 +70,7 @@ function parseISO(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
-export default function NuevaInspeccionCarroDrawer({ vehicle, onClose, onCreated }: Props) {
+export default function NuevaInspeccionCarroDrawer({ vehicle, previousInspection, onClose, onCreated }: Props) {
   const { user } = useAuth();
   const [catalog, setCatalog] = useState<InspectionItemsCatalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,12 +89,35 @@ export default function NuevaInspeccionCarroDrawer({ vehicle, onClose, onCreated
     setWeekNumber(weekOfYear(d));
   };
   const [mileage, setMileage] = useState("");
-  const [driverName, setDriverName] = useState(user?.name ?? "");
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [licenseCategory, setLicenseCategory] = useState("");
+  const [driverName, setDriverName] = useState(previousInspection?.driver_name ?? user?.name ?? "");
+  const [licenseNumber, setLicenseNumber] = useState(previousInspection?.license_number ?? user?.license_number ?? "");
+  const [licenseCategory, setLicenseCategory] = useState(previousInspection?.license_category ?? user?.license_category ?? "");
+
+  // Placeholder de kilometraje = último reportado
+  const lastMileagePlaceholder = previousInspection?.mileage
+    ? `Último: ${previousInspection.mileage}`
+    : "Ej: 125.000";
 
   // Checklist: { "category|item_key": true/false }
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  // Prefill: docs cargados + valores de última inspección
+  const initialChecked = (): Record<string, boolean> => {
+    const c: Record<string, boolean> = {};
+    // 1) Copiar de la inspección previa
+    if (previousInspection) {
+      for (const item of previousInspection.items) {
+        c[`${item.category}|${item.item_key}`] = item.is_ok;
+      }
+    }
+    // 2) Superponer: si el doc existe en company_docs, marcar como OK
+    const uploadedTypes = new Set(vehicle.documents.map(d => d.doc_type));
+    for (const [docType, [category, itemKey]] of Object.entries(DOC_TO_ITEM)) {
+      if (uploadedTypes.has(docType)) {
+        c[`${category}|${itemKey}`] = true;
+      }
+    }
+    return c;
+  };
+  const [checked, setChecked] = useState<Record<string, boolean>>(initialChecked());
 
   // Textos
   const [damageDescription, setDamageDescription] = useState("");
@@ -231,7 +263,7 @@ export default function NuevaInspeccionCarroDrawer({ vehicle, onClose, onCreated
                     <input type="number" min={1} max={53} value={weekNumber} onChange={e => setWeekNumber(Number(e.target.value))} className={inputCls} />
                   </Field>
                   <Field label="Kilometraje">
-                    <input value={mileage} onChange={e => setMileage(e.target.value)} className={inputCls} placeholder="Ej: 125.000" />
+                    <input value={mileage} onChange={e => setMileage(e.target.value)} className={inputCls} placeholder={lastMileagePlaceholder} />
                   </Field>
                   <Field label="Conductor">
                     <input value={driverName} onChange={e => setDriverName(e.target.value)} className={inputCls} />
@@ -252,7 +284,31 @@ export default function NuevaInspeccionCarroDrawer({ vehicle, onClose, onCreated
 
               {/* Checklist */}
               <section className="space-y-3">
-                <h3 className="text-[11px] font-semibold text-fg-5 uppercase tracking-wider">Checklist</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-semibold text-fg-5 uppercase tracking-wider">Checklist</h3>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const all: Record<string, boolean> = {};
+                        for (const [cat, items] of Object.entries(catalog)) {
+                          for (const key of Object.keys(items)) all[`${cat}|${key}`] = true;
+                        }
+                        setChecked(all);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                    >
+                      <CheckSquare size={11} /> Marcar todo OK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChecked({})}
+                      className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold border border-border text-fg-5 hover:border-fg-4 transition-colors"
+                    >
+                      <Square size={11} /> Limpiar
+                    </button>
+                  </div>
+                </div>
                 {Object.entries(catalog).map(([cat, items]) => {
                   const allOk = Object.keys(items).every(k => checked[`${cat}|${k}`]);
                   return (

@@ -195,6 +195,7 @@ export default function InspeccionesTab({ vehicle }: Props) {
       {showNew && !isMoto && (
         <NuevaInspeccionCarroDrawer
           vehicle={vehicle}
+          previousInspection={carroList[0] ?? null}
           onClose={() => setShowNew(false)}
           onCreated={(insp) => { setCarroList(prev => [insp, ...prev]); setShowNew(false); }}
         />
@@ -202,6 +203,7 @@ export default function InspeccionesTab({ vehicle }: Props) {
       {showNew && isMoto && (
         <NuevaInspeccionMotoDrawer
           vehicle={vehicle}
+          previousInspection={motoList[0] ?? null}
           onClose={() => setShowNew(false)}
           onCreated={(insp) => { setMotoList(prev => [insp, ...prev]); setShowNew(false); }}
         />

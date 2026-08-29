@@ -8,6 +8,7 @@ import { useAuth } from "../../../hooks/useAuth";
 
 interface Props {
   vehicle: VehicleOut;
+  previousInspection?: MotoInspectionOut | null;
   onClose: () => void;
   onCreated: (inspection: MotoInspectionOut) => void;
 }
@@ -30,33 +31,51 @@ type ItemState = {
   observaciones: string;
 };
 
-export default function NuevaInspeccionMotoDrawer({ vehicle, onClose, onCreated }: Props) {
+export default function NuevaInspeccionMotoDrawer({ vehicle, previousInspection, onClose, onCreated }: Props) {
   const { user } = useAuth();
   const [catalog, setCatalog] = useState<InspectionItemsCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Detectar docs cargados
+  const uploadedTypes = new Set(vehicle.documents.map(d => d.doc_type));
+  const hasSoat = uploadedTypes.has("soat");
+  const hasMatricula = uploadedTypes.has("matricula");
+
   // Cabecera
   const [inspectionDate, setInspectionDate] = useState(todayISO());
-  const [driverName, setDriverName] = useState(user?.name ?? "");
-  const [cedula, setCedula] = useState("");
-  const [cilindraje, setCilindraje] = useState("");
+  const [driverName, setDriverName] = useState(previousInspection?.driver_name ?? user?.name ?? "");
+  const [cedula, setCedula] = useState(previousInspection?.cedula ?? "");
+  const [cilindraje, setCilindraje] = useState(vehicle.cilindraje ?? "");
   const [modelo, setModelo] = useState(vehicle.modelo ?? "");
-  const [color, setColor] = useState("");
-  const [marca, setMarca] = useState("");
+  const [color, setColor] = useState(vehicle.color ?? "");
+  const [marca, setMarca] = useState(vehicle.marca ?? "");
 
-  // Documentos
-  const [seguroHas, setSeguroHas] = useState<boolean | null>(null);
-  const [seguroVenc, setSeguroVenc] = useState("");
-  const [licTransitoHas, setLicTransitoHas] = useState<boolean | null>(null);
-  const [licTransitoOrig, setLicTransitoOrig] = useState<boolean | null>(null);
-  const [licConducHas, setLicConducHas] = useState<boolean | null>(null);
-  const [licConducExp, setLicConducExp] = useState("");
-  const [papelesNombre, setPapelesNombre] = useState<boolean | null>(null);
-  const [papelesANombreDe, setPapelesANombreDe] = useState("");
+  // Documentos: pre-marcar SÍ si el doc está cargado o si la inspección anterior lo tenía
+  const [seguroHas, setSeguroHas] = useState<boolean | null>(hasSoat ? true : previousInspection?.seguro_obligatorio_has ?? null);
+  const [seguroVenc, setSeguroVenc] = useState(previousInspection?.seguro_obligatorio_vencimiento ?? "");
+  const [licTransitoHas, setLicTransitoHas] = useState<boolean | null>(hasMatricula ? true : previousInspection?.licencia_transito_has ?? null);
+  const [licTransitoOrig, setLicTransitoOrig] = useState<boolean | null>(previousInspection?.licencia_transito_original ?? null);
+  const [licConducHas, setLicConducHas] = useState<boolean | null>(previousInspection?.licencia_conduccion_has ?? null);
+  const [licConducExp, setLicConducExp] = useState(previousInspection?.licencia_conduccion_expedicion ?? "");
+  const [papelesNombre, setPapelesNombre] = useState<boolean | null>(previousInspection?.papeles_a_nombre_candidato ?? null);
+  const [papelesANombreDe, setPapelesANombreDe] = useState(previousInspection?.papeles_a_nombre_de ?? "");
 
-  // Items { "section|key": {status, accion, obs} }
-  const [items, setItems] = useState<Record<string, ItemState>>({});
+  // Items { "section|key": {status, accion, obs} } — pre-cargar de inspección anterior
+  const initialItems = (): Record<string, ItemState> => {
+    const map: Record<string, ItemState> = {};
+    if (previousInspection) {
+      for (const it of previousInspection.items) {
+        map[`${it.section}|${it.item_key}`] = {
+          status: (it.status as "bueno" | "malo" | null) ?? null,
+          accion_correctiva: it.accion_correctiva ?? "",
+          observaciones: it.observaciones ?? "",
+        };
+      }
+    }
+    return map;
+  };
+  const [items, setItems] = useState<Record<string, ItemState>>(initialItems());
   const [observations, setObservations] = useState("");
   const [commitment, setCommitment] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -247,7 +266,23 @@ export default function NuevaInspeccionMotoDrawer({ vehicle, onClose, onCreated 
               {/* Secciones */}
               {Object.entries(catalog).map(([section, itemsMap]) => (
                 <section key={section}>
-                  <h3 className="text-[11px] font-semibold text-fg-5 uppercase tracking-wider mb-3">{SECTION_LABELS[section] ?? section}</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[11px] font-semibold text-fg-5 uppercase tracking-wider">{SECTION_LABELS[section] ?? section}</h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const patch: Record<string, ItemState> = {};
+                        for (const key of Object.keys(itemsMap)) {
+                          const cur = getItem(section, key);
+                          patch[`${section}|${key}`] = { ...cur, status: "bueno" };
+                        }
+                        setItems(prev => ({ ...prev, ...patch }));
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                    >
+                      Todo bueno
+                    </button>
+                  </div>
                   <div className="border border-border">
                     <div className="grid grid-cols-[1fr_140px_1fr_1fr] gap-2 bg-surface-3 px-3 py-2 border-b border-border">
                       <div className="text-[10px] font-semibold text-fg-5 uppercase">Descripción</div>
