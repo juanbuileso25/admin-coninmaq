@@ -1,45 +1,31 @@
-import { useState, useEffect, useRef } from "react";
-import { Plus, Upload, Trash2, X, Pencil, Truck, Bike, ChevronRight, Loader2, Search, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Pencil, Truck, Bike, ChevronRight, Loader2, Search, ArrowLeft, Trash2, FileText, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api, type VehicleOut } from "../../services/api";
+import DocumentosTab, { VEHICLE_DOC_TYPES_COUNT } from "./vehiculos/DocumentosTab";
+import InspeccionesTab from "./vehiculos/InspeccionesTab";
 
-const VEHICLE_DOC_LABELS: Record<string, string> = {
-  matricula:                    "Matrícula",
-  soat:                         "SOAT vigente",
-  revision_tecnico_mecanica:    "Revisión técnico-mecánica",
-  poliza_seguros:               "Póliza de seguros",
-  declaracion_importacion:      "Declaración de importación (si aplica)",
-  hoja_de_vida:                 "Hoja de vida de la máquina",
-  convenio_colaboracion:        "Convenio de colaboración (si aplica)",
-  simit:                        "Certificado SIMIT",
-  lista_chequeo_preoperacional: "Lista de chequeo preoperacional",
-  cronograma_mantenimiento:     "Cronograma de mantenimiento",
-  mantenimientos_realizados:    "Mantenimientos realizados",
-  ficha_tecnica:                "Ficha técnica del equipo",
-};
-
-const TOTAL_TYPES = Object.keys(VEHICLE_DOC_LABELS).length;
+type TabKey = "documentos" | "inspecciones";
 
 export default function VehiculosPage() {
-  const [vehicles,  setVehicles]  = useState<VehicleOut[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [selected,  setSelected]  = useState<VehicleOut | null>(null);
-  const [search,    setSearch]    = useState("");
+  const [vehicles, setVehicles] = useState<VehicleOut[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<VehicleOut | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<TabKey>("documentos");
 
-  const [showNew,   setShowNew]   = useState(false);
-  const [newPlate,  setNewPlate]  = useState("");
-  const [newTipo,   setNewTipo]   = useState<"carro" | "moto">("carro");
-  const [creating,  setCreating]  = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [newPlate, setNewPlate] = useState("");
+  const [newTipo, setNewTipo] = useState<"carro" | "moto">("carro");
+  const [newModelo, setNewModelo] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const [editing,   setEditing]   = useState(false);
+  const [editing, setEditing] = useState(false);
   const [editPlate, setEditPlate] = useState("");
-  const [editTipo,  setEditTipo]  = useState<"carro" | "moto">("carro");
-  const [saving,    setSaving]    = useState(false);
-
-  const fileRef        = useRef<HTMLInputElement>(null);
-  const [uploadType,   setUploadType]   = useState<string | null>(null);
-  const [deletingId,   setDeletingId]   = useState<number | null>(null);
-  const [deletingVeh,  setDeletingVeh]  = useState(false);
+  const [editTipo, setEditTipo] = useState<"carro" | "moto">("carro");
+  const [editModelo, setEditModelo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingVeh, setDeletingVeh] = useState(false);
 
   const load = async () => {
     try {
@@ -59,10 +45,14 @@ export default function VehiculosPage() {
     if (!newPlate.trim()) return;
     setCreating(true);
     try {
-      const created = await api.companyDocs.createVehicle({ plate: newPlate.trim().toUpperCase(), tipo: newTipo });
+      const created = await api.companyDocs.createVehicle({
+        plate: newPlate.trim().toUpperCase(),
+        tipo: newTipo,
+        modelo: newModelo.trim() || null,
+      });
       setVehicles(prev => [created, ...prev]);
       setSelected(created);
-      setShowNew(false); setNewPlate(""); setNewTipo("carro");
+      setShowNew(false); setNewPlate(""); setNewTipo("carro"); setNewModelo("");
       toast.success("Vehículo creado");
     } catch (e: any) { toast.error(e.detail ?? "Error al crear"); }
     finally { setCreating(false); }
@@ -72,44 +62,16 @@ export default function VehiculosPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      const updated = await api.companyDocs.updateVehicle(selected.id, { plate: editPlate.trim().toUpperCase(), tipo: editTipo });
+      const updated = await api.companyDocs.updateVehicle(selected.id, {
+        plate: editPlate.trim().toUpperCase(),
+        tipo: editTipo,
+        modelo: editModelo.trim() || null,
+      });
       setVehicles(prev => prev.map(v => v.id === updated.id ? updated : v));
       setSelected(updated); setEditing(false);
       toast.success("Vehículo actualizado");
     } catch (e: any) { toast.error(e.detail ?? "Error al guardar"); }
     finally { setSaving(false); }
-  };
-
-  const handleUploadClick = (docType: string) => {
-    setUploadType(docType);
-    fileRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selected || !uploadType) return;
-    e.target.value = "";
-    const tid = toast.loading("Subiendo...");
-    try {
-      const updated = await api.companyDocs.uploadVehicleDoc(selected.id, uploadType, file);
-      setVehicles(prev => prev.map(v => v.id === updated.id ? updated : v));
-      setSelected(updated);
-      toast.success("Documento subido", { id: tid });
-    } catch (err: any) { toast.error(err.detail ?? "Error al subir", { id: tid }); }
-    finally { setUploadType(null); }
-  };
-
-  const handleDeleteDoc = async (docId: number) => {
-    if (!selected) return;
-    setDeletingId(docId);
-    try {
-      await api.companyDocs.deleteVehicleDoc(selected.id, docId);
-      const updated = { ...selected, documents: selected.documents.filter(d => d.id !== docId) };
-      setVehicles(prev => prev.map(v => v.id === selected.id ? updated : v));
-      setSelected(updated);
-      toast.success("Documento eliminado");
-    } catch (e: any) { toast.error(e.detail ?? "Error"); }
-    finally { setDeletingId(null); }
   };
 
   const handleDeleteVehicle = async () => {
@@ -124,14 +86,17 @@ export default function VehiculosPage() {
     finally { setDeletingVeh(false); }
   };
 
+  const handleVehicleUpdated = (updated: VehicleOut) => {
+    setVehicles(prev => prev.map(v => v.id === updated.id ? updated : v));
+    setSelected(updated);
+  };
+
   const uniqueTypes = (v: VehicleOut) => new Set(v.documents.map(d => d.doc_type)).size;
-  const docsCount   = selected ? uniqueTypes(selected) : 0;
-  const showDetail  = !!selected;
+  const docsCount = selected ? uniqueTypes(selected) : 0;
+  const showDetail = !!selected;
 
   return (
     <div className="flex h-full overflow-hidden">
-      <input ref={fileRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFileChange} />
-
       {/* ── Lista ── oculta en móvil cuando hay seleccionado */}
       <div className={`
         w-full md:w-64 lg:w-72 flex-shrink-0 border-r border-border flex flex-col bg-surface-2
@@ -160,7 +125,7 @@ export default function VehiculosPage() {
           ) : filtered.length === 0 ? (
             <p className="text-center text-fg-6 text-xs py-10">Sin resultados</p>
           ) : filtered.map(v => {
-            const pct = (uniqueTypes(v) / TOTAL_TYPES) * 100;
+            const pct = (uniqueTypes(v) / VEHICLE_DOC_TYPES_COUNT) * 100;
             const isSelected = selected?.id === v.id;
             return (
               <button
@@ -185,7 +150,7 @@ export default function VehiculosPage() {
                     <div className="flex-1 h-1 bg-surface-3 rounded-full overflow-hidden">
                       <div className="h-1 bg-accent/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-fg-6">{uniqueTypes(v)}/{TOTAL_TYPES}</span>
+                    <span className="text-[10px] text-fg-6">{uniqueTypes(v)}/{VEHICLE_DOC_TYPES_COUNT}</span>
                   </div>
                 </div>
                 <ChevronRight size={12} className="text-fg-6 flex-shrink-0" />
@@ -195,7 +160,7 @@ export default function VehiculosPage() {
         </div>
       </div>
 
-      {/* ── Panel derecho ── ocupa todo en móvil */}
+      {/* ── Panel derecho ── */}
       {showDetail ? (
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
@@ -209,19 +174,20 @@ export default function VehiculosPage() {
                 <input
                   className="bg-surface-3 border border-border text-fg text-sm px-3 py-1.5 outline-none focus:border-accent w-36 font-mono uppercase"
                   value={editPlate} onChange={e => setEditPlate(e.target.value.toUpperCase())}
-                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()} autoFocus
+                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()} autoFocus placeholder="Placa"
+                />
+                <input
+                  className="bg-surface-3 border border-border text-fg text-sm px-3 py-1.5 outline-none focus:border-accent w-40"
+                  value={editModelo} onChange={e => setEditModelo(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSaveEdit()} placeholder="Modelo (ej: Hilux 2020)"
                 />
                 <div className="flex gap-1">
-                  <button
-                    type="button" onClick={() => setEditTipo("carro")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
-                  >
+                  <button type="button" onClick={() => setEditTipo("carro")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
                     <Truck size={11} /> Carro
                   </button>
-                  <button
-                    type="button" onClick={() => setEditTipo("moto")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
-                  >
+                  <button type="button" onClick={() => setEditTipo("moto")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors ${editTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
                     <Bike size={11} /> Moto
                   </button>
                 </div>
@@ -233,19 +199,20 @@ export default function VehiculosPage() {
             ) : (
               <>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-sm font-semibold font-mono text-fg">{selected.plate}</h2>
                     <span className="text-[9px] uppercase tracking-wide text-fg-6 bg-surface-3 px-1.5 py-0.5 rounded-sm">{selected.tipo}</span>
+                    {selected.modelo && <span className="text-[11px] text-fg-4">· {selected.modelo}</span>}
                   </div>
-                  <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {TOTAL_TYPES} tipos · {selected.documents.length} archivo{selected.documents.length !== 1 ? "s" : ""}</p>
+                  <p className="text-[11px] text-fg-5 mt-0.5">{docsCount} de {VEHICLE_DOC_TYPES_COUNT} tipos · {selected.documents.length} archivo{selected.documents.length !== 1 ? "s" : ""}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="hidden sm:flex items-center gap-2">
                     <div className="w-24 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                      <div className="h-1.5 bg-accent rounded-full transition-all" style={{ width: `${(docsCount / TOTAL_TYPES) * 100}%` }} />
+                      <div className="h-1.5 bg-accent rounded-full transition-all" style={{ width: `${(docsCount / VEHICLE_DOC_TYPES_COUNT) * 100}%` }} />
                     </div>
                   </div>
-                  <button onClick={() => { setEditPlate(selected.plate); setEditTipo(selected.tipo as "carro" | "moto"); setEditing(true); }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
+                  <button onClick={() => { setEditPlate(selected.plate); setEditTipo(selected.tipo as "carro" | "moto"); setEditModelo(selected.modelo ?? ""); setEditing(true); }} className="p-2 text-fg-5 hover:text-fg hover:bg-surface-3 rounded-sm transition-colors">
                     <Pencil size={16} />
                   </button>
                   <button onClick={handleDeleteVehicle} disabled={deletingVeh} className="p-2 text-fg-5 hover:text-red-400 hover:bg-red-950/20 rounded-sm transition-colors">
@@ -256,68 +223,40 @@ export default function VehiculosPage() {
             )}
           </div>
 
-          {/* Slots */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            <div className="space-y-2">
-              {Object.entries(VEHICLE_DOC_LABELS).map(([docType, label]) => {
-                const docs = selected.documents.filter(d => d.doc_type === docType);
-                const hasAny = docs.length > 0;
-                const isUp   = uploadType === docType;
-                return (
-                  <div key={docType} className="bg-surface-2 border border-border">
-                    {/* Fila principal del tipo */}
-                    <div className="flex items-center gap-3 px-3 md:px-4 py-3">
-                      {hasAny
-                        ? <CheckCircle2 size={15} className="text-emerald-400 flex-shrink-0" />
-                        : <div className="w-[15px] h-[15px] rounded-full border-2 border-fg-6 flex-shrink-0" />
-                      }
-                      <span className="text-xs md:text-sm text-fg-3 flex-1 min-w-0 leading-snug">
-                        {label}
-                        {docs.length > 1 && (
-                          <span className="ml-1.5 text-[10px] text-fg-6 bg-surface-3 px-1 py-0.5 rounded-sm">{docs.length}</span>
-                        )}
-                      </span>
-                      <button
-                        onClick={() => handleUploadClick(docType)} disabled={isUp}
-                        className="flex-shrink-0 flex items-center gap-1.5 text-xs px-2 md:px-2.5 py-1.5 border border-dashed border-fg-6 text-fg-5 hover:border-accent hover:text-accent transition-colors whitespace-nowrap"
-                      >
-                        {isUp ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
-                        {hasAny ? "Agregar" : "Subir"}
-                      </button>
-                    </div>
-                    {/* Lista de archivos */}
-                    {docs.map(doc => (
-                      <div key={doc.id} className="flex items-center gap-2 px-3 md:px-4 py-2 border-t border-border/50 bg-surface-3/30 pl-9 md:pl-11">
-                        <span className="text-[11px] text-fg-5 flex-1 min-w-0 truncate" title={doc.file_name}>
-                          {doc.file_name}
-                        </span>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <a
-                            href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs px-2 py-1 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors whitespace-nowrap"
-                          >
-                            Ver
-                          </a>
-                          <button
-                            onClick={() => handleDeleteDoc(doc.id)} disabled={deletingId === doc.id}
-                            title="Eliminar"
-                            className="p-1.5 text-fg-5 hover:text-red-400 border border-border hover:border-red-500/30 transition-colors"
-                          >
-                            {deletingId === doc.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+          {/* Tabs */}
+          <div className="flex border-b border-border bg-surface-2 flex-shrink-0 px-4 md:px-6">
+            <button
+              onClick={() => setActiveTab("documentos")}
+              className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === "documentos"
+                  ? "border-accent text-accent"
+                  : "border-transparent text-fg-5 hover:text-fg-3"
+              }`}
+            >
+              <FileText size={13} /> Documentos
+            </button>
+            <button
+              onClick={() => setActiveTab("inspecciones")}
+              className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === "inspecciones"
+                  ? "border-accent text-accent"
+                  : "border-transparent text-fg-5 hover:text-fg-3"
+              }`}
+            >
+              <ClipboardCheck size={13} /> Inspecciones
+            </button>
           </div>
+
+          {/* Contenido del tab */}
+          {activeTab === "documentos"
+            ? <DocumentosTab vehicle={selected} onVehicleUpdated={handleVehicleUpdated} />
+            : <InspeccionesTab vehicle={selected} />
+          }
         </div>
       ) : (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center gap-3 text-fg-6">
           <Truck size={48} strokeWidth={1} />
-          <p className="text-sm">Selecciona un vehículo para ver sus documentos</p>
+          <p className="text-sm">Selecciona un vehículo para ver sus documentos e inspecciones</p>
           {!loading && vehicles.length === 0 && (
             <button onClick={() => setShowNew(true)} className="mt-2 flex items-center gap-2 px-4 py-2 border border-dashed border-fg-6 text-fg-5 hover:border-accent hover:text-accent transition-colors text-sm">
               <Plus size={14} /> Agregar primer vehículo
@@ -336,16 +275,12 @@ export default function VehiculosPage() {
             </div>
             <label className="text-xs text-fg-5 block mb-1.5">Tipo *</label>
             <div className="flex gap-2 mb-4">
-              <button
-                type="button" onClick={() => setNewTipo("carro")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
-              >
+              <button type="button" onClick={() => setNewTipo("carro")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "carro" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
                 <Truck size={13} /> Carro
               </button>
-              <button
-                type="button" onClick={() => setNewTipo("moto")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}
-              >
+              <button type="button" onClick={() => setNewTipo("moto")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold border transition-colors ${newTipo === "moto" ? "bg-accent text-black border-accent" : "border-border text-fg-5 hover:border-fg-4"}`}>
                 <Bike size={13} /> Moto
               </button>
             </div>
@@ -355,6 +290,13 @@ export default function VehiculosPage() {
               className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6 font-mono uppercase"
               placeholder="Ej: ABC-123"
               value={newPlate} onChange={e => setNewPlate(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === "Enter" && handleCreate()}
+            />
+            <label className="text-xs text-fg-5 block mt-3 mb-1.5">Modelo</label>
+            <input
+              className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+              placeholder="Ej: Hilux 2020"
+              value={newModelo} onChange={e => setNewModelo(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleCreate()}
             />
             <button
