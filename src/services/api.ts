@@ -85,6 +85,41 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  let token = getToken();
+  let res = await doFetch(path, { method: "GET" }, token);
+
+  if (res.status === 401) {
+    const newToken = await tryRefresh();
+    if (newToken) {
+      res = await doFetch(path, { method: "GET" }, newToken);
+    } else {
+      clearTokens();
+      window.location.href = "/";
+      throw { status: 401, detail: "Sesión expirada" };
+    }
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw { status: res.status, detail: body.detail ?? "Error desconocido" };
+  }
+
+  return res.blob();
+}
+
+async function downloadBlobAs(path: string, filename: string): Promise<void> {
+  const blob = await requestBlob(path);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 // ── Reviews types ─────────────────────────────────────────────────────────────
 
 export type ReviewResponse = {
@@ -847,7 +882,8 @@ export type VehicleDocumentOut = {
   id: number; doc_type: string; file_url: string; file_name: string; updated_at: string;
 };
 export type VehicleOut = {
-  id: number; plate: string; tipo: string; created_at: string; updated_at: string;
+  id: number; plate: string; tipo: string; modelo: string | null;
+  created_at: string; updated_at: string;
   documents: VehicleDocumentOut[];
 };
 export type EmployeeDocumentOut = {
@@ -858,6 +894,114 @@ export type EmployeeOut = {
   email: string | null; address: string | null; emergency_contact: string | null;
   emergency_phone: string | null; created_at: string; updated_at: string;
   documents: EmployeeDocumentOut[];
+};
+
+// ── Inspecciones ──────────────────────────────────────────────────────────────
+
+export type InspectionItemsCatalog = Record<string, Record<string, string>>;
+
+export type InspectionPhotoOut = {
+  id: number; photo_url: string; description: string | null; created_at: string;
+};
+
+export type VehicleInspectionItemIn = {
+  category: string; item_key: string; is_ok: boolean; notes?: string | null;
+};
+export type VehicleInspectionItemOut = VehicleInspectionItemIn & { id: number };
+
+export type VehicleInspectionCreate = {
+  vehicle_id: number;
+  inspection_date: string; // YYYY-MM-DD
+  month?: string | null;
+  week_number?: number | null;
+  mileage?: string | null;
+  driver_name?: string | null;
+  license_number?: string | null;
+  license_category?: string | null;
+  damage_description?: string | null;
+  observations?: string | null;
+  signature_url?: string | null;
+  items: VehicleInspectionItemIn[];
+};
+
+export type VehicleInspectionOut = {
+  id: number;
+  vehicle_id: number;
+  inspector_id: string | null;
+  inspection_date: string;
+  month: string | null;
+  week_number: number | null;
+  mileage: string | null;
+  driver_name: string | null;
+  license_number: string | null;
+  license_category: string | null;
+  damage_description: string | null;
+  observations: string | null;
+  signature_url: string | null;
+  created_at: string;
+  updated_at: string;
+  items: VehicleInspectionItemOut[];
+  photos: InspectionPhotoOut[];
+};
+
+export type MotoInspectionItemIn = {
+  section: "mecanica" | "proteccion";
+  item_key: string;
+  status?: "bueno" | "malo" | null;
+  accion_correctiva?: string | null;
+  observaciones?: string | null;
+};
+export type MotoInspectionItemOut = MotoInspectionItemIn & { id: number };
+
+export type MotoInspectionCreate = {
+  vehicle_id: number;
+  inspection_date: string;
+  driver_name?: string | null;
+  cedula?: string | null;
+  cilindraje?: string | null;
+  modelo?: string | null;
+  color?: string | null;
+  marca?: string | null;
+  seguro_obligatorio_has?: boolean | null;
+  seguro_obligatorio_vencimiento?: string | null;
+  licencia_transito_has?: boolean | null;
+  licencia_transito_original?: boolean | null;
+  licencia_conduccion_has?: boolean | null;
+  licencia_conduccion_expedicion?: string | null;
+  papeles_a_nombre_candidato?: boolean | null;
+  papeles_a_nombre_de?: string | null;
+  signature_url?: string | null;
+  commitment_accepted: boolean;
+  observations?: string | null;
+  items: MotoInspectionItemIn[];
+};
+
+export type MotoInspectionOut = {
+  id: number;
+  vehicle_id: number;
+  inspector_id: string | null;
+  inspection_date: string;
+  driver_name: string | null;
+  cedula: string | null;
+  cilindraje: string | null;
+  modelo: string | null;
+  color: string | null;
+  marca: string | null;
+  seguro_obligatorio_has: boolean | null;
+  seguro_obligatorio_vencimiento: string | null;
+  licencia_transito_has: boolean | null;
+  licencia_transito_original: boolean | null;
+  licencia_conduccion_has: boolean | null;
+  licencia_conduccion_expedicion: string | null;
+  papeles_a_nombre_candidato: boolean | null;
+  papeles_a_nombre_de: string | null;
+  signature_url: string | null;
+  commitment_accepted: boolean;
+  observations: string | null;
+  created_at: string;
+  updated_at: string;
+  items: MotoInspectionItemOut[];
+  photos: InspectionPhotoOut[];
 };
 
 export const api = {
@@ -1343,9 +1487,9 @@ export const api = {
   },
   companyDocs: {
     listVehicles: () => request<VehicleOut[]>("/company-docs/vehicles"),
-    createVehicle: (data: { plate: string; tipo: string }) =>
+    createVehicle: (data: { plate: string; tipo: string; modelo?: string | null }) =>
       request<VehicleOut>("/company-docs/vehicles", { method: "POST", body: JSON.stringify(data) }),
-    updateVehicle: (id: number, data: { name?: string; plate?: string; tipo?: string }) =>
+    updateVehicle: (id: number, data: { plate?: string; tipo?: string; modelo?: string | null }) =>
       request<VehicleOut>(`/company-docs/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteVehicle: (id: number) =>
       request<void>(`/company-docs/vehicles/${id}`, { method: "DELETE" }),
@@ -1369,6 +1513,64 @@ export const api = {
     },
     deleteEmployeeDoc: (id: number, docType: string) =>
       request<void>(`/company-docs/employees/${id}/documents/${docType}`, { method: "DELETE" }),
+  },
+  vehicleInspections: {
+    itemsCatalog: () => request<InspectionItemsCatalog>("/vehicle-inspections/items-catalog"),
+    list: (params: { vehicle_id?: number; date_from?: string; date_to?: string } = {}) => {
+      const qs = new URLSearchParams();
+      if (params.vehicle_id !== undefined) qs.set("vehicle_id", String(params.vehicle_id));
+      if (params.date_from) qs.set("date_from", params.date_from);
+      if (params.date_to) qs.set("date_to", params.date_to);
+      const suffix = qs.toString() ? `?${qs.toString()}` : "";
+      return request<VehicleInspectionOut[]>(`/vehicle-inspections${suffix}`);
+    },
+    get: (id: number) => request<VehicleInspectionOut>(`/vehicle-inspections/${id}`),
+    create: (data: VehicleInspectionCreate) =>
+      request<VehicleInspectionOut>("/vehicle-inspections", { method: "POST", body: JSON.stringify(data) }),
+    delete: (id: number) => request<void>(`/vehicle-inspections/${id}`, { method: "DELETE" }),
+    uploadSignature: (file: File | Blob, filename = "signature.png") => {
+      const form = new FormData();
+      form.append("file", file, filename);
+      return request<{ url: string }>("/vehicle-inspections/upload-signature", { method: "POST", body: form, headers: {} });
+    },
+    uploadPhoto: (inspectionId: number, file: File, description?: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (description) form.append("description", description);
+      return request<InspectionPhotoOut>(`/vehicle-inspections/${inspectionId}/photos`, { method: "POST", body: form, headers: {} });
+    },
+    downloadPdf: (id: number) => downloadBlobAs(`/vehicle-inspections/${id}/pdf`, `inspeccion-vehiculo-${id}.pdf`),
+    notifyEmail: (id: number) =>
+      request<{ queued: boolean }>(`/vehicle-inspections/${id}/notify-email`, { method: "POST" }),
+  },
+  motoInspections: {
+    itemsCatalog: () => request<InspectionItemsCatalog>("/moto-inspections/items-catalog"),
+    list: (params: { vehicle_id?: number; date_from?: string; date_to?: string } = {}) => {
+      const qs = new URLSearchParams();
+      if (params.vehicle_id !== undefined) qs.set("vehicle_id", String(params.vehicle_id));
+      if (params.date_from) qs.set("date_from", params.date_from);
+      if (params.date_to) qs.set("date_to", params.date_to);
+      const suffix = qs.toString() ? `?${qs.toString()}` : "";
+      return request<MotoInspectionOut[]>(`/moto-inspections${suffix}`);
+    },
+    get: (id: number) => request<MotoInspectionOut>(`/moto-inspections/${id}`),
+    create: (data: MotoInspectionCreate) =>
+      request<MotoInspectionOut>("/moto-inspections", { method: "POST", body: JSON.stringify(data) }),
+    delete: (id: number) => request<void>(`/moto-inspections/${id}`, { method: "DELETE" }),
+    uploadSignature: (file: File | Blob, filename = "signature.png") => {
+      const form = new FormData();
+      form.append("file", file, filename);
+      return request<{ url: string }>("/moto-inspections/upload-signature", { method: "POST", body: form, headers: {} });
+    },
+    uploadPhoto: (inspectionId: number, file: File, description?: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (description) form.append("description", description);
+      return request<InspectionPhotoOut>(`/moto-inspections/${inspectionId}/photos`, { method: "POST", body: form, headers: {} });
+    },
+    downloadPdf: (id: number) => downloadBlobAs(`/moto-inspections/${id}/pdf`, `inspeccion-moto-${id}.pdf`),
+    notifyEmail: (id: number) =>
+      request<{ queued: boolean }>(`/moto-inspections/${id}/notify-email`, { method: "POST" }),
   },
   menuItems: {
     list: () => request<MenuItemResponse[]>("/menu-items"),

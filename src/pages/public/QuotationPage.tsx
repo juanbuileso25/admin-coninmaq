@@ -260,7 +260,7 @@ export default function QuotationPage() {
           <div className="s-intro__content">
             <div>
               <p className="s-intro__hi">Hola, <strong>{data.client?.name ?? data.client?.representative ?? "cliente"}</strong> 👋</p>
-              {data.client?.company && (
+              {data.client?.company && data.client.company.toLowerCase() !== "persona natural" && (
                 <p className="s-intro__company">{data.client.company}</p>
               )}
               <p className="s-intro__sub">Todo lo que necesitas para decir sí con confianza está en esta oferta comercial: precio, ficha técnica, garantía y el respaldo de quienes más saben de maquinaria pesada en Colombia. Nuestro equipo comercial está listo para acompañarle en cada paso.</p>
