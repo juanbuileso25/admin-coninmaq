@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { api } from "../services/api";
 import * as yup from "yup";
 import { useAuth } from "../hooks/useAuth";
 
@@ -39,7 +40,13 @@ export default function LoginPage() {
     setAuthError("");
     const ok = await login(data.email, data.password, data.remember ?? false);
     if (ok) {
-      navigate("/dashboard");
+      try {
+        const items = await api.menuItems.myMenu();
+        const first = items.find((i) => i.path) ?? items.flatMap((i) => i.children).find((c) => c.path);
+        navigate(first?.path ?? "/dashboard");
+      } catch {
+        navigate("/dashboard");
+      }
     } else {
       setAuthError("Credenciales incorrectas. Verifica tu email y contraseña.");
     }
