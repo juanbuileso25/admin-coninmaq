@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe } from "lucide-react";
+import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe, Trash2 } from "lucide-react";
 import {
   api,
   type BotLeadResponse,
@@ -37,9 +37,10 @@ interface KanbanCardProps {
   onDragStart: (e: React.DragEvent, lead: BotLeadResponse) => void;
   onTouchOver: (stage: PipelineStage | null) => void;
   onClick: (lead: BotLeadResponse) => void;
+  onDelete: (lead: BotLeadResponse) => void;
 }
 
-function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick }: KanbanCardProps) {
+function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDelete }: KanbanCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos]   = useState({ top: 0, left: 0 });
   const btnRef    = useRef<HTMLButtonElement>(null);
@@ -147,7 +148,7 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick }: Ka
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {lead.lead_source === "whatsapp_bot" ? (
               <span title={`WhatsApp · ${lead.phone_number}`} className="text-green-400">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -160,6 +161,14 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick }: Ka
                 <Globe size={14} />
               </span>
             )}
+            <button
+              type="button"
+              title="Eliminar lead"
+              onClick={e => { e.stopPropagation(); onDelete(lead); }}
+              className="text-fg-6 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+            >
+              <Trash2 size={13} />
+            </button>
           </div>
         </div>
 
@@ -303,6 +312,18 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
     setDraggingOver(stage);
   }, []);
 
+  const handleDelete = async (lead: BotLeadResponse) => {
+    const name = lead.name ?? "este lead";
+    if (!window.confirm(`¿Eliminar a ${name}? El lead quedará inactivo y no aparecerá en el pipeline.`)) return;
+    try {
+      await api.bot.deactivateLead(lead.id);
+      toast.success(`${name} eliminado del pipeline`);
+      onRefresh();
+    } catch {
+      toast.error("No se pudo eliminar el lead");
+    }
+  };
+
   const visibleStages = PIPELINE_STAGES.filter(s => !hiddenStages.has(s));
 
   return (
@@ -382,6 +403,7 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
                     onDragStart={handleDragStart}
                     onTouchOver={handleTouchOver}
                     onClick={onLeadClick}
+                    onDelete={handleDelete}
                   />
                 ))}
                 {leads.length === 0 && !isOver && (

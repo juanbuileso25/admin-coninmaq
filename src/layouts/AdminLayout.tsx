@@ -1,19 +1,60 @@
-import { useState } from "react";
-import { Outlet, Navigate } from "react-router-dom";
-import { Menu, X, Bell, Sun, Moon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { Menu, X, Bell, Sun, Moon, Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
 import { AbilityContext } from "../context/AbilityContext";
+import { api, type MenuItemResponse } from "../services/api";
+
+function extractPaths(items: MenuItemResponse[]): string[] {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (item.path) paths.push(item.path);
+    for (const child of item.children ?? []) {
+      if (child.path) paths.push(child.path);
+    }
+  }
+  return paths;
+}
 
 export default function AdminLayout() {
   const { user, ability } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [collapsed, setCollapsed]     = useState(false);
-  const [mobileOpen, setMobileOpen]   = useState(false);
+  const location = useLocation();
+  const [collapsed, setCollapsed]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // null = cargando, [] = admin (sin restricción), [...] = rutas permitidas
+  const [allowedPaths, setAllowedPaths] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === "admin") { setAllowedPaths([]); return; }
+    api.menuItems.myMenu()
+      .then(items => setAllowedPaths(extractPaths(items)))
+      .catch(() => setAllowedPaths([]));
+  }, [user]);
 
   if (!user) return <Navigate to="/" replace />;
+
+  // Esperar hasta tener las rutas cargadas
+  if (allowedPaths === null) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-surface">
+        <Loader2 size={24} className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  // Verificar acceso a la ruta actual (admin siempre pasa)
+  if (user.role !== "admin" && allowedPaths.length > 0) {
+    const allowed = allowedPaths.some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+    if (!allowed) {
+      return <Navigate to={allowedPaths[0]} replace />;
+    }
+  }
 
   return (
     <AbilityContext.Provider value={ability}>

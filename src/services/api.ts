@@ -1354,6 +1354,8 @@ export const api = {
     },
     patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; note?: string }) =>
       request<BotLeadResponse>(`/bot/leads/${leadId}/stage`, { method: "PATCH", body: JSON.stringify(data) }),
+    deactivateLead: (leadId: number) =>
+      request<void>(`/bot/leads/${leadId}`, { method: "DELETE" }),
     leadStageHistory: (leadId: number) =>
       request<LeadStageHistoryResponse[]>(`/bot/leads/${leadId}/stage-history`),
   },
