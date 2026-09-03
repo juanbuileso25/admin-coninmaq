@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe, Trash2 } from "lucide-react";
+import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe, Trash2, AlertTriangle } from "lucide-react";
 import {
   api,
   type BotLeadResponse,
@@ -30,6 +30,60 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hrs / 24);
   return `${days}d`;
 }
+
+function ConfirmDeleteModal({
+  lead,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  lead: BotLeadResponse;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+              <AlertTriangle size={18} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-fg font-semibold text-sm">Eliminar lead</h3>
+              <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                <span className="text-fg font-medium">{lead.name ?? "Este lead"}</span> quedará inactivo
+                y no aparecerá en el pipeline. Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={12} />
+              {loading ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 interface KanbanCardProps {
   lead: BotLeadResponse;
@@ -244,6 +298,8 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
   const draggingLead = useRef<BotLeadResponse | null>(null);
   const [draggingOver, setDraggingOver] = useState<PipelineStage | null>(null);
   const [hiddenStages, setHiddenStages] = useState<Set<PipelineStage>>(new Set());
+  const [confirmLead, setConfirmLead]   = useState<BotLeadResponse | null>(null);
+  const [deleting, setDeleting]         = useState(false);
 
   // Synchronized dual scrollbar (top + bottom)
   const boardRef  = useRef<HTMLDivElement>(null);
@@ -312,15 +368,20 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
     setDraggingOver(stage);
   }, []);
 
-  const handleDelete = async (lead: BotLeadResponse) => {
-    const name = lead.name ?? "este lead";
-    if (!window.confirm(`¿Eliminar a ${name}? El lead quedará inactivo y no aparecerá en el pipeline.`)) return;
+  const handleDelete = (lead: BotLeadResponse) => setConfirmLead(lead);
+
+  const confirmDelete = async () => {
+    if (!confirmLead) return;
+    setDeleting(true);
     try {
-      await api.bot.deactivateLead(lead.id);
-      toast.success(`${name} eliminado del pipeline`);
+      await api.bot.deactivateLead(confirmLead.id);
+      toast.success(`${confirmLead.name ?? "Lead"} eliminado del pipeline`);
+      setConfirmLead(null);
       onRefresh();
     } catch {
       toast.error("No se pudo eliminar el lead");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -328,6 +389,14 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
 
   return (
     <div>
+      {confirmLead && (
+        <ConfirmDeleteModal
+          lead={confirmLead}
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmLead(null)}
+          loading={deleting}
+        />
+      )}
       {/* Stage filter chips */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {PIPELINE_STAGES.map(stage => {
