@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UserCheck, TrendingUp, Hammer, Mail, DollarSign, LayoutList, Kanban } from "lucide-react";
+import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, Star, ReceiptText, CheckCircle2, Percent } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import KanbanBoard from "../../components/agente/KanbanBoard";
 import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
@@ -151,7 +151,7 @@ export default function LeadsPage() {
 
         {/* Stat cards */}
         {metrics && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className={`grid gap-3 ${viewMode === "kanban" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-7" : "grid-cols-2 lg:grid-cols-4"}`}>
             {viewMode === "lista" ? (
               <>
                 <StatCard label="Total leads"    value={String(metrics.total_leads)}          icon={UserCheck}  accent delay={0}   />
@@ -161,10 +161,27 @@ export default function LeadsPage() {
               </>
             ) : (
               <>
-                <StatCard label="Total leads"    value={String(totalLeads)}                                                    icon={UserCheck}  accent delay={0}  />
-                <StatCard label="En seguimiento" value={String(pipeline.find(c => c.stage === "seguimiento")?.count ?? 0)}    icon={Mail}       delay={50}  />
-                <StatCard label="Cerrados"        value={String(pipeline.find(c => c.stage === "cerrado")?.count ?? 0)}       icon={DollarSign} delay={100} />
-                <StatCard label="Este mes"        value={String(metrics.leads_period)}                                        icon={TrendingUp} delay={150} />
+                {(() => {
+                  const cerrados = pipeline.find(c => c.stage === "cerrado")?.count ?? 0;
+                  const perdidos = pipeline.find(c => c.stage === "perdido")?.count ?? 0;
+                  const tasaCierre = (cerrados + perdidos) > 0
+                    ? Math.round((cerrados / (cerrados + perdidos)) * 100)
+                    : 0;
+                  const COP = (n: number) => n >= 1_000_000
+                    ? `$${(n / 1_000_000).toFixed(1)}M`
+                    : n >= 1_000 ? `$${(n / 1_000).toFixed(0)}K` : `$${n}`;
+                  return (
+                    <>
+                      <StatCard label="Total leads"      value={String(totalLeads)}                       icon={UserCheck}    accent delay={0}   />
+                      <StatCard label="Tier A"           value={String(metrics.leads_tier_a_period)}      icon={Star}                delay={50}  sub="en el período" />
+                      <StatCard label="Cotizaciones"     value={String(metrics.quotations_period)}        icon={ReceiptText}         delay={100} sub="en el período" />
+                      <StatCard label="Valor cotizado"   value={COP(metrics.revenue_period)}              icon={DollarSign}          delay={150} sub="en el período" />
+                      <StatCard label="Cerrados"         value={String(cerrados)}                         icon={CheckCircle2}        delay={200} />
+                      <StatCard label="Tasa de cierre"   value={`${tasaCierre}%`}                         icon={Percent}             delay={250} sub={`${cerrados} de ${cerrados + perdidos}`} />
+                      <StatCard label="Este mes"         value={String(metrics.leads_period)}             icon={TrendingUp}          delay={300} sub="leads nuevos" />
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>
