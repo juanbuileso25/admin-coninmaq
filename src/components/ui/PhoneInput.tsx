@@ -25,25 +25,30 @@ export default function PhoneInput({ value, onChange, placeholder = "3012345678"
   const [dialCode, setDialCode] = useState("57");
   const [local, setLocal]       = useState("");
   const [open, setOpen]         = useState(false);
-  const dropRef = useRef<HTMLDivElement>(null);
+  const dropRef    = useRef<HTMLDivElement>(null);
+  const internalRef = useRef(false); // evita loop entre onChange y el efecto de sync
 
   // Sincronizar hacia afuera
   useEffect(() => {
     const clean = local.replace(/\D/g, "");
+    internalRef.current = true;
     onChange(clean ? `${dialCode}${clean}` : "");
   }, [dialCode, local]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sincronizar desde afuera (prefill)
+  // Sincronizar desde afuera (prefill y cambios externos)
   useEffect(() => {
+    if (internalRef.current) { internalRef.current = false; return; }
     if (!value) { setLocal(""); return; }
-    const matched = COUNTRIES.find(c => value.startsWith(c.code));
+    // Intentar códigos más largos primero para evitar ambigüedad
+    const sorted = [...COUNTRIES].sort((a, b) => b.code.length - a.code.length);
+    const matched = sorted.find(c => value.startsWith(c.code));
     if (matched) {
       setDialCode(matched.code);
       setLocal(value.slice(matched.code.length));
     } else {
       setLocal(value);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value]);
 
   // Cerrar al hacer click fuera
   useEffect(() => {
