@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Plus, Trash2, Loader2, Search, UserCheck, Clock } from "lucide-react";
+import PhoneInput from "../ui/PhoneInput";
 import { toast } from "sonner";
 import { api, type BotLeadResponse, type ClientResponse, type MachineResponse, type ManualQuotationResponse } from "../../services/api";
 
@@ -72,6 +73,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   // Opciones
   const [modoEntrega, setModo]      = useState<"email" | "chat" | "ambas">("email");
   const [sendToWa, setSendToWa]     = useState(true);
+  const [waPhone, setWaPhone]       = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState<ManualQuotationResponse | null>(null);
 
@@ -107,7 +109,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       setItems([]); setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
       setObservations("");
       setExtraEmails([]); setExtraEmailInput("");
-      setModo("email"); setSendToWa(true); setResult(null); setMSearch(""); setShowCatalog(false);
+      setModo("email"); setSendToWa(true); setWaPhone(""); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
     } else if (prefill) {
@@ -168,6 +170,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     if (l.company)        setEmpresa(l.company);
     if (l.rut_nit)        setTaxId(l.rut_nit);
     if (l.rut_direccion)  setAddress(l.rut_direccion);
+    if (l.phone_number)   setWaPhone(l.phone_number);
     setShowLeadSearch(false);
     setLeadSearch("");
   };
@@ -243,11 +246,13 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     setSubmitting(true);
     try {
       const hasEmail = !!clienteEmail.trim();
+      const phoneClean = waPhone.trim().replace(/\D/g, "");
+      const sendWa = sendToWa && !!phoneClean;
       const entrega = fromLead ? "chat" : (hasEmail ? "email" : "chat");
-      const sendEmail = hasEmail;
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
+        client_phone:   phoneClean || undefined,
         client_company: clienteEmpresa.trim() || undefined,
         client_tax_id:  clienteTaxId.trim() || undefined,
         client_address: clienteAddress.trim() || undefined,
@@ -258,13 +263,14 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
           sale_price:   i.sale_price,
           tax_value:    i.tax_value,
         })),
-        delivery_mode:         entrega,
-        send_email:            sendEmail,
-        observations: observations.trim() || undefined,
-        extra_emails: extraEmails.length > 0 ? extraEmails : undefined,
+        delivery_mode:  entrega,
+        send_email:     hasEmail,
+        send_whatsapp:  sendWa,
+        observations:   observations.trim() || undefined,
+        extra_emails:   extraEmails.length > 0 ? extraEmails : undefined,
       });
 
-      // Enviar link al WhatsApp de la conversación si aplica
+      // Si viene de una sesión activa de WA, también enviar por el chat
       if (fromLead && sendToWa && prefill?.session_id && res.page_url) {
         try {
           await api.bot.sendMessage(
@@ -631,29 +637,36 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                 />
               </section>
 
-              {/* Entrega — solo visible desde una conversación de WhatsApp */}
-              {fromLead && (
-                <section>
-                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                  <div className="space-y-2.5">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={sendToWa}
-                        onChange={e => setSendToWa(e.target.checked)}
-                        className="w-4 h-4 accent-accent"
+              {/* Entrega WhatsApp */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">WhatsApp</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={sendToWa}
+                      onChange={e => setSendToWa(e.target.checked)}
+                      className="w-4 h-4 accent-accent"
+                    />
+                    <span className="text-sm text-fg">Enviar notificación por WhatsApp</span>
+                  </label>
+                  {sendToWa && (
+                    <div className="pl-7">
+                      <PhoneInput
+                        value={waPhone}
+                        onChange={setWaPhone}
+                        placeholder="3012345678"
                       />
-                      <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
-                    </label>
-                    {clienteEmail.trim() && (
-                      <div className="flex items-center gap-2 pl-7 text-xs text-fg-4">
-                        <span>✉</span>
-                        <span>También se enviará por correo a <span className="text-fg-3 font-medium">{clienteEmail.trim()}</span></span>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
+                    </div>
+                  )}
+                  {clienteEmail.trim() && (
+                    <div className="flex items-center gap-2 text-xs text-fg-4">
+                      <span>✉</span>
+                      <span>También se enviará por correo a <span className="text-fg-3 font-medium">{clienteEmail.trim()}</span></span>
+                    </div>
+                  )}
+                </div>
+              </section>
 
             </div>
 

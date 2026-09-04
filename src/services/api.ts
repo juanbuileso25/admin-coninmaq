@@ -577,6 +577,7 @@ export type QuotationPageData = {
 export type ManualQuotationRequest = {
   client_name: string;
   client_email: string;
+  client_phone?: string;
   client_company?: string;
   client_tax_id?: string;
   client_address?: string;
@@ -585,6 +586,7 @@ export type ManualQuotationRequest = {
   items: ManualQuotationItem[];
   delivery_mode: string;
   send_email: boolean;
+  send_whatsapp?: boolean;
   observations?: string;
   extra_emails?: string[];
 };
