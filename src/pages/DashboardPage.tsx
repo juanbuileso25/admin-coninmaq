@@ -216,6 +216,7 @@ export default function DashboardPage() {
           sub={metrics?.quotations_period ? `Sobre ${metrics.quotations_period} cotizaciones` : undefined}
           icon={Receipt}
           delay={180}
+          tooltip="Valor promedio por cotización generada en el período. Se calcula dividiendo el total cotizado entre la cantidad de cotizaciones."
         />
       </div>
 
