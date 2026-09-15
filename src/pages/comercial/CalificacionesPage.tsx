@@ -313,10 +313,10 @@ export default function CalificacionesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1 flex-wrap">
-                      {[r.q1_attention, r.q2_information, r.q3_response_time, r.q4_quality, r.q5_understanding, r.q6_value, r.q7_overall].map((v, i) => (
+                      {[r.q1_attention, r.q2_information, r.q3_response_time, r.q5_understanding, r.q6_value].map((v, i) => (
                         <span
                           key={i}
-                          title={["Atención", "Información", "Tiempo resp.", "Calidad", "Comprensión", "Cal/Precio", "Satisfacción"][i]}
+                          title={["Atención", "Información", "Tiempo resp.", "Comprensión", "Cal/Precio"][i]}
                           className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center ${
                             v >= 4 ? "bg-green-400/10 text-green-400" :
                             v === 3 ? "bg-yellow-400/10 text-yellow-400" :

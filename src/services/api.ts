@@ -128,10 +128,8 @@ export type ReviewResponse = {
   q1_attention:        number;
   q2_information:      number;
   q3_response_time:    number;
-  q4_quality:          number;
   q5_understanding:    number;
   q6_value:            number;
-  q7_overall:          number;
   q8_nps:              number;
   comment:             string | null;
   reviewer_name:       string | null;
