@@ -4,10 +4,21 @@ import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, 
 import StatCard from "../../components/StatCard";
 import KanbanBoard from "../../components/agente/KanbanBoard";
 import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
+import Select from "../../components/ui/Select";
+import DatePicker from "../../components/ui/DatePicker";
 import { api, type BotLeadResponse, type BotMetrics, type PipelineColumnResponse } from "../../services/api";
 
 function TierBadge({ tier }: { tier?: string | null }) {
-  if (!tier) return <span className="text-fg-6">—</span>;
+  if (!tier) {
+    return (
+      <span
+        title="Lead sin calificar"
+        className="px-2 py-0.5 text-[11px] font-semibold border rounded-sm bg-surface-4 text-fg-5 border-border"
+      >
+        Sin calificar
+      </span>
+    );
+  }
   const styles = ({
     A:      "bg-green-500/15 text-green-400 border-green-500/30",
     B:      "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -21,32 +32,74 @@ function TierBadge({ tier }: { tier?: string | null }) {
   );
 }
 
-const COP = (n: number) =>
-  n ? `$${n.toLocaleString("es-CO")}` : "—";
+const COP = (n: number) => n ? `$${n.toLocaleString("es-CO")}` : "—";
 
 type ViewMode = "lista" | "kanban";
+
+function buildMonthOptions() {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("es-CO", { month: "long", year: "numeric" });
+    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), value });
+  }
+  return options;
+}
+const MONTH_OPTIONS = buildMonthOptions();
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function monthStart(month: string) {
+  return `${month}-01`;
+}
+function monthEnd(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+}
 
 export default function LeadsPage() {
   const navigate = useNavigate();
 
   const [viewMode, setViewMode] = useState<ViewMode>("lista");
 
+  // ── Rango de fechas — fuente de verdad única ───────────────────────────────
+  const [dateFrom, setDateFrom] = useState(() => monthStart(MONTH_OPTIONS[0].value));
+  const [dateTo,   setDateTo]   = useState(() => todayStr());
+
+  // Preset de mes: coincide cuando dateFrom es el 1° de un mes conocido
+  const monthPreset = (() => {
+    if (!dateFrom) return "";
+    const parts = dateFrom.split("-");
+    if (parts[2] !== "01") return "";
+    const val = `${parts[0]}-${parts[1]}`;
+    return MONTH_OPTIONS.find(o => o.value === val)?.value ?? "";
+  })();
+
+  const applyMonthPreset = (month: string) => {
+    setDateFrom(monthStart(month));
+    setDateTo(monthEnd(month));
+  };
+
   // ── Lista state ────────────────────────────────────────────────────────────
-  const [leads, setLeads]         = useState<BotLeadResponse[]>([]);
-  const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState("");
+  const [leads, setLeads]             = useState<BotLeadResponse[]>([]);
+  const [metrics, setMetrics]         = useState<BotMetrics | null>(null);
+  const [total, setTotal]             = useState(0);
+  const [page, setPage]               = useState(1);
+  const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState("");
   const [industryFilter, setIndustry] = useState("");
-  const [typeFilter, setType]     = useState("");
-  const [tierFilter, setTier]     = useState("");
+  const [typeFilter, setType]         = useState("");
+  const [tierFilter, setTier]         = useState("");
 
   // ── Kanban state ───────────────────────────────────────────────────────────
-  const [pipeline, setPipeline]           = useState<PipelineColumnResponse[]>([]);
+  const [pipeline, setPipeline]               = useState<PipelineColumnResponse[]>([]);
   const [pipelineLoading, setPipelineLoading] = useState(false);
-  const [kanbanSearch, setKanbanSearch]   = useState("");
-  const [selectedLead, setSelectedLead]   = useState<BotLeadResponse | null>(null);
+  const [kanbanSearch, setKanbanSearch]       = useState("");
+  const [selectedLead, setSelectedLead]       = useState<BotLeadResponse | null>(null);
 
   const PAGE_SIZE = 20;
 
@@ -54,10 +107,12 @@ export default function LeadsPage() {
     setLoading(true);
     try {
       const res = await api.bot.leads({
-        lead_type: "maquinaria",
-        industry: industryFilter || undefined,
-        client_type: typeFilter || undefined,
-        tier: tierFilter || undefined,
+        lead_type:   "maquinaria",
+        industry:    industryFilter || undefined,
+        client_type: typeFilter     || undefined,
+        tier:        tierFilter     || undefined,
+        date_from:   dateFrom       || undefined,
+        date_to:     dateTo         || undefined,
         page,
         page_size: PAGE_SIZE,
       });
@@ -73,7 +128,9 @@ export default function LeadsPage() {
     try {
       const data = await api.bot.pipeline({
         lead_type: "maquinaria",
-        search: kanbanSearch || undefined,
+        search:    kanbanSearch || undefined,
+        date_from: dateFrom     || undefined,
+        date_to:   dateTo       || undefined,
       });
       setPipeline(data);
     } catch {
@@ -81,21 +138,25 @@ export default function LeadsPage() {
     } finally {
       setPipelineLoading(false);
     }
-  }, [kanbanSearch]);
+  }, [kanbanSearch, dateFrom, dateTo]);
 
+  // Métricas
+  useEffect(() => {
+    api.bot.metrics({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
+      .then(setMetrics).catch(() => null);
+  }, [dateFrom, dateTo]);
+
+  // Lista
   useEffect(() => {
     if (viewMode === "lista") loadLeads();
-  }, [page, industryFilter, typeFilter, tierFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, industryFilter, typeFilter, tierFilter, viewMode, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pipeline
   useEffect(() => {
     if (viewMode === "kanban") loadPipeline();
   }, [viewMode, loadPipeline]);
 
-  useEffect(() => {
-    api.bot.metrics().then(setMetrics).catch(() => null);
-  }, []);
-
-  // Debounce kanban search
+  // Debounce búsqueda kanban
   useEffect(() => {
     if (viewMode !== "kanban") return;
     const t = setTimeout(() => loadPipeline(), 400);
@@ -111,7 +172,7 @@ export default function LeadsPage() {
       )
     : leads;
 
-  const pages = Math.ceil(total / PAGE_SIZE) || 1;
+  const pages      = Math.ceil(total / PAGE_SIZE) || 1;
   const totalLeads = pipeline.reduce((acc, col) => acc + col.count, 0);
 
   return (
@@ -127,7 +188,7 @@ export default function LeadsPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-fg font-bold text-xl">Leads</h1>
-            <p className="text-fg-5 text-sm mt-0.5">Prospectos capturados por el bot Coni</p>
+            <p className="text-fg-5 text-sm mt-0.5">Todos los leads del pipeline comercial</p>
           </div>
           <div className="flex bg-surface-2 border border-border p-0.5">
             <button
@@ -149,36 +210,55 @@ export default function LeadsPage() {
           </div>
         </div>
 
+        {/* Selector de período — fuente de verdad única */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-fg-5 text-xs uppercase tracking-wider font-medium">Métricas del período</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-36">
+              <DatePicker value={dateFrom} onChange={v => setDateFrom(v ?? "")} placeholder="Desde" compact />
+            </div>
+            <span className="text-fg-6 text-xs">—</span>
+            <div className="w-36">
+              <DatePicker value={dateTo} onChange={v => setDateTo(v ?? "")} placeholder="Hasta" compact />
+            </div>
+            <div className="w-44">
+              <Select value={monthPreset} onChange={applyMonthPreset} options={MONTH_OPTIONS} placeholder="Mes rápido..." compact />
+            </div>
+          </div>
+        </div>
+
         {/* Stat cards */}
         {metrics && (
-          <div className={`grid gap-3 ${viewMode === "kanban" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-7" : "grid-cols-2 lg:grid-cols-4"}`}>
+          <div className={`grid gap-3 ${viewMode === "kanban" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-4"}`}>
             {viewMode === "lista" ? (
               <>
-                <StatCard label="Total leads"    value={String(metrics.total_leads)}          icon={UserCheck}  accent delay={0}   />
-                <StatCard label="Este mes"        value={String(metrics.leads_period)}         icon={TrendingUp} delay={50}  />
-                <StatCard label="Top equipo"      value={metrics.top_equipment_interest[0]?.equipment ?? "—"} icon={Hammer} delay={100} />
-                <StatCard label="Top industria"   value={metrics.top_industries[0]?.industry ?? "—"}          icon={UserCheck} delay={150} />
+                <StatCard label="Total leads"    value={String(metrics.total_leads)}                                    icon={UserCheck}  accent delay={0}   />
+                <StatCard label="Leads período"  value={String(metrics.leads_period)}                                   icon={TrendingUp}        delay={50}  />
+                <StatCard label="Top equipo"     value={metrics.top_equipment_interest[0]?.equipment ?? "—"}            icon={Hammer}            delay={100} />
+                <StatCard label="Top industria"  value={metrics.top_industries[0]?.industry          ?? "—"}            icon={UserCheck}         delay={150} />
               </>
             ) : (
               <>
                 {(() => {
-                  const cerrados = pipeline.find(c => c.stage === "cerrado")?.count ?? 0;
+                  const cerradosCol = pipeline.find(c => c.stage === "cerrado");
+                  const cerrados = cerradosCol?.count ?? 0;
+                  const valorCerrados = (cerradosCol?.leads ?? []).reduce(
+                    (sum, l) => sum + (l.close_value ?? 0), 0
+                  );
                   const perdidos = pipeline.find(c => c.stage === "perdido")?.count ?? 0;
                   const tasaCierre = (cerrados + perdidos) > 0
                     ? Math.round((cerrados / (cerrados + perdidos)) * 100)
                     : 0;
-                  const COP = (n: number) => n >= 1_000_000
+                  const fmt = (n: number) => n >= 1_000_000
                     ? `$${(n / 1_000_000).toFixed(1)}M`
                     : n >= 1_000 ? `$${(n / 1_000).toFixed(0)}K` : `$${n}`;
                   return (
                     <>
-                      <StatCard label="Total leads"      value={String(totalLeads)}                       icon={UserCheck}    accent delay={0}   />
-                      <StatCard label="Tier A"           value={String(metrics.leads_tier_a_period)}      icon={Star}                delay={50}  sub="en el período" />
-                      <StatCard label="Cotizaciones"     value={String(metrics.quotations_period)}        icon={ReceiptText}         delay={100} sub="en el período" />
-                      <StatCard label="Valor cotizado"   value={COP(metrics.revenue_period)}              icon={DollarSign}          delay={150} sub="en el período" />
-                      <StatCard label="Cerrados"         value={String(cerrados)}                         icon={CheckCircle2}        delay={200} />
-                      <StatCard label="Tasa de cierre"   value={`${tasaCierre}%`}                         icon={Percent}             delay={250} sub={`${cerrados} de ${cerrados + perdidos}`} />
-                      <StatCard label="Este mes"         value={String(metrics.leads_period)}             icon={TrendingUp}          delay={300} sub="leads nuevos" />
+                      <StatCard label="Total leads"     value={String(totalLeads)}                  icon={UserCheck}   accent delay={0}   />
+                      <StatCard label="Cotizaciones"    value={fmt(metrics.revenue_period)}         icon={DollarSign}         delay={50}  sub={String(metrics.quotations_period)} />
+                      <StatCard label="Cerrados"        value={valorCerrados > 0 ? fmt(valorCerrados) : String(cerrados)} icon={CheckCircle2} delay={100} sub={valorCerrados > 0 ? String(cerrados) : undefined} />
+                      <StatCard label="Tasa de cierre"  value={`${tasaCierre}%`}                    icon={Percent}            delay={150} sub={`${cerrados} de ${cerrados + perdidos}`} />
+                      <StatCard label="Tier A"          value={String(metrics.leads_tier_a_period)} icon={Star}               delay={200} />
                     </>
                   );
                 })()}
@@ -206,25 +286,33 @@ export default function LeadsPage() {
                 value={industryFilter}
                 onChange={e => { setIndustry(e.target.value); setPage(1); }}
               />
-              <select
-                className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
-                value={typeFilter}
-                onChange={e => { setType(e.target.value); setPage(1); }}
-              >
-                <option value="">Tipo: todos</option>
-                <option value="minorista">Minorista</option>
-                <option value="mayorista">Mayorista</option>
-              </select>
-              <select
-                className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
-                value={tierFilter}
-                onChange={e => { setTier(e.target.value); setPage(1); }}
-              >
-                <option value="">Tier: todos</option>
-                <option value="A">Tier A</option>
-                <option value="B">Tier B</option>
-                <option value="no_fit">No Fit</option>
-              </select>
+              <div className="w-36">
+                <Select
+                  value={typeFilter}
+                  onChange={v => { setType(v); setPage(1); }}
+                  placeholder="Tipo: todos"
+                  clearable
+                  compact
+                  options={[
+                    { value: "minorista", label: "Minorista" },
+                    { value: "mayorista", label: "Mayorista" },
+                  ]}
+                />
+              </div>
+              <div className="w-36">
+                <Select
+                  value={tierFilter}
+                  onChange={v => { setTier(v); setPage(1); }}
+                  placeholder="Tier: todos"
+                  clearable
+                  compact
+                  options={[
+                    { value: "A",      label: "Tier A" },
+                    { value: "B",      label: "Tier B" },
+                    { value: "no_fit", label: "No Fit" },
+                  ]}
+                />
+              </div>
             </div>
 
             <div className="bg-surface-2 border border-border overflow-x-auto">

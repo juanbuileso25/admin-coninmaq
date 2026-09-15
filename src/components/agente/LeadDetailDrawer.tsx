@@ -14,6 +14,19 @@ import {
   PIPELINE_STAGE_LABELS,
 } from "../../services/api";
 import NuevaCotizacionDrawer from "./NuevaCotizacionDrawer";
+import Select from "../ui/Select";
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "contado", label: "Contado" },
+  { value: "credito", label: "Crédito" },
+  { value: "no_sabe", label: "Evaluando opciones" },
+];
+
+const CLIENT_ROLE_OPTIONS = [
+  { value: "dueño",   label: "Dueño" },
+  { value: "gerente", label: "Gerente" },
+  { value: "otro",    label: "Otro" },
+];
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
@@ -22,7 +35,6 @@ const STAGE_COLORS: Record<PipelineStage, string> = {
   contactado:           "bg-blue-500/15 text-blue-300 border-blue-500/30",
   calificado:           "bg-violet-500/15 text-violet-300 border-violet-500/30",
   cotizacion_propuesta: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  seguimiento:          "bg-orange-500/15 text-orange-300 border-orange-500/30",
   cerrado:              "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   perdido:              "bg-red-500/15 text-red-300 border-red-500/30",
   referido:             "bg-pink-500/15 text-pink-300 border-pink-500/30",
@@ -33,7 +45,6 @@ const STAGE_DOT: Record<PipelineStage, string> = {
   contactado:           "bg-blue-400",
   calificado:           "bg-violet-400",
   cotizacion_propuesta: "bg-amber-400",
-  seguimiento:          "bg-orange-400",
   cerrado:              "bg-emerald-400",
   perdido:              "bg-red-400",
   referido:             "bg-pink-400",
@@ -78,11 +89,24 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const [note, setNote]               = useState("");
   const [quotationDrawer, setQD]      = useState(false);
 
+  // Calificación manual
+  const [qualifying, setQualifying]       = useState(false);
+  const [qNumMachines, setQNumMachines]   = useState("");
+  const [qPaymentMethod, setQPaymentMethod] = useState("");
+  const [qRole, setQRole]                 = useState("");
+
   const open = !!lead;
 
   useEffect(() => {
-    if (!lead) { setHistory([]); setSelStage(""); setNote(""); return; }
+    if (!lead) {
+      setHistory([]); setSelStage(""); setNote("");
+      setQNumMachines(""); setQPaymentMethod(""); setQRole("");
+      return;
+    }
     setSelStage(lead.pipeline_stage);
+    setQNumMachines("");
+    setQPaymentMethod("");
+    setQRole("");
     setHL(true);
     api.bot.leadStageHistory(lead.id)
       .then(setHistory)
@@ -115,6 +139,25 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const tier = lead.score?.tier_final;
   const quotations = lead.latest_quotation ? [lead.latest_quotation] : [];
   const stageChanged = selectedStage !== lead.pipeline_stage;
+  const qualifyReady = qNumMachines !== "" && qPaymentMethod !== "" && qRole.trim() !== "";
+
+  const handleQualify = async () => {
+    if (!qualifyReady || !lead) return;
+    setQualifying(true);
+    try {
+      await api.bot.qualifyLead(lead.id, {
+        num_machines:   parseInt(qNumMachines, 10),
+        payment_method: qPaymentMethod,
+        role:           qRole.trim(),
+      });
+      toast.success("Lead calificado");
+      onStageChanged();
+    } catch {
+      toast.error("No se pudo calificar el lead");
+    } finally {
+      setQualifying(false);
+    }
+  };
 
   return (
     <>
@@ -293,7 +336,7 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
             )}
 
             {/* ── Scoring ICP ──────────────────────────────────────────────── */}
-            {lead.score && (
+            {lead.score ? (
               <Section title="Calificación ICP">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between bg-surface-3 border border-border px-3 py-2">
@@ -316,6 +359,59 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                       </div>
                     </div>
                   ))}
+                </div>
+              </Section>
+            ) : (
+              <Section title="Calificación ICP">
+                <div className="border border-amber-500/30 bg-amber-500/5 px-3 py-3">
+                  <p className="text-amber-300 text-xs font-medium mb-0.5">Lead sin calificar</p>
+                  <p className="text-fg-5 text-[11px] leading-relaxed">
+                    Completa los datos para calcular el tier automáticamente.
+                  </p>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-fg-4 mb-1">Máquinas en su flota</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={qNumMachines}
+                      onChange={e => setQNumMachines(e.target.value)}
+                      placeholder="Ej: 3"
+                      className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-fg-4 mb-1">Método de pago</label>
+                    <Select
+                      value={qPaymentMethod}
+                      onChange={setQPaymentMethod}
+                      placeholder="Seleccionar..."
+                      options={PAYMENT_METHOD_OPTIONS}
+                      clearable
+                      compact
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-fg-4 mb-1">Rol del contacto</label>
+                    <Select
+                      value={qRole}
+                      onChange={setQRole}
+                      placeholder="Seleccionar..."
+                      options={CLIENT_ROLE_OPTIONS}
+                      clearable
+                      compact
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleQualify}
+                    disabled={!qualifyReady || qualifying}
+                    className="w-full px-3 py-2 bg-accent text-black text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {qualifying && <Loader2 size={12} className="animate-spin" />}
+                    {qualifying ? "Calificando..." : "Calificar lead"}
+                  </button>
                 </div>
               </Section>
             )}

@@ -455,7 +455,6 @@ export type PipelineStage =
   | "contactado"
   | "calificado"
   | "cotizacion_propuesta"
-  | "seguimiento"
   | "cerrado"
   | "perdido"
   | "referido";
@@ -465,7 +464,6 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   "contactado",
   "calificado",
   "cotizacion_propuesta",
-  "seguimiento",
   "cerrado",
   "perdido",
   "referido",
@@ -475,8 +473,7 @@ export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
   interesado:           "Interesado",
   contactado:           "Contactado",
   calificado:           "Calificado",
-  cotizacion_propuesta: "Cotización y propuesta",
-  seguimiento:          "Seguimiento y negociación",
+  cotizacion_propuesta: "Cotización / Seguimiento",
   cerrado:              "Cerrado ✓",
   perdido:              "Perdido",
   referido:             "Referido",
@@ -520,6 +517,7 @@ export type BotLeadResponse = {
   rut_file_url: string | null;
   pipeline_stage: PipelineStage;
   close_result: "ganado" | "perdido" | null;
+  close_value: number | null;
   num_units: number | null;
   created_at: string;
   score?: LeadScoreResponse | null;
@@ -532,6 +530,7 @@ export type BotQuotationResponse = {
   lead_id: number | null;
   lead_email: string | null;
   lead_name: string | null;
+  lead_pipeline_stage: PipelineStage | null;
   quotation_number: string;
   items: object[] | null;
   subtotal: number;
@@ -589,6 +588,10 @@ export type ManualQuotationRequest = {
   send_whatsapp?: boolean;
   observations?: string;
   extra_emails?: string[];
+  // Calificación del lead (opcional — dispara scoring si vienen los 3)
+  num_machines_fleet?: number;
+  payment_method?: string;
+  client_role?: string;
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
@@ -1310,13 +1313,15 @@ export const api = {
       request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
     sendDocument: (sessionId: string, data: { pdf_url: string; filename: string; caption?: string }) =>
       request<{ sent: boolean }>(`/bot/sessions/${sessionId}/send-document`, { method: "POST", body: JSON.stringify(data) }),
-    leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; search?: string; page?: number; page_size?: number }) => {
+    leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; search?: string; date_from?: string; date_to?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.industry)    qs.set("industry",    params.industry);
       if (params?.client_type) qs.set("client_type", params.client_type);
       if (params?.tier)        qs.set("tier",        params.tier);
       if (params?.lead_type)   qs.set("lead_type",   params.lead_type);
       if (params?.search)      qs.set("search",      params.search);
+      if (params?.date_from)   qs.set("date_from",   params.date_from);
+      if (params?.date_to)     qs.set("date_to",     params.date_to);
       if (params?.page)        qs.set("page",        String(params.page));
       if (params?.page_size)   qs.set("page_size",   String(params.page_size));
       return request<PaginatedResponse<BotLeadResponse>>(`/bot/leads?${qs}`);
@@ -1329,11 +1334,13 @@ export const api = {
       request<ScoringVariable>(`/bot/scoring/variables/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     patchScoringRule: (id: number, data: Partial<Pick<ScoringRule, "points" | "label" | "value_min" | "value_max" | "values_list">>) =>
       request<ScoringRule>(`/bot/scoring/rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-    quotations: (params?: { status?: string; delivery_mode?: string; quotation_type?: string; page?: number; page_size?: number }) => {
+    quotations: (params?: { status?: string; delivery_mode?: string; quotation_type?: string; date_from?: string; date_to?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.status)          qs.set("status",          params.status);
       if (params?.delivery_mode)   qs.set("delivery_mode",   params.delivery_mode);
       if (params?.quotation_type)  qs.set("quotation_type",  params.quotation_type);
+      if (params?.date_from)       qs.set("date_from",       params.date_from);
+      if (params?.date_to)         qs.set("date_to",         params.date_to);
       if (params?.page)            qs.set("page",            String(params.page));
       if (params?.page_size)       qs.set("page_size",       String(params.page_size));
       return request<PaginatedResponse<BotQuotationResponse>>(`/bot/quotations?${qs}`);
@@ -1348,18 +1355,22 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ emails }),
       }),
-    pipeline: (params?: { lead_type?: string; search?: string }) => {
+    pipeline: (params?: { lead_type?: string; search?: string; date_from?: string; date_to?: string }) => {
       const qs = new URLSearchParams();
-      if (params?.lead_type) qs.set("lead_type", params.lead_type);
-      if (params?.search)    qs.set("search",    params.search);
+      if (params?.lead_type)  qs.set("lead_type",  params.lead_type);
+      if (params?.search)     qs.set("search",     params.search);
+      if (params?.date_from)  qs.set("date_from",  params.date_from);
+      if (params?.date_to)    qs.set("date_to",    params.date_to);
       return request<PipelineColumnResponse[]>(`/bot/leads/pipeline?${qs}`);
     },
-    patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; note?: string }) =>
+    patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; close_value?: number | null; note?: string }) =>
       request<BotLeadResponse>(`/bot/leads/${leadId}/stage`, { method: "PATCH", body: JSON.stringify(data) }),
     deactivateLead: (leadId: number) =>
       request<void>(`/bot/leads/${leadId}`, { method: "DELETE" }),
     leadStageHistory: (leadId: number) =>
       request<LeadStageHistoryResponse[]>(`/bot/leads/${leadId}/stage-history`),
+    qualifyLead: (leadId: number, data: { num_machines?: number; payment_method?: string; role?: string; product_code?: string }) =>
+      request<BotLeadResponse>(`/bot/leads/${leadId}/qualify`, { method: "POST", body: JSON.stringify(data) }),
   },
   quotations: {
     getPage: (quotationNumber: string) =>

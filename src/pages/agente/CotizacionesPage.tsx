@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send } from "lucide-react";
 import StatCard from "../../components/StatCard";
-import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent } from "../../services/api";
+import Select from "../../components/ui/Select";
+import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
 import { toast } from "sonner";
 
@@ -13,27 +14,41 @@ const DELIVERY_LABELS: Record<string, string> = {
   ambas:  "Email + link",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  generated: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  sent:      "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+const PIPELINE_STAGE_COLORS: Record<string, string> = {
+  interesado:           "bg-sky-500/15 text-sky-400 border-sky-500/30",
+  contactado:           "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
+  calificado:           "bg-violet-500/15 text-violet-400 border-violet-500/30",
+  cotizacion_propuesta: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  cerrado:              "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  perdido:              "bg-red-500/15 text-red-400 border-red-500/30",
+  referido:             "bg-pink-500/15 text-pink-400 border-pink-500/30",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  generated: "Generada",
-  sent:      "Enviada",
-};
+function buildMonthOptions() {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("es-CO", { month: "long", year: "numeric" });
+    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), value });
+  }
+  return options;
+}
+const MONTH_OPTIONS = buildMonthOptions();
 
 export default function CotizacionesPage() {
-  const [quotes, setQuotes]       = useState<BotQuotationResponse[]>([]);
-  const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
-  const [clicks, setClicks]       = useState<Map<string, EmailClickEvent>>(new Map());
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
-  const [loading, setLoading]     = useState(false);
-  const [search, setSearch]       = useState("");
-  const [statusFilter, setStatus] = useState("");
-  const [modeFilter, setMode]     = useState("");
-  const [drawerOpen, setDrawer]   = useState(false);
+  const [quotes, setQuotes]           = useState<BotQuotationResponse[]>([]);
+  const [metrics, setMetrics]         = useState<BotMetrics | null>(null);
+  const [clicks, setClicks]           = useState<Map<string, EmailClickEvent>>(new Map());
+  const [total, setTotal]             = useState(0);
+  const [page, setPage]               = useState(1);
+  const [loading, setLoading]         = useState(false);
+  const [search, setSearch]           = useState("");
+  const [statusFilter, setStatus]     = useState("");
+  const [modeFilter, setMode]         = useState("");
+  const [drawerOpen, setDrawer]       = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
 
   // Modal reenvío de email
   const [sendModal,       setSendModal]       = useState<BotQuotationResponse | null>(null);
@@ -80,8 +95,12 @@ export default function CotizacionesPage() {
 
   const PAGE_SIZE = 20;
 
-  const loadMetrics = () => {
-    api.bot.metrics().then(setMetrics).catch(() => null);
+  const loadMetrics = (month: string) => {
+    const [year, m] = month.split("-").map(Number);
+    const date_from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay   = new Date(year, m, 0).getDate();
+    const date_to   = `${year}-${String(m).padStart(2, "0")}-${lastDay}`;
+    api.bot.metrics({ date_from, date_to }).then(setMetrics).catch(() => null);
     api.track.clicks()
       .then(data => setClicks(new Map(data.map(e => [e.quotation_number, e]))))
       .catch(() => null);
@@ -89,11 +108,17 @@ export default function CotizacionesPage() {
 
   const loadQuotations = async () => {
     setLoading(true);
+    const [year, m] = selectedMonth.split("-").map(Number);
+    const date_from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay   = new Date(year, m, 0).getDate();
+    const date_to   = `${year}-${String(m).padStart(2, "0")}-${lastDay}`;
     try {
       const res = await api.bot.quotations({
         quotation_type: "maquinaria",
         status: statusFilter || undefined,
         delivery_mode: modeFilter || undefined,
+        date_from,
+        date_to,
         page,
         page_size: PAGE_SIZE,
       });
@@ -104,8 +129,8 @@ export default function CotizacionesPage() {
     }
   };
 
-  useEffect(() => { loadQuotations(); }, [page, statusFilter, modeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { loadMetrics(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadQuotations(); }, [page, statusFilter, modeFilter, selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadMetrics(selectedMonth); }, [selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = search
     ? quotes.filter(q =>
@@ -121,7 +146,7 @@ export default function CotizacionesPage() {
     <NuevaCotizacionDrawer
       open={drawerOpen}
       onClose={() => setDrawer(false)}
-      onCreated={() => { loadQuotations(); loadMetrics(); }}
+      onCreated={() => { loadQuotations(); loadMetrics(selectedMonth); }}
     />
     <div className="space-y-5">
 
@@ -142,11 +167,25 @@ export default function CotizacionesPage() {
 
       {/* Stat cards */}
       {metrics && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Total cotizaciones" value={String(total)}                    icon={ReceiptText} accent delay={0}   />
-          <StatCard label="Enviadas por email" value={String(metrics.email_sent_period)} icon={Mail}        delay={50}  />
-          <StatCard label="Revenue total"      value={COP(metrics.total_revenue)}       icon={DollarSign}  delay={100} />
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-fg-5 text-xs uppercase tracking-wider font-medium">Métricas del período</p>
+            <div className="w-44">
+              <Select
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+                options={MONTH_OPTIONS}
+                compact
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard label="Total acumulado"   value={String(metrics.total_quotations)}  icon={ReceiptText} accent delay={0}   />
+            <StatCard label="Del período"        value={String(metrics.quotations_period)} icon={ReceiptText}        delay={50}  />
+            <StatCard label="Enviadas por email" value={String(metrics.email_sent_period)} icon={Mail}               delay={100} />
+            <StatCard label="Revenue período"    value={COP(metrics.revenue_period)}       icon={DollarSign}         delay={150} />
+          </div>
+        </>
       )}
 
       {/* ── Lista ────────────────────────────────────────────────────────────── */}
@@ -162,25 +201,33 @@ export default function CotizacionesPage() {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <select
-              className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
-              value={statusFilter}
-              onChange={e => { setStatus(e.target.value); setPage(1); }}
-            >
-              <option value="">Estado: todos</option>
-              <option value="generated">Generada</option>
-              <option value="sent">Enviada</option>
-            </select>
-            <select
-              className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
-              value={modeFilter}
-              onChange={e => { setMode(e.target.value); setPage(1); }}
-            >
-              <option value="">Entrega: todas</option>
-              <option value="chat">Chat</option>
-              <option value="email">Email</option>
-              <option value="ambas">Ambas</option>
-            </select>
+            <div className="w-40">
+              <Select
+                value={statusFilter}
+                onChange={v => { setStatus(v); setPage(1); }}
+                placeholder="Estado: todos"
+                clearable
+                compact
+                options={[
+                  { value: "generated", label: "Generada" },
+                  { value: "sent",      label: "Enviada"  },
+                ]}
+              />
+            </div>
+            <div className="w-40">
+              <Select
+                value={modeFilter}
+                onChange={v => { setMode(v); setPage(1); }}
+                placeholder="Entrega: todas"
+                clearable
+                compact
+                options={[
+                  { value: "chat",  label: "Solo link"    },
+                  { value: "email", label: "Email"        },
+                  { value: "ambas", label: "Email + link" },
+                ]}
+              />
+            </div>
           </div>
 
           <div className="bg-surface-2 border border-border overflow-x-auto">
@@ -231,9 +278,13 @@ export default function CotizacionesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${STATUS_COLORS[q.status] ?? "bg-surface-4 text-fg-5 border-border"}`}>
-                        {STATUS_LABELS[q.status] ?? q.status}
-                      </span>
+                      {q.lead_pipeline_stage ? (
+                        <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-sm ${PIPELINE_STAGE_COLORS[q.lead_pipeline_stage] ?? "bg-surface-4 text-fg-5 border-border"}`}>
+                          {PIPELINE_STAGE_LABELS[q.lead_pipeline_stage] ?? q.lead_pipeline_stage}
+                        </span>
+                      ) : (
+                        <span className="text-fg-6 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-fg-5 text-xs whitespace-nowrap">
                       {q.expires_at ? new Date(q.expires_at).toLocaleDateString("es-CO") : "—"}

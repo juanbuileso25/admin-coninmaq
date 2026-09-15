@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { es } from "react-day-picker/locale";
-import { CalendarDays, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+
+function NavChevron({ orientation }: { orientation?: "left" | "right" | "up" | "down" }) {
+  return orientation === "right"
+    ? <ChevronRight size={14} />
+    : <ChevronLeft  size={14} />;
+}
 
 interface DatePickerProps {
   value:       string | null | undefined;   // "YYYY-MM-DD" o null
@@ -137,6 +143,7 @@ export default function DatePicker({
             onMonthChange={setMonth}
             locale={es}
             showOutsideDays
+            components={{ Chevron: NavChevron }}
             classNames={{
               root:            "p-3",
               months:          "flex flex-col",
@@ -144,20 +151,20 @@ export default function DatePicker({
               month_caption:   "flex items-center justify-between px-1 py-1",
               caption_label:   "text-sm font-semibold text-fg capitalize",
               nav:             "flex items-center gap-1",
-              button_previous: "p-1 text-fg-5 hover:text-fg hover:bg-surface-3 transition-colors",
-              button_next:     "p-1 text-fg-5 hover:text-fg hover:bg-surface-3 transition-colors",
+              button_previous: "p-1 !text-fg-4 hover:!text-fg hover:bg-surface-3 transition-colors",
+              button_next:     "p-1 !text-fg-4 hover:!text-fg hover:bg-surface-3 transition-colors",
               weeks:           "border-collapse",
               weekdays:        "flex",
               weekday:         "w-8 h-7 flex items-center justify-center text-[10px] font-medium text-fg-6 uppercase",
               week:            "flex mt-0.5",
-              day:             "w-8 h-8 flex items-center justify-center text-xs text-fg-4 hover:bg-surface-3 cursor-pointer transition-colors",
-              day_button:      "w-full h-full flex items-center justify-center",
-              selected:        "bg-accent text-black font-semibold hover:bg-accent",
-              today:           "text-accent font-semibold",
-              outside:         "text-fg-6 opacity-40",
+              day:             "w-8 h-8 flex items-center justify-center text-xs cursor-pointer transition-colors hover:bg-surface-3",
+              day_button:      "w-full h-full flex items-center justify-center !text-fg-4",
+              selected:        "!bg-accent hover:!bg-accent font-semibold [&_button]:!text-black",
+              today:           "[&_button]:!text-accent font-semibold",
+              outside:         "opacity-40 [&_button]:!text-fg-6",
               disabled:        "opacity-30 cursor-not-allowed",
-              range_start:     "bg-accent text-black rounded-l",
-              range_end:       "bg-accent text-black rounded-r",
+              range_start:     "!bg-accent rounded-l [&_button]:!text-black",
+              range_end:       "!bg-accent rounded-r [&_button]:!text-black",
             }}
           />
         </div>,

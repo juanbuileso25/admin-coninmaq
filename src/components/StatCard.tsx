@@ -45,7 +45,7 @@ export default function StatCard({
           {value}
         </p>
         {sub && (
-          <p className="text-fg-6 text-xs mt-0.5">{sub}</p>
+          <p className="text-fg-4 text-xs mt-0.5">{sub}</p>
         )}
       </div>
 
