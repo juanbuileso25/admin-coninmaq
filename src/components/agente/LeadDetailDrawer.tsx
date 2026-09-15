@@ -16,12 +16,6 @@ import {
 import NuevaCotizacionDrawer from "./NuevaCotizacionDrawer";
 import Select from "../ui/Select";
 
-const PAYMENT_METHOD_OPTIONS = [
-  { value: "contado", label: "Contado" },
-  { value: "credito", label: "Crédito" },
-  { value: "no_sabe", label: "Evaluando opciones" },
-];
-
 const CLIENT_ROLE_OPTIONS = [
   { value: "dueño",   label: "Dueño" },
   { value: "gerente", label: "Gerente" },
@@ -92,7 +86,6 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   // Calificación manual
   const [qualifying, setQualifying]       = useState(false);
   const [qNumMachines, setQNumMachines]   = useState("");
-  const [qPaymentMethod, setQPaymentMethod] = useState("");
   const [qRole, setQRole]                 = useState("");
 
   const open = !!lead;
@@ -100,12 +93,11 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   useEffect(() => {
     if (!lead) {
       setHistory([]); setSelStage(""); setNote("");
-      setQNumMachines(""); setQPaymentMethod(""); setQRole("");
+      setQNumMachines(""); setQRole("");
       return;
     }
     setSelStage(lead.pipeline_stage);
     setQNumMachines("");
-    setQPaymentMethod("");
     setQRole("");
     setHL(true);
     api.bot.leadStageHistory(lead.id)
@@ -139,16 +131,15 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const tier = lead.score?.tier_final;
   const quotations = lead.latest_quotation ? [lead.latest_quotation] : [];
   const stageChanged = selectedStage !== lead.pipeline_stage;
-  const qualifyReady = qNumMachines !== "" && qPaymentMethod !== "" && qRole.trim() !== "";
+  const qualifyReady = qNumMachines !== "" && qRole.trim() !== "";
 
   const handleQualify = async () => {
     if (!qualifyReady || !lead) return;
     setQualifying(true);
     try {
       await api.bot.qualifyLead(lead.id, {
-        num_machines:   parseInt(qNumMachines, 10),
-        payment_method: qPaymentMethod,
-        role:           qRole.trim(),
+        num_machines: parseInt(qNumMachines, 10),
+        role:         qRole.trim(),
       });
       toast.success("Lead calificado");
       onStageChanged();
@@ -379,17 +370,6 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                       onChange={e => setQNumMachines(e.target.value)}
                       placeholder="Ej: 3"
                       className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-fg-4 mb-1">Método de pago</label>
-                    <Select
-                      value={qPaymentMethod}
-                      onChange={setQPaymentMethod}
-                      placeholder="Seleccionar..."
-                      options={PAYMENT_METHOD_OPTIONS}
-                      clearable
-                      compact
                     />
                   </div>
                   <div>

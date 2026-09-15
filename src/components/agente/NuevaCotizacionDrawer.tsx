@@ -9,12 +9,6 @@ const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
 const fmtInput = (n: number) => n > 0 ? n.toLocaleString("es-CO") : "";
 
-const PAYMENT_METHOD_OPTIONS = [
-  { value: "contado", label: "Contado" },
-  { value: "credito", label: "Crédito" },
-  { value: "no_sabe", label: "Evaluando opciones" },
-];
-
 const CLIENT_ROLE_OPTIONS = [
   { value: "dueño",   label: "Dueño" },
   { value: "gerente", label: "Gerente" },
@@ -90,10 +84,9 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState<ManualQuotationResponse | null>(null);
 
-  // Calificación del lead (opcional — dispara scoring si se completan los 3)
+  // Calificación del lead (opcional — dispara scoring si se completan los 2)
   const [showQualify, setShowQualify]   = useState(true);
   const [numMachinesFleet, setNumMachinesFleet] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [clientRole, setClientRole]     = useState<string>("");
 
   useEffect(() => {
@@ -131,7 +124,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       setModo("email"); setSendToWa(true); setWaPhone(""); setResult(null); setMSearch(""); setShowCatalog(false);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
-      setShowQualify(true); setNumMachinesFleet(""); setPaymentMethod(""); setClientRole("");
+      setShowQualify(true); setNumMachinesFleet(""); setClientRole("");
     } else if (prefill) {
       if (prefill.name)    setNombre(prefill.name);
       if (prefill.email)   setEmail(prefill.email);
@@ -195,7 +188,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     setLeadSearch("");
   };
 
-  const qualifyReady = numMachinesFleet !== "" && paymentMethod !== "" && clientRole.trim() !== "";
+  const qualifyReady = numMachinesFleet !== "" && clientRole.trim() !== "";
 
   const clearClient = () => {
     setSelectedClient(null);
@@ -291,7 +284,6 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         observations:   observations.trim() || undefined,
         extra_emails:   extraEmails.length > 0 ? extraEmails : undefined,
         num_machines_fleet: numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined,
-        payment_method:     paymentMethod || undefined,
         client_role:        clientRole.trim() || undefined,
       });
 
@@ -674,13 +666,13 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                     <p className="text-fg-6 text-[11px] mt-0.5">
                       {qualifyReady
                         ? <span className="text-emerald-400">✓ Se calculará el tier automáticamente</span>
-                        : "Completa los 3 campos para calificar el lead"}
+                        : "Completa los 2 campos para calificar el lead"}
                     </p>
                   </div>
                   <span className={`text-fg-5 group-hover:text-fg transition-transform ${showQualify ? "rotate-180" : ""}`}>▾</span>
                 </button>
                 {showQualify && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-fg-4 mb-1.5">
                         Máquinas en su flota
@@ -692,17 +684,6 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                         onChange={e => setNumMachinesFleet(e.target.value)}
                         placeholder="Ej: 3"
                         className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-fg-4 mb-1.5">Método de pago</label>
-                      <Select
-                        value={paymentMethod}
-                        onChange={setPaymentMethod}
-                        placeholder="Seleccionar..."
-                        options={PAYMENT_METHOD_OPTIONS}
-                        clearable
-                        compact
                       />
                     </div>
                     <div>
