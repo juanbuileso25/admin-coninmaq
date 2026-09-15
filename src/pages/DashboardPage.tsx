@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Package, MessageSquare, Users, DollarSign,
   Clock, CheckCircle2, XCircle, ArrowRight,
-  AlertCircle, Star, Mail, Building2,
+  AlertCircle, Star, Building2, Receipt,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
@@ -127,8 +127,8 @@ export default function DashboardPage() {
   const maxProd      = topProducts[0]?.count  ?? 1;
   const maxInd       = topIndustries[0]?.count ?? 1;
 
-  const emailPct = metrics && metrics.quotations_period > 0
-    ? Math.round((metrics.email_sent_period / metrics.quotations_period) * 100)
+  const avgTicket = metrics && metrics.quotations_period > 0
+    ? Math.round(metrics.revenue_period / metrics.quotations_period)
     : 0;
 
   return (
@@ -211,10 +211,10 @@ export default function DashboardPage() {
           delay={120}
         />
         <StatCard
-          label="Emails enviados"
-          value={loading ? "—" : String(metrics?.email_sent_period ?? 0)}
-          sub={metrics?.quotations_period ? `${emailPct}% de las cotizaciones` : undefined}
-          icon={Mail}
+          label="Ticket promedio"
+          value={loading ? "—" : COP(avgTicket)}
+          sub={metrics?.quotations_period ? `Sobre ${metrics.quotations_period} cotizaciones` : undefined}
+          icon={Receipt}
           delay={180}
         />
       </div>
