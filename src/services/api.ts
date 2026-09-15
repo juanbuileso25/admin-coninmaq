@@ -49,6 +49,7 @@ async function tryRefresh(): Promise<string | null> {
 async function doFetch(path: string, options: RequestInit, token: string | null): Promise<Response> {
   const isFormData = options.body instanceof FormData;
   return fetch(`${BASE_URL}${path}`, {
+    cache: "no-store",
     ...options,
     headers: {
       // Omit Content-Type for FormData — browser sets it with boundary automatically
