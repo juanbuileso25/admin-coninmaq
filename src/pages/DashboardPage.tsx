@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import {
   Package, MessageSquare, Users, DollarSign,
   Clock, CheckCircle2, XCircle, ArrowRight,
-  AlertCircle, Star, Mail, Building2,
+  AlertCircle, Star, Building2, Receipt,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
+import DatePicker from "../components/ui/DatePicker";
+import Select from "../components/ui/Select";
 import { useAuth } from "../hooks/useAuth";
 import { api, type BotMetrics, type BotQuotationResponse } from "../services/api";
 
@@ -38,27 +40,39 @@ function timeAgo(dateStr: string) {
   return `Hace ${Math.floor(diff / 86400)}d`;
 }
 
-// ── Presets ───────────────────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
-type Preset = "today" | "week" | "month" | "year" | "custom";
-
-function getPresetRange(preset: Preset): { from: string; to: string } {
-  const today = new Date();
-  const to    = toISO(today);
-  if (preset === "today") return { from: to, to };
-  if (preset === "week") {
-    const mon = new Date(today);
-    mon.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-    return { from: toISO(mon), to };
+function buildMonthOptions() {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("es-CO", { month: "long", year: "numeric" });
+    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), value });
   }
-  if (preset === "month") return { from: toISO(new Date(today.getFullYear(), today.getMonth(), 1)), to };
-  if (preset === "year")  return { from: `${today.getFullYear()}-01-01`, to };
-  return { from: to, to };
+  return options;
+}
+const MONTH_OPTIONS = buildMonthOptions();
+
+function monthStart(month: string) { return `${month}-01`; }
+function monthEnd(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
 }
 
-const PRESET_LABELS: Record<Preset, string> = {
-  today: "Hoy", week: "Esta semana", month: "Este mes", year: "Este año", custom: "Personalizado",
-};
+type QuickPreset = "all" | "today" | "week" | "year";
+const QUICK_PRESETS: { key: QuickPreset; label: string; range: () => { from: string; to: string } }[] = [
+  { key: "all",   label: "Todo",        range: () => ({ from: "", to: "" }) },
+  { key: "today", label: "Hoy",         range: () => { const t = toISO(new Date()); return { from: t, to: t }; } },
+  { key: "week",  label: "Esta semana", range: () => {
+    const today = new Date();
+    const mon = new Date(today);
+    mon.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+    return { from: toISO(mon), to: toISO(today) };
+  }},
+  { key: "year",  label: "Este año",    range: () => ({ from: `${new Date().getFullYear()}-01-01`, to: toISO(new Date()) }) },
+];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -66,28 +80,43 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [preset, setPreset]     = useState<Preset>("month");
-  const [customFrom, setFrom]   = useState("");
-  const [customTo, setTo]       = useState("");
+  const [dateFrom, setDateFrom] = useState(() => monthStart(MONTH_OPTIONS[0].value));
+  const [dateTo,   setDateTo]   = useState(() => toISO(new Date()));
   const [metrics, setMetrics]   = useState<BotMetrics | null>(null);
   const [quotes, setQuotes]     = useState<BotQuotationResponse[]>([]);
   const [loading, setLoading]   = useState(true);
 
-  const activeRange = preset === "custom"
-    ? { from: customFrom, to: customTo }
-    : getPresetRange(preset);
+  const monthPreset = (() => {
+    if (!dateFrom) return "";
+    const parts = dateFrom.split("-");
+    if (parts[2] !== "01") return "";
+    const val = `${parts[0]}-${parts[1]}`;
+    return MONTH_OPTIONS.find(o => o.value === val)?.value ?? "";
+  })();
+
+  const applyMonthPreset = (month: string) => {
+    setDateFrom(monthStart(month));
+    setDateTo(monthEnd(month));
+  };
+
+  const applyQuickPreset = (key: QuickPreset) => {
+    const { from, to } = QUICK_PRESETS.find(p => p.key === key)!.range();
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   useEffect(() => {
-    if (preset === "custom" && (!customFrom || !customTo)) return;
     setLoading(true);
+    const from = dateFrom || undefined;
+    const to   = dateTo   || undefined;
     Promise.all([
-      api.bot.metrics({ date_from: activeRange.from, date_to: activeRange.to }),
-      api.bot.quotations({ quotation_type: "maquinaria", page: 1, page_size: 5 }),
+      api.bot.metrics({ date_from: from, date_to: to }),
+      api.bot.quotations({ quotation_type: "maquinaria", date_from: from, date_to: to, page: 1, page_size: 5 }),
     ])
       .then(([m, q]) => { setMetrics(m); setQuotes(q.data); })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, [preset, customFrom, customTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const now      = new Date();
   const hour     = now.getHours();
@@ -98,8 +127,8 @@ export default function DashboardPage() {
   const maxProd      = topProducts[0]?.count  ?? 1;
   const maxInd       = topIndustries[0]?.count ?? 1;
 
-  const emailPct = metrics && metrics.quotations_period > 0
-    ? Math.round((metrics.email_sent_period / metrics.quotations_period) * 100)
+  const avgTicket = metrics && metrics.quotations_period > 0
+    ? Math.round(metrics.revenue_period / metrics.quotations_period)
     : 0;
 
   return (
@@ -123,41 +152,38 @@ export default function DashboardPage() {
 
       {/* Date filter */}
       <div className="animate-fade-up" style={{ animationDelay: "50ms", animationFillMode: "both" }}>
-        <div className="flex items-center gap-2 flex-wrap">
-          {(["today", "week", "month", "year", "custom"] as Preset[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPreset(p)}
-              className={`px-3 py-1.5 text-xs font-medium border transition-colors ${
-                preset === p
-                  ? "bg-accent text-black border-accent"
-                  : "bg-surface-2 border-border text-fg-4 hover:border-accent/50 hover:text-fg"
-              }`}
-            >
-              {PRESET_LABELS[p]}
-            </button>
-          ))}
-          {metrics && preset !== "custom" && (
-            <span className="text-fg-6 text-xs ml-1">{activeRange.from} → {activeRange.to}</span>
-          )}
-        </div>
-        {preset === "custom" && (
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={e => setFrom(e.target.value)}
-              className="bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
-            />
-            <span className="text-fg-5 text-xs">→</span>
-            <input
-              type="date"
-              value={customTo}
-              onChange={e => setTo(e.target.value)}
-              className="bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
-            />
+        <div className="flex flex-wrap items-center gap-2">
+          {QUICK_PRESETS.map(p => {
+            const { from, to } = p.range();
+            const isActive = from === dateFrom && to === dateTo;
+            return (
+              <button
+                key={p.key}
+                onClick={() => applyQuickPreset(p.key)}
+                className={`px-3 py-2 text-xs font-medium border transition-colors whitespace-nowrap ${
+                  isActive
+                    ? "bg-accent text-black border-accent"
+                    : "bg-surface-2 border-border text-fg-4 hover:border-accent/50 hover:text-fg"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+          <div className="w-px h-6 bg-border mx-0.5 hidden sm:block" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-36">
+              <DatePicker value={dateFrom} onChange={v => setDateFrom(v ?? "")} placeholder="Desde" compact />
+            </div>
+            <span className="text-fg-6 text-xs">—</span>
+            <div className="w-36">
+              <DatePicker value={dateTo} onChange={v => setDateTo(v ?? "")} placeholder="Hasta" compact />
+            </div>
+            <div className="w-44">
+              <Select value={monthPreset} onChange={applyMonthPreset} options={MONTH_OPTIONS} placeholder="Mes rápido..." compact />
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* KPI Cards — Row 1: período */}
@@ -185,10 +211,10 @@ export default function DashboardPage() {
           delay={120}
         />
         <StatCard
-          label="Emails enviados"
-          value={loading ? "—" : String(metrics?.email_sent_period ?? 0)}
-          sub={metrics?.quotations_period ? `${emailPct}% de las cotizaciones` : undefined}
-          icon={Mail}
+          label="Ticket promedio"
+          value={loading ? "—" : COP(avgTicket)}
+          sub={metrics?.quotations_period ? `Sobre ${metrics.quotations_period} cotizaciones` : undefined}
+          icon={Receipt}
           delay={180}
         />
       </div>

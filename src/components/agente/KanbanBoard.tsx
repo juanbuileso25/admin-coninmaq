@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe, Trash2, AlertTriangle } from "lucide-react";
+import { Clock, Building2, Phone, Briefcase, FileText, GripVertical, ChevronDown, Globe, Trash2, AlertTriangle, CheckCircle2, DollarSign } from "lucide-react";
 import {
   api,
   type BotLeadResponse,
@@ -15,7 +15,6 @@ const STAGE_COLORS: Record<PipelineStage, { col: string; badge: string; badgeAct
   contactado:           { col: "border-t-blue-400",    badge: "bg-blue-500/15 text-blue-300 border-blue-500/30",      badgeActive: "bg-blue-500/30 text-blue-200 border-blue-400",      dot: "bg-blue-400"    },
   calificado:           { col: "border-t-violet-400",  badge: "bg-violet-500/15 text-violet-300 border-violet-500/30", badgeActive: "bg-violet-500/30 text-violet-200 border-violet-400", dot: "bg-violet-400"  },
   cotizacion_propuesta: { col: "border-t-amber-400",   badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",   badgeActive: "bg-amber-500/30 text-amber-200 border-amber-400",   dot: "bg-amber-400"   },
-  seguimiento:          { col: "border-t-orange-400",  badge: "bg-orange-500/15 text-orange-300 border-orange-500/30", badgeActive: "bg-orange-500/30 text-orange-200 border-orange-400", dot: "bg-orange-400"  },
   cerrado:              { col: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", badgeActive: "bg-emerald-500/30 text-emerald-200 border-emerald-400", dot: "bg-emerald-400" },
   perdido:              { col: "border-t-red-400",     badge: "bg-red-500/15 text-red-300 border-red-500/30",         badgeActive: "bg-red-500/30 text-red-200 border-red-400",         dot: "bg-red-400"     },
   referido:             { col: "border-t-pink-400",    badge: "bg-pink-500/15 text-pink-300 border-pink-500/30",      badgeActive: "bg-pink-500/30 text-pink-200 border-pink-400",      dot: "bg-pink-400"    },
@@ -84,6 +83,98 @@ function ConfirmDeleteModal({
   );
 }
 
+
+function ConfirmCloseModal({
+  lead,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  lead: BotLeadResponse;
+  onConfirm: (closeValue: number) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [display, setDisplay] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const rawValue = parseFloat(display.replace(/\./g, "").replace(",", "."));
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/[^0-9]/g, "");
+    if (!digits) { setDisplay(""); return; }
+    setDisplay(Number(digits).toLocaleString("es-CO"));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rawValue || rawValue <= 0) return;
+    onConfirm(rawValue);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 size={18} className="text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-fg font-semibold text-sm">Marcar como cerrado</h3>
+              <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                Ingresa el valor real de venta para{" "}
+                <span className="text-fg font-medium">{lead.name ?? "este lead"}</span>.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-fg-4 mb-1.5">
+                Valor de venta (COP)
+              </label>
+              <div className="relative">
+                <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-5 pointer-events-none" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={display}
+                  onChange={handleChange}
+                  className="w-full bg-surface-3 border border-border text-fg pl-8 pr-4 py-2.5 text-sm outline-none focus:border-accent placeholder:text-fg-6"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={loading}
+                className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !rawValue || rawValue <= 0}
+                className="flex-1 px-3 py-2 text-xs font-medium text-black bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 size={12} />
+                {loading ? "Guardando..." : "Cerrar lead"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface KanbanCardProps {
   lead: BotLeadResponse;
@@ -246,9 +337,16 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11px] text-fg-6">
             <Clock size={10} />{timeAgo(lead.created_at)}
-            {tier && (
+            {tier ? (
               <span className="px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm bg-amber-500/15 text-amber-400 border-amber-500/30">
                 {tier === "no_fit" ? "N/F" : tier.toUpperCase()}
+              </span>
+            ) : (
+              <span
+                title="Este lead aún no ha sido calificado"
+                className="px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm bg-surface-4 text-fg-5 border-border"
+              >
+                Sin calificar
               </span>
             )}
           </span>
@@ -300,6 +398,8 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
   const [hiddenStages, setHiddenStages] = useState<Set<PipelineStage>>(new Set());
   const [confirmLead, setConfirmLead]   = useState<BotLeadResponse | null>(null);
   const [deleting, setDeleting]         = useState(false);
+  const [closingLead, setClosingLead]   = useState<BotLeadResponse | null>(null);
+  const [closing, setClosing]           = useState(false);
 
   // Synchronized dual scrollbar (top + bottom)
   const boardRef  = useRef<HTMLDivElement>(null);
@@ -355,12 +455,35 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
   };
 
   const moveLeadToStage = async (lead: BotLeadResponse, stage: PipelineStage) => {
+    if (stage === "cerrado") {
+      setClosingLead(lead);
+      return;
+    }
     try {
       await api.bot.patchLeadStage(lead.id, { stage });
       toast.success(`${lead.name ?? "Lead"} movido a "${PIPELINE_STAGE_LABELS[stage]}"`);
       onRefresh();
     } catch {
       toast.error("No se pudo mover el lead");
+    }
+  };
+
+  const confirmClose = async (closeValue: number) => {
+    if (!closingLead) return;
+    setClosing(true);
+    try {
+      await api.bot.patchLeadStage(closingLead.id, {
+        stage: "cerrado",
+        close_result: "ganado",
+        close_value: closeValue,
+      });
+      toast.success(`${closingLead.name ?? "Lead"} cerrado`);
+      setClosingLead(null);
+      onRefresh();
+    } catch {
+      toast.error("No se pudo cerrar el lead");
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -395,6 +518,14 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
           onConfirm={confirmDelete}
           onCancel={() => setConfirmLead(null)}
           loading={deleting}
+        />
+      )}
+      {closingLead && (
+        <ConfirmCloseModal
+          lead={closingLead}
+          onConfirm={confirmClose}
+          onCancel={() => setClosingLead(null)}
+          loading={closing}
         />
       )}
       {/* Stage filter chips */}

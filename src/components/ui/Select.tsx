@@ -8,16 +8,17 @@ export interface SelectOption {
 }
 
 interface Props {
-  value:       string;
-  onChange:    (value: string) => void;
-  options:     SelectOption[];
+  value:        string;
+  onChange:     (value: string) => void;
+  options:      SelectOption[];
   placeholder?: string;
-  clearable?:  boolean;
-  disabled?:   boolean;
+  clearable?:   boolean;
+  disabled?:    boolean;
+  compact?:     boolean;
 }
 
 export default function Select({
-  value, onChange, options, placeholder = "Seleccionar...", clearable = false, disabled = false,
+  value, onChange, options, placeholder = "Seleccionar...", clearable = false, disabled = false, compact = false,
 }: Props) {
   const [open, setOpen]         = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -89,7 +90,8 @@ export default function Select({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen((v) => !v)}
-        className={`w-full flex items-center gap-2 bg-surface-3 border rounded-sm px-4 py-3 text-sm text-left transition-colors
+        className={`w-full flex items-center gap-2 bg-surface-3 border rounded-sm text-left transition-colors
+          ${compact ? "px-2.5 py-2 text-xs" : "px-4 py-3 text-sm"}
           ${open ? "border-accent/60" : "border-border hover:border-border-light"}
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
