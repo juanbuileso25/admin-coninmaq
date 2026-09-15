@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, Star, ReceiptText, CheckCircle2, Percent } from "lucide-react";
+import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, Star, CheckCircle2, Percent } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import KanbanBoard from "../../components/agente/KanbanBoard";
 import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
