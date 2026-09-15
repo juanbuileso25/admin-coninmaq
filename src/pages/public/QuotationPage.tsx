@@ -235,6 +235,53 @@ export default function QuotationPage() {
           .s-intro__sub { font-size: 13px; }
           .s-intro__bullets li { font-size: 12px; }
         }
+
+        @media print {
+          @page { size: A4; margin: 10mm; }
+
+          /* Preservar colores de fondo (amarillo, negro, etc.) */
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body { background: var(--bg) !important; }
+
+          /* Ocultar elementos no relevantes para el PDF */
+          .topbar,
+          .s-video,
+          .s-brochure,
+          .s-footer__wa { display: none !important; }
+
+          /* Hero: reducir altura y colapsar a 1 columna para ahorrar papel */
+          .hero {
+            grid-template-columns: 1fr !important;
+            min-height: auto !important;
+            max-height: none !important;
+            page-break-after: avoid;
+          }
+          .hero__left { min-height: 220px !important; max-height: 260px !important; }
+          .hero__right { padding: 24px 28px !important; }
+
+          /* Padding de secciones más compacto para PDF */
+          .s-about, .s-features, .s-investment, .s-conditions { padding: 32px 0 !important; }
+          .s-intro__inner { min-height: auto !important; }
+          .s-intro__image { min-height: 200px !important; max-height: 260px !important; }
+          .s-intro__content { padding: 28px 32px !important; }
+
+          /* Evitar cortes feos dentro de secciones clave */
+          .s-features__card,
+          .s-investment__card,
+          .s-conditions__warranty,
+          .s-conditions__grid > *,
+          .s-statband { page-break-inside: avoid; break-inside: avoid; }
+
+          /* Forzar salto de página antes de secciones grandes */
+          .s-investment { page-break-before: auto; }
+
+          /* Footer: fondo negro debe imprimirse */
+          .s-footer { background: var(--black) !important; }
+        }
       `}</style>
 
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
