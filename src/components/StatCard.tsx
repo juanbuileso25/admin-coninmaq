@@ -1,4 +1,4 @@
-import { type LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { type LucideIcon, TrendingUp, TrendingDown, Info } from "lucide-react";
 
 interface StatCardProps {
   label:     string;
@@ -8,10 +8,11 @@ interface StatCardProps {
   icon:      LucideIcon;
   accent?:   boolean;
   delay?:    number;
+  tooltip?:  string;
 }
 
 export default function StatCard({
-  label, value, sub, trend, icon: Icon, accent = false, delay = 0,
+  label, value, sub, trend, icon: Icon, accent = false, delay = 0, tooltip,
 }: StatCardProps) {
   const isPositive = trend !== undefined && trend >= 0;
 
@@ -27,7 +28,14 @@ export default function StatCard({
 
       {/* Header */}
       <div className="flex items-start justify-between">
-        <p className="text-fg-5 text-xs font-medium uppercase tracking-wider">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-fg-5 text-xs font-medium uppercase tracking-wider">{label}</p>
+          {tooltip && (
+            <span title={tooltip} className="text-fg-6 hover:text-fg-4 cursor-help transition-colors">
+              <Info size={11} />
+            </span>
+          )}
+        </div>
         <div
           className={`w-9 h-9 flex items-center justify-center rounded-sm flex-shrink-0
                       ${accent
