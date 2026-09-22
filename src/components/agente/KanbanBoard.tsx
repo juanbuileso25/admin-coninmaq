@@ -337,13 +337,36 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
           )}
         </div>
 
-        {lead.latest_quotation && (
-          <div className="flex items-center gap-1.5 text-[11px] text-accent bg-accent/5 border border-accent/20 px-2 py-1">
-            <FileText size={10} />
-            <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
-            <span className="text-fg-5 ml-auto">{new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(lead.latest_quotation.total)}</span>
-          </div>
-        )}
+        {lead.latest_quotation && (() => {
+          const fmt = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+          const hasCloseValue = lead.close_value != null;
+          const isClosedStage = lead.pipeline_stage === "cerrado";
+          const displayValue = lead.close_value ?? lead.latest_quotation.total;
+          const missingCloseValue = isClosedStage && !hasCloseValue;
+          return (
+            <div className={`flex items-center gap-1.5 text-[11px] px-2 py-1 border
+              ${missingCloseValue
+                ? "text-amber-300 bg-amber-950/20 border-amber-900/40"
+                : "text-accent bg-accent/5 border-accent/20"}`}>
+              <FileText size={10} />
+              <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
+              <span
+                className="ml-auto"
+                title={
+                  hasCloseValue
+                    ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(lead.latest_quotation.total)})`
+                    : missingCloseValue
+                      ? `Sin valor de cierre — usando cotización ${fmt(lead.latest_quotation.total)}. Edítalo desde el detalle.`
+                      : undefined
+                }
+              >
+                {fmt(displayValue)}
+                {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
+                {missingCloseValue && <span className="ml-1">⚠</span>}
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11px] text-fg-6">

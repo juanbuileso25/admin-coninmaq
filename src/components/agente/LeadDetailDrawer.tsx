@@ -88,17 +88,25 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const [qNumMachines, setQNumMachines]   = useState("");
   const [qRole, setQRole]                 = useState("");
 
+  // Edición de valor de cierre
+  const [closeValueInput, setCloseValueInput] = useState("");
+  const [closeIsUsed, setCloseIsUsed]         = useState(false);
+  const [savingClose, setSavingClose]         = useState(false);
+
   const open = !!lead;
 
   useEffect(() => {
     if (!lead) {
       setHistory([]); setSelStage(""); setNote("");
       setQNumMachines(""); setQRole("");
+      setCloseValueInput(""); setCloseIsUsed(false);
       return;
     }
     setSelStage(lead.pipeline_stage);
     setQNumMachines("");
     setQRole("");
+    setCloseValueInput(lead.close_value != null ? Number(lead.close_value).toLocaleString("es-CO") : "");
+    setCloseIsUsed(!!lead.close_is_used);
     setHL(true);
     api.bot.leadStageHistory(lead.id)
       .then(setHistory)
@@ -132,6 +140,32 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const quotations = lead.latest_quotation ? [lead.latest_quotation] : [];
   const stageChanged = selectedStage !== lead.pipeline_stage;
   const qualifyReady = qNumMachines !== "" && qRole.trim() !== "";
+
+  const handleCloseValueChange = (raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, "");
+    setCloseValueInput(digits ? Number(digits).toLocaleString("es-CO") : "");
+  };
+
+  const handleSaveCloseValue = async () => {
+    if (!lead) return;
+    const value = parseFloat(closeValueInput.replace(/\./g, "").replace(",", "."));
+    if (!value || value <= 0) return;
+    setSavingClose(true);
+    try {
+      await api.bot.patchLeadStage(lead.id, {
+        stage: "cerrado",
+        close_result: lead.close_result ?? "ganado",
+        close_value: value,
+        close_is_used: closeIsUsed,
+      });
+      toast.success("Valor de cierre actualizado");
+      onStageChanged();
+    } catch {
+      toast.error("No se pudo guardar el valor");
+    } finally {
+      setSavingClose(false);
+    }
+  };
 
   const handleQualify = async () => {
     if (!qualifyReady || !lead) return;
@@ -251,6 +285,47 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                 )}
               </div>
             </Section>
+
+            {/* ── Valor de cierre (solo cuando está cerrado) ───────────────── */}
+            {lead.pipeline_stage === "cerrado" && (
+              <Section title="Valor de cierre">
+                <div className="space-y-3">
+                  {lead.close_value == null && (
+                    <div className="text-amber-300 text-xs bg-amber-950/30 border border-amber-900/40 px-3 py-2">
+                      ⚠ Este lead fue cerrado sin registrar el valor de venta. La métrica está usando el valor de la cotización como fallback. Actualízalo aquí para reflejar el precio real.
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-fg-5 text-xs mb-1.5 block">Valor de venta (COP)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={closeValueInput}
+                      onChange={e => handleCloseValueChange(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent placeholder:text-fg-6"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-fg-3 cursor-pointer select-none bg-surface-3 border border-border px-3 py-2 hover:border-border-light transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={closeIsUsed}
+                      onChange={e => setCloseIsUsed(e.target.checked)}
+                      className="accent-accent"
+                    />
+                    <span>Máquina <strong>usada</strong> (no nueva)</span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={savingClose || !closeValueInput}
+                    onClick={handleSaveCloseValue}
+                    className="w-full py-2.5 bg-emerald-500 text-black text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {savingClose ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : <>Guardar valor de cierre</>}
+                  </button>
+                </div>
+              </Section>
+            )}
 
             {/* ── Información de contacto ──────────────────────────────────── */}
             <Section title="Información de contacto">
