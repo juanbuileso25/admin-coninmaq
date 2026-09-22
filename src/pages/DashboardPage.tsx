@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Package, MessageSquare, Users, DollarSign,
+  MessageSquare, DollarSign,
   Clock, CheckCircle2, XCircle, ArrowRight,
   AlertCircle, Star, Building2, Receipt,
 } from "lucide-react";

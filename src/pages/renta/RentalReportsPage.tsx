@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Eye, Loader2, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { api, type RentalReportClientBucket } from "../../services/api";
 import DatePicker from "../../components/ui/DatePicker";
 import ReportPreviewModal from "../../components/renta/ReportPreviewModal";
@@ -146,7 +146,7 @@ export default function RentalReportsPage() {
           </button>
         </div>
         <button
-          onClick={load}
+          onClick={() => load()}
           disabled={!dateFrom || !dateTo}
           className="flex items-center gap-2 bg-accent hover:bg-accent-light text-zinc-900 font-semibold
                      text-xs uppercase tracking-wider px-3 py-2 transition-all hover:shadow-glow ml-auto"
