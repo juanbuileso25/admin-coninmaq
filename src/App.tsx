@@ -5,7 +5,9 @@ import AdminLayout          from "./layouts/AdminLayout";
 import MaquinariaNuevaPage  from "./pages/inventario/MaquinariaNuevaPage";
 import MaquinariaUsadaPage  from "./pages/inventario/MaquinariaUsadaPage";
 import MaquinariaRentaPage  from "./pages/inventario/MaquinariaRentaPage";
-import HorometroPage        from "./pages/renta/HorometroPage";
+import RentalOverviewPage      from "./pages/renta/RentalOverviewPage";
+import RentalMachineDetailPage from "./pages/renta/RentalMachineDetailPage";
+import RentalReportsPage       from "./pages/renta/RentalReportsPage";
 import UsersPage            from "./pages/usuarios/UsersPage";
 import RolesPage            from "./pages/ajustes/RolesPage";
 import AreasPage            from "./pages/ajustes/AreasPage";
@@ -61,7 +63,9 @@ export default function App() {
 
         {/* Renta */}
         <Route path="/renta" element={<Navigate to="/renta/horometro" replace />} />
-        <Route path="/renta/horometro" element={<HorometroPage />} />
+        <Route path="/renta/horometro" element={<RentalOverviewPage />} />
+        <Route path="/renta/horometro/reportes" element={<RentalReportsPage />} />
+        <Route path="/renta/horometro/:id" element={<RentalMachineDetailPage />} />
 
 
         {/* Comercio exterior */}

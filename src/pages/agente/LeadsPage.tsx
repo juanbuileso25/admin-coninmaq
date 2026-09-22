@@ -8,6 +8,47 @@ import Select from "../../components/ui/Select";
 import DatePicker from "../../components/ui/DatePicker";
 import { api, type BotLeadResponse, type BotMetrics, type PipelineColumnResponse } from "../../services/api";
 
+function TierBreakdownCard({
+  counts, delay = 0,
+}: {
+  counts: { A: number; B: number; no_fit: number };
+  delay?: number;
+}) {
+  const tiers = [
+    { key: "A" as const,      label: "Tier A", color: "text-green-400",  bg: "bg-green-500/15",  border: "border-green-500/30"  },
+    { key: "B" as const,      label: "Tier B", color: "text-yellow-400", bg: "bg-yellow-500/15", border: "border-yellow-500/30" },
+    { key: "no_fit" as const, label: "No Fit", color: "text-red-400",    bg: "bg-red-500/15",    border: "border-red-500/30"    },
+  ];
+  return (
+    <div
+      className="animate-fade-up relative bg-surface-2 border border-border p-5 flex flex-col gap-4
+                 hover:border-border-light transition-all duration-200 group"
+      style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-accent/0 to-transparent
+                      group-hover:via-accent/50 transition-all duration-300" />
+
+      <div className="flex items-start justify-between">
+        <p className="text-fg-5 text-xs font-medium uppercase tracking-wider">Leads por tier</p>
+        <div className="w-9 h-9 flex items-center justify-center rounded-sm flex-shrink-0 bg-surface-4 border border-border-light">
+          <Star size={16} className="text-fg-4" />
+        </div>
+      </div>
+
+      <div className="flex items-end justify-between gap-2">
+        {tiers.map(t => (
+          <div key={t.key} className="flex-1 flex flex-col items-center gap-1">
+            <span className={`text-2xl font-bold tracking-tight ${t.color}`}>{counts[t.key]}</span>
+            <span className={`px-2 py-0.5 text-[10px] font-semibold border rounded-sm ${t.bg} ${t.color} ${t.border}`}>
+              {t.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TierBadge({ tier }: { tier?: string | null }) {
   if (!tier) {
     return (
@@ -242,23 +283,40 @@ export default function LeadsPage() {
                 {(() => {
                   const cerradosCol = pipeline.find(c => c.stage === "cerrado");
                   const cerrados = cerradosCol?.count ?? 0;
+                  // Suma: usa close_value si existe, si no cae al total de la última cotización
                   const valorCerrados = (cerradosCol?.leads ?? []).reduce(
-                    (sum, l) => sum + (l.close_value ?? 0), 0
+                    (sum, l) => sum + (l.close_value ?? l.latest_quotation?.total ?? 0), 0
                   );
-                  const perdidos = pipeline.find(c => c.stage === "perdido")?.count ?? 0;
-                  const tasaCierre = (cerrados + perdidos) > 0
-                    ? Math.round((cerrados / (cerrados + perdidos)) * 100)
+                  // Cotizaciones desde el stage "cotizacion_propuesta" en adelante
+                  const QUOTED_STAGES = ["cotizacion_propuesta", "cerrado", "perdido", "referido"];
+                  const quotedLeads = pipeline
+                    .filter(c => QUOTED_STAGES.includes(c.stage))
+                    .flatMap(c => c.leads ?? [])
+                    .filter(l => l.latest_quotation);
+                  const cotizacionesCount = quotedLeads.length;
+                  const cotizacionesValor = quotedLeads.reduce(
+                    (sum, l) => sum + (l.latest_quotation?.total ?? 0), 0
+                  );
+                  const tasaCierreLocal = cotizacionesCount > 0
+                    ? Math.round((cerrados / cotizacionesCount) * 100)
                     : 0;
-                  const fmt = (n: number) => n >= 1_000_000
-                    ? `$${(n / 1_000_000).toFixed(1)}M`
-                    : n >= 1_000 ? `$${(n / 1_000).toFixed(0)}K` : `$${n}`;
+                  const fmt = (n: number) => new Intl.NumberFormat("es-CO", {
+                    style: "currency", currency: "COP", maximumFractionDigits: 0,
+                  }).format(n);
+                  // Contar leads por tier en el pipeline
+                  const allLeads = pipeline.flatMap(c => c.leads ?? []);
+                  const tierCounts = {
+                    A:      allLeads.filter(l => l.score?.tier_final === "A").length,
+                    B:      allLeads.filter(l => l.score?.tier_final === "B").length,
+                    no_fit: allLeads.filter(l => l.score?.tier_final === "no_fit").length,
+                  };
                   return (
                     <>
                       <StatCard label="Total leads"     value={String(totalLeads)}                  icon={UserCheck}   accent delay={0}   />
-                      <StatCard label="Cotizaciones"    value={fmt(metrics.revenue_period)}         icon={DollarSign}         delay={50}  sub={String(metrics.quotations_period)} />
-                      <StatCard label="Cerrados"        value={valorCerrados > 0 ? fmt(valorCerrados) : String(cerrados)} icon={CheckCircle2} delay={100} sub={valorCerrados > 0 ? String(cerrados) : undefined} />
-                      <StatCard label="Tasa de cierre"  value={`${tasaCierre}%`}                    icon={Percent}            delay={150} sub={`${cerrados} de ${cerrados + perdidos}`} />
-                      <StatCard label="Tier A"          value={String(metrics.leads_tier_a_period)} icon={Star}               delay={200} />
+                      <StatCard label="Cotizaciones"    value={fmt(cotizacionesValor)}              icon={DollarSign}         delay={50}  sub={String(cotizacionesCount)} />
+                      <StatCard label="Cerrados"        value={fmt(valorCerrados)}                   icon={CheckCircle2}       delay={100} sub={String(cerrados)} />
+                      <StatCard label="Tasa de cierre"  value={`${tasaCierreLocal}%`}               icon={Percent}            delay={150} sub={`${cerrados} de ${cotizacionesCount}`} />
+                      <TierBreakdownCard counts={tierCounts} delay={200} />
                     </>
                   );
                 })()}
