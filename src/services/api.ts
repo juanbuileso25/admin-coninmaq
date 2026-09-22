@@ -404,6 +404,16 @@ export type SparePartSuggestion = {
   match_reason: string;
 };
 
+export type SparePartRequestsMetrics = {
+  total_all: number;
+  period_total: number;
+  by_status: Record<string, number>;
+  ganadas: number;
+  perdidas: number;
+  en_proceso: number;
+  conversion_pct: number;
+};
+
 // ── Bot types ──────────────────────────────────────────────────────────────────
 
 export type BotMessageResponse = {
@@ -517,6 +527,7 @@ export type BotLeadResponse = {
   pipeline_stage: PipelineStage;
   close_result: "ganado" | "perdido" | null;
   close_value: number | null;
+  close_is_used: boolean | null;
   num_units: number | null;
   created_at: string;
   score?: LeadScoreResponse | null;
@@ -706,7 +717,7 @@ export type MachineInfoDocumentResponse = {
 
 export type MachineInfoResponse = {
   id: string;
-  plate: string;
+  plate: string | null;
   brand: string;
   model: string;
   machine_serial: string;
@@ -1016,6 +1027,266 @@ export type MotoInspectionOut = {
   updated_at: string;
   items: MotoInspectionItemOut[];
   photos: InspectionPhotoOut[];
+};
+
+// ── Rental ────────────────────────────────────────────────────────────────────
+
+export type RentalMachineCatalogRef = {
+  id: string;
+  code: string;
+  model: string;
+  brand: string;
+  category: string;
+  image_url: string | null;
+  slug: string | null;
+};
+
+export type RentalMachineResponse = {
+  id: string;
+  catalog_machine_id: string | null;
+  catalog: RentalMachineCatalogRef | null;
+  plate: string;
+  nickname: string | null;
+  code: string;
+  model: string;
+  brand: string | null;
+  machine_type: string | null;
+  engine_serial: string | null;
+  year: number | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RentalAssignmentResponse = {
+  id: string;
+  machine_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  obra: string;
+  operator: string | null;
+  rate: number | null;
+  standby_hours: number;
+  cutoff_day: number;
+  conditions: string | null;
+  monthly_projection: number | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RentalReadingAttachmentResponse = {
+  id: string;
+  kind: string;
+  file_url: string;
+  file_name: string;
+  content_type: string | null;
+  created_at: string;
+};
+
+export type RentalReadingResponse = {
+  id: number;
+  assignment_id: string;
+  machine_id: string;
+  date: string;
+  horometer_start: number | null;
+  horometer_end: number | null;
+  hours: number | null;
+  unit_value: number | null;
+  total_value: number | null;
+  receipt_number: string | null;
+  observations: string | null;
+  is_standby: boolean;
+  is_holiday: boolean;
+  has_invoice: boolean;
+  invoice_number: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  attachments: RentalReadingAttachmentResponse[];
+};
+
+export type RentalReadingPrefill = {
+  suggested_date: string;
+  suggested_horometer_start: number | null;
+  suggested_unit_value: number | null;
+  last_receipt_number: string | null;
+};
+
+export type RentalMaintenanceAttachmentResponse = {
+  id: string;
+  file_url: string;
+  file_name: string;
+  content_type: string | null;
+  created_at: string;
+};
+
+export type RentalMaintenanceResponse = {
+  id: string;
+  machine_id: string;
+  date: string;
+  horometer: number | null;
+  location: string | null;
+  fault: string | null;
+  service: string | null;
+  workshop: string | null;
+  kind: string; // 'preventive' | 'corrective'
+  cost: number | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  attachments: RentalMaintenanceAttachmentResponse[];
+};
+
+export type RentalMonthlyBucket = {
+  year: number;
+  month: number;
+  total: number;
+  hours: number;
+  standby_hours: number;
+};
+
+export type RentalMachineOverview = {
+  machine: RentalMachineResponse;
+  current_assignment: RentalAssignmentResponse | null;
+  months: RentalMonthlyBucket[];
+  projection_current_month: number | null;
+  billed_current_month: number;
+  compliance_pct: number | null;
+  next_maintenance_hours_remaining: number | null;
+  last_horometer: number | null;
+};
+
+export type RentalMachineDetail = {
+  machine: RentalMachineResponse;
+  assignments: RentalAssignmentResponse[];
+  current_assignment: RentalAssignmentResponse | null;
+};
+
+export type RentalMachineCreate = {
+  plate: string;
+  catalog_machine_id?: string | null;
+  nickname?: string | null;
+  engine_serial?: string | null;
+  year?: number | null;
+  code?: string | null;
+  model?: string | null;
+  brand?: string | null;
+  machine_type?: string | null;
+  notes?: string | null;
+};
+
+export type RentalMachineUpdate = Partial<RentalMachineCreate> & { is_active?: boolean };
+
+export type RentalAssignmentCreate = {
+  client_id?: string | null;
+  client_name_snapshot?: string | null;
+  obra?: string;
+  operator?: string | null;
+  rate?: number | null;
+  standby_hours?: number;
+  cutoff_day?: number;
+  conditions?: string | null;
+  monthly_projection?: number | null;
+  start_date: string;
+  end_date?: string | null;
+};
+
+export type RentalAssignmentUpdate = Partial<RentalAssignmentCreate> & { is_active?: boolean };
+
+export type RentalReadingCreate = {
+  assignment_id: string;
+  date: string;
+  horometer_start?: number | null;
+  horometer_end?: number | null;
+  hours?: number | null;
+  unit_value?: number | null;
+  receipt_number?: string | null;
+  observations?: string | null;
+  is_standby?: boolean;
+  is_holiday?: boolean;
+  has_invoice?: boolean;
+  invoice_number?: string | null;
+};
+
+export type RentalReadingUpdate = Partial<Omit<RentalReadingCreate, "assignment_id">>;
+
+export type RentalMaintenanceCreate = {
+  date: string;
+  horometer?: number | null;
+  location?: string | null;
+  fault?: string | null;
+  service?: string | null;
+  workshop?: string | null;
+  kind?: "preventive" | "corrective";
+  cost?: number | null;
+  notes?: string | null;
+};
+
+export type RentalMaintenanceUpdate = Partial<RentalMaintenanceCreate>;
+
+// ── Rental reports ────────────────────────────────────────────────────────────
+
+export type RentalReportMachineItem = {
+  machine_id: string;
+  machine_code: string;
+  machine_plate: string;
+  machine_nickname: string | null;
+  obra: string;
+  assignment_id: string;
+  total_hours: number;
+  total_value: number;
+  readings_count: number;
+};
+
+export type RentalReportClientBucket = {
+  client_id: string | null;
+  client_name: string;
+  suggested_recipients: string[];
+  suggested_cc: string[];
+  machines: RentalReportMachineItem[];
+  total_value: number;
+  total_hours: number;
+};
+
+export type RentalReportOverviewResponse = {
+  date_from: string;
+  date_to: string;
+  clients: RentalReportClientBucket[];
+};
+
+export type RentalReportPreviewResponse = {
+  subject: string;
+  html: string;
+};
+
+export type RentalReportSendResponse = {
+  id: string;
+  status: string;
+  subject: string;
+  recipient_emails: string[];
+  cc_emails: string[];
+  sent_at: string;
+};
+
+export type RentalReportHistoryItem = {
+  id: string;
+  client_id: string | null;
+  client_name: string | null;
+  date_from: string;
+  date_to: string;
+  machine_ids: string[];
+  recipient_emails: string[];
+  cc_emails: string[];
+  subject: string;
+  note: string | null;
+  status: string;
+  error: string | null;
+  sent_at: string;
 };
 
 export const api = {
@@ -1362,7 +1633,7 @@ export const api = {
       if (params?.date_to)    qs.set("date_to",    params.date_to);
       return request<PipelineColumnResponse[]>(`/bot/leads/pipeline?${qs}`);
     },
-    patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; close_value?: number | null; note?: string }) =>
+    patchLeadStage: (leadId: number, data: { stage: string; close_result?: string | null; close_value?: number | null; close_is_used?: boolean | null; note?: string }) =>
       request<BotLeadResponse>(`/bot/leads/${leadId}/stage`, { method: "PATCH", body: JSON.stringify(data) }),
     deactivateLead: (leadId: number) =>
       request<void>(`/bot/leads/${leadId}`, { method: "DELETE" }),
@@ -1479,13 +1750,22 @@ export const api = {
     remove: (id: number) =>
       request<SparePart>(`/spare-parts/parts/${id}`, { method: "DELETE" }),
 
-    requests: (params?: { status?: string; search?: string; page?: number; page_size?: number }) => {
+    requests: (params?: { status?: string; search?: string; date_from?: string; date_to?: string; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.status    !== undefined) qs.set("status",    params.status);
       if (params?.search    !== undefined) qs.set("search",    params.search);
+      if (params?.date_from !== undefined) qs.set("date_from", params.date_from);
+      if (params?.date_to   !== undefined) qs.set("date_to",   params.date_to);
       if (params?.page      !== undefined) qs.set("page",      String(params.page));
       if (params?.page_size !== undefined) qs.set("page_size", String(params.page_size));
       return request<PaginatedResponse<SparePartRequest>>(`/spare-parts/requests?${qs}`);
+    },
+    requestsMetrics: (params?: { date_from?: string; date_to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<SparePartRequestsMetrics>(`/spare-parts/requests/metrics${suffix}`);
     },
     request: (id: number) =>
       request<SparePartRequest>(`/spare-parts/requests/${id}`),
@@ -1493,9 +1773,11 @@ export const api = {
       request<SparePartRequest>(`/spare-parts/requests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     suggestions: (requestId: number, limit = 6) =>
       request<SparePartSuggestion[]>(`/spare-parts/requests/${requestId}/suggestions?limit=${limit}`),
-    pipeline: async (search?: string): Promise<Record<string, SparePartRequest[]>> => {
+    pipeline: async (params?: { search?: string; date_from?: string; date_to?: string }): Promise<Record<string, SparePartRequest[]>> => {
       const qs = new URLSearchParams({ page_size: "500" });
-      if (search) qs.set("search", search);
+      if (params?.search)    qs.set("search",    params.search);
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
       const res = await request<PaginatedResponse<SparePartRequest>>(`/spare-parts/requests?${qs}`);
       const grouped: Record<string, SparePartRequest[]> = {};
       SPARE_PART_STAGES.forEach(s => { grouped[s] = []; });
@@ -1606,5 +1888,88 @@ export const api = {
     delete: (id: string) => request<void>(`/menu-items/${id}`, { method: "DELETE" }),
     reorder: (orders: { id: string; order_index: number }[]) =>
       request<void>("/menu-items/reorder", { method: "POST", body: JSON.stringify({ orders }) }),
+  },
+  rental: {
+    overview: (params?: { months?: number; only_active?: boolean }) => {
+      const qs = new URLSearchParams();
+      if (params?.months) qs.set("months", String(params.months));
+      if (params?.only_active !== undefined) qs.set("only_active", String(params.only_active));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<RentalMachineOverview[]>(`/rental/overview${suffix}`);
+    },
+    listMachines: (only_active = true) =>
+      request<RentalMachineResponse[]>(`/rental/machines?only_active=${only_active}`),
+    getMachine: (id: string) => request<RentalMachineDetail>(`/rental/machines/${id}`),
+    createMachine: (data: RentalMachineCreate) =>
+      request<RentalMachineResponse>("/rental/machines", { method: "POST", body: JSON.stringify(data) }),
+    updateMachine: (id: string, data: RentalMachineUpdate) =>
+      request<RentalMachineResponse>(`/rental/machines/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteMachine: (id: string) => request<void>(`/rental/machines/${id}`, { method: "DELETE" }),
+
+    listAssignments: (machineId: string) =>
+      request<RentalAssignmentResponse[]>(`/rental/machines/${machineId}/assignments`),
+    createAssignment: (machineId: string, data: RentalAssignmentCreate) =>
+      request<RentalAssignmentResponse>(`/rental/machines/${machineId}/assignments`, { method: "POST", body: JSON.stringify(data) }),
+    updateAssignment: (id: string, data: RentalAssignmentUpdate) =>
+      request<RentalAssignmentResponse>(`/rental/assignments/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteAssignment: (id: string) => request<void>(`/rental/assignments/${id}`, { method: "DELETE" }),
+
+    listReadings: (machineId: string, params?: { date_from?: string; date_to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to) qs.set("date_to", params.date_to);
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<RentalReadingResponse[]>(`/rental/machines/${machineId}/readings${suffix}`);
+    },
+    readingPrefill: (assignmentId: string) =>
+      request<RentalReadingPrefill>(`/rental/assignments/${assignmentId}/reading-prefill`),
+    createReading: (data: RentalReadingCreate) =>
+      request<RentalReadingResponse>("/rental/readings", { method: "POST", body: JSON.stringify(data) }),
+    updateReading: (id: number, data: RentalReadingUpdate) =>
+      request<RentalReadingResponse>(`/rental/readings/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteReading: (id: number) => request<void>(`/rental/readings/${id}`, { method: "DELETE" }),
+
+    uploadReadingAttachment: (readingId: number, file: File, kind: string = "other") => {
+      const form = new FormData();
+      form.append("kind", kind);
+      form.append("file", file);
+      return request<RentalReadingAttachmentResponse>(`/rental/readings/${readingId}/attachments`, { method: "POST", body: form, headers: {} });
+    },
+    deleteReadingAttachment: (id: string) => request<void>(`/rental/reading-attachments/${id}`, { method: "DELETE" }),
+
+    listMaintenances: (machineId: string) =>
+      request<RentalMaintenanceResponse[]>(`/rental/machines/${machineId}/maintenances`),
+    createMaintenance: (machineId: string, data: RentalMaintenanceCreate) =>
+      request<RentalMaintenanceResponse>(`/rental/machines/${machineId}/maintenances`, { method: "POST", body: JSON.stringify(data) }),
+    updateMaintenance: (id: string, data: RentalMaintenanceUpdate) =>
+      request<RentalMaintenanceResponse>(`/rental/maintenances/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteMaintenance: (id: string) => request<void>(`/rental/maintenances/${id}`, { method: "DELETE" }),
+
+    uploadMaintenanceAttachment: (maintenanceId: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<RentalMaintenanceAttachmentResponse>(`/rental/maintenances/${maintenanceId}/attachments`, { method: "POST", body: form, headers: {} });
+    },
+    deleteMaintenanceAttachment: (id: string) => request<void>(`/rental/maintenance-attachments/${id}`, { method: "DELETE" }),
+
+    reportsOverview: (date_from: string, date_to: string) =>
+      request<RentalReportOverviewResponse>("/rental/reports/overview", {
+        method: "POST", body: JSON.stringify({ date_from, date_to }),
+      }),
+    reportPreview: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null }) =>
+      request<RentalReportPreviewResponse>("/rental/reports/preview", {
+        method: "POST", body: JSON.stringify(data),
+      }),
+    reportSend: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; recipient_emails: string[]; cc_emails?: string[]; note?: string | null }) =>
+      request<RentalReportSendResponse>("/rental/reports/send", {
+        method: "POST", body: JSON.stringify(data),
+      }),
+    reportsHistory: (params?: { client_id?: string; limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.client_id) qs.set("client_id", params.client_id);
+      if (params?.limit) qs.set("limit", String(params.limit));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<RentalReportHistoryItem[]>(`/rental/reports/history${suffix}`);
+    },
   },
 };

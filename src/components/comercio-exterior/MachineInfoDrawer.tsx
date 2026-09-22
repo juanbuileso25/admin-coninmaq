@@ -21,7 +21,7 @@ const DOCUMENT_SLOTS = [
 ] as const;
 
 const schema = yup.object({
-  plate:              yup.string().required("Campo obligatorio").max(20),
+  plate:              yup.string().nullable().default(null).max(20),
   brand:              yup.string().required("Campo obligatorio").max(100),
   model:              yup.string().required("Campo obligatorio").max(100),
   machine_serial:     yup.string().required("Campo obligatorio").max(100),
@@ -33,7 +33,7 @@ const schema = yup.object({
 });
 
 type FormData = {
-  plate:              string;
+  plate:              string | null;
   brand:              string;
   model:              string;
   machine_serial:     string;
@@ -187,7 +187,7 @@ export default function MachineInfoDrawer({ open, machine, onClose, onSaved }: P
             <div className="grid grid-cols-2 gap-4">
               {/* Placa */}
               <div>
-                <label className="block text-xs font-medium text-fg-4 mb-1.5">Placa *</label>
+                <label className="block text-xs font-medium text-fg-4 mb-1.5">Placa</label>
                 <input
                   className="w-full bg-surface-3 border border-border text-fg px-3.5 py-2.5 text-sm uppercase placeholder:normal-case placeholder:text-fg-6"
                   placeholder="MC757973"

@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, LayoutList, Kanban } from "lucide-react";
+import { Search, LayoutList, Kanban, Wrench, Send, CheckCircle2, XCircle, Percent } from "lucide-react";
+import StatCard from "../../components/StatCard";
 import SparePartsKanbanBoard from "../../components/posventa/SparePartsKanbanBoard";
-import { api, type SparePartRequest, SPARE_PART_STAGES } from "../../services/api";
+import DatePicker from "../../components/ui/DatePicker";
+import Select from "../../components/ui/Select";
+import { api, type SparePartRequest, type SparePartRequestsMetrics, SPARE_PART_STAGES } from "../../services/api";
 
 const STATUSES = ["solicitudes_recibidas", "cotizado", "esperando_respuesta", "negociacion", "venta_ganada", "venta_perdida"] as const;
 
@@ -42,14 +45,58 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ── Rango de fechas helpers ─────────────────────────────────────────────────
+function buildMonthOptions() {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("es-CO", { month: "long", year: "numeric" });
+    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), value });
+  }
+  return options;
+}
+const MONTH_OPTIONS = buildMonthOptions();
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function monthStart(month: string) {
+  return `${month}-01`;
+}
+function monthEnd(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+}
+
 type ViewMode = "lista" | "pipeline";
 
 export default function RepuestosPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>("lista");
 
+  // ── Rango de fechas — fuente de verdad única ───────────────────────────────
+  const [dateFrom, setDateFrom] = useState(() => monthStart(MONTH_OPTIONS[0].value));
+  const [dateTo,   setDateTo]   = useState(() => todayStr());
+
+  const monthPreset = (() => {
+    if (!dateFrom) return "";
+    const parts = dateFrom.split("-");
+    if (parts[2] !== "01") return "";
+    const val = `${parts[0]}-${parts[1]}`;
+    return MONTH_OPTIONS.find(o => o.value === val)?.value ?? "";
+  })();
+
+  const applyMonthPreset = (month: string) => {
+    setDateFrom(monthStart(month));
+    setDateTo(monthEnd(month));
+  };
+
   // ── Lista state ────────────────────────────────────────────────────────────
   const [requests, setRequests]         = useState<SparePartRequest[]>([]);
+  const [metrics, setMetrics]           = useState<SparePartRequestsMetrics | null>(null);
   const [total, setTotal]               = useState(0);
   const [page, setPage]                 = useState(1);
   const [loading, setLoading]           = useState(true);
@@ -71,6 +118,8 @@ export default function RepuestosPage() {
       const res = await api.spareParts.requests({
         status:    statusFilter || undefined,
         search:    search       || undefined,
+        date_from: dateFrom     || undefined,
+        date_to:   dateTo       || undefined,
         page,
         page_size: PAGE_SIZE,
       });
@@ -84,24 +133,35 @@ export default function RepuestosPage() {
   const loadPipeline = useCallback(async () => {
     setPipelineLoading(true);
     try {
-      const data = await api.spareParts.pipeline(pipelineSearch || undefined);
+      const data = await api.spareParts.pipeline({
+        search:    pipelineSearch || undefined,
+        date_from: dateFrom       || undefined,
+        date_to:   dateTo         || undefined,
+      });
       setGrouped(data);
     } catch {
       // silencioso
     } finally {
       setPipelineLoading(false);
     }
-  }, [pipelineSearch]);
+  }, [pipelineSearch, dateFrom, dateTo]);
+
+  // Métricas
+  useEffect(() => {
+    api.spareParts.requestsMetrics({
+      date_from: dateFrom || undefined,
+      date_to:   dateTo   || undefined,
+    }).then(setMetrics).catch(() => null);
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     if (viewMode === "lista") loadList();
-  }, [page, statusFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, viewMode, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (viewMode === "pipeline") loadPipeline();
   }, [viewMode, loadPipeline]);
 
-  // Debounce pipeline search
   useEffect(() => {
     if (viewMode !== "pipeline") return;
     const t = setTimeout(() => loadPipeline(), 400);
@@ -145,6 +205,34 @@ export default function RepuestosPage() {
         </div>
       </div>
 
+      {/* Selector de período */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-fg-5 text-xs uppercase tracking-wider font-medium">Métricas del período</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-36">
+            <DatePicker value={dateFrom} onChange={v => setDateFrom(v ?? "")} placeholder="Desde" compact />
+          </div>
+          <span className="text-fg-6 text-xs">—</span>
+          <div className="w-36">
+            <DatePicker value={dateTo} onChange={v => setDateTo(v ?? "")} placeholder="Hasta" compact />
+          </div>
+          <div className="w-44">
+            <Select value={monthPreset} onChange={applyMonthPreset} options={MONTH_OPTIONS} placeholder="Mes rápido..." compact />
+          </div>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      {metrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <StatCard label="Solicitudes"     value={String(metrics.period_total)}       icon={Wrench}      accent delay={0}   sub={`Histórico: ${metrics.total_all}`} />
+          <StatCard label="En proceso"      value={String(metrics.en_proceso)}         icon={Send}               delay={50}  sub="Sin cerrar" />
+          <StatCard label="Ganadas"         value={String(metrics.ganadas)}            icon={CheckCircle2}       delay={100} />
+          <StatCard label="Perdidas"        value={String(metrics.perdidas)}           icon={XCircle}            delay={150} />
+          <StatCard label="Tasa conversión" value={`${metrics.conversion_pct}%`}       icon={Percent}            delay={200} sub={`${metrics.ganadas} de ${metrics.ganadas + metrics.perdidas}`} />
+        </div>
+      )}
+
       {/* ── VISTA LISTA ────────────────────────────────────────────────────────── */}
       {viewMode === "lista" && (
         <>
@@ -159,16 +247,16 @@ export default function RepuestosPage() {
                 onKeyDown={handleSearchKey}
               />
             </div>
-            <select
-              className="bg-surface-2 border border-border text-fg-3 text-sm px-3 py-2.5 outline-none focus:border-accent"
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">Estado: todos</option>
-              {STATUSES.map(s => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
+            <div className="w-52">
+              <Select
+                value={statusFilter}
+                onChange={v => { setStatusFilter(v); setPage(1); }}
+                placeholder="Estado: todos"
+                clearable
+                compact
+                options={STATUSES.map(s => ({ value: s, label: STATUS_LABELS[s] }))}
+              />
+            </div>
           </div>
 
           <div className="bg-surface-2 border border-border overflow-x-auto">

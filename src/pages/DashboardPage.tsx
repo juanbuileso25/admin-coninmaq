@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Package, MessageSquare, Users, DollarSign,
+  MessageSquare, DollarSign,
   Clock, CheckCircle2, XCircle, ArrowRight,
   AlertCircle, Star, Building2, Receipt,
 } from "lucide-react";
@@ -14,9 +14,9 @@ import { api, type BotMetrics, type BotQuotationResponse } from "../services/api
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const COP = (n: number) => {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n > 0)              return `$${n.toLocaleString("es-CO")}`;
+  if (n > 0) return new Intl.NumberFormat("es-CO", {
+    style: "currency", currency: "COP", maximumFractionDigits: 0,
+  }).format(n);
   return "$0";
 };
 
@@ -203,12 +203,9 @@ export default function DashboardPage() {
           icon={DollarSign}
           delay={60}
         />
-        <StatCard
-          label="Leads captados"
-          value={loading ? "—" : String(metrics?.leads_period ?? 0)}
-          sub={metrics ? `${metrics.leads_tier_a_period} Tier A` : undefined}
-          icon={Users}
-          delay={120}
+        <div
+          className="animate-fade-up bg-surface-2 border border-border border-dashed p-5 min-h-[140px]"
+          style={{ animationDelay: "120ms", animationFillMode: "both" }}
         />
         <StatCard
           label="Ticket promedio"
@@ -222,12 +219,9 @@ export default function DashboardPage() {
 
       {/* KPI Cards — Row 2: estado actual */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Catálogo"
-          value={loading ? "—" : String(metrics?.total_machines ?? 0)}
-          sub={metrics ? `${metrics.machines_visible_web} visibles en web` : undefined}
-          icon={Package}
-          delay={0}
+        <div
+          className="animate-fade-up bg-surface-2 border border-border border-dashed p-5 min-h-[140px]"
+          style={{ animationFillMode: "both" }}
         />
         <StatCard
           label="Clientes CRM"

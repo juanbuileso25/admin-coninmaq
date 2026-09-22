@@ -8,6 +8,7 @@ export type Subjects =
   | "Quote"
   | "Lead"
   | "RentalRecord"
+  | "Rental"
   | "Client"
   | "User"
   | "Settings"

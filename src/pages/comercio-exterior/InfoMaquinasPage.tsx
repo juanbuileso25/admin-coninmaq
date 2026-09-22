@@ -55,7 +55,7 @@ function MachineCard({
       >
         <div className="space-y-0.5 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono font-bold text-accent text-base">{machine.plate}</span>
+            <span className="font-mono font-bold text-accent text-base">{machine.plate ?? "Sin placa"}</span>
             <span className={`text-[10px] px-1.5 py-0.5 font-medium ${
               machine.is_active ? "bg-green-500/10 text-green-400" : "bg-fg-6/10 text-fg-6"
             }`}>
@@ -179,7 +179,7 @@ function MachineRow({
         onClick={() => setExpanded((v) => !v)}
       >
         <td className="px-4 py-3">
-          <span className="font-mono font-semibold text-accent text-sm">{machine.plate}</span>
+          <span className="font-mono font-semibold text-accent text-sm">{machine.plate ?? <span className="text-fg-6">Sin placa</span>}</span>
         </td>
         <td className="px-4 py-3">
           <p className="text-fg text-sm font-medium">{machine.brand}</p>
@@ -321,7 +321,7 @@ export default function InfoMaquinasPage() {
     const q = search.toLowerCase();
     return machines.filter((m) =>
       !q ||
-      m.plate.toLowerCase().includes(q) ||
+      (m.plate ?? "").toLowerCase().includes(q) ||
       m.brand.toLowerCase().includes(q) ||
       m.model.toLowerCase().includes(q) ||
       m.machine_serial.toLowerCase().includes(q) ||

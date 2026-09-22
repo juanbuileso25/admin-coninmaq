@@ -91,11 +91,12 @@ function ConfirmCloseModal({
   loading,
 }: {
   lead: BotLeadResponse;
-  onConfirm: (closeValue: number) => void;
+  onConfirm: (closeValue: number, isUsed: boolean) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
   const [display, setDisplay] = useState("");
+  const [isUsed, setIsUsed] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -111,7 +112,7 @@ function ConfirmCloseModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rawValue || rawValue <= 0) return;
-    onConfirm(rawValue);
+    onConfirm(rawValue, isUsed);
   };
 
   return (
@@ -150,6 +151,16 @@ function ConfirmCloseModal({
                 />
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-xs text-fg-3 cursor-pointer select-none bg-surface-3 border border-border px-3 py-2.5 hover:border-border-light transition-colors">
+              <input
+                type="checkbox"
+                checked={isUsed}
+                onChange={(e) => setIsUsed(e.target.checked)}
+                className="accent-accent"
+              />
+              <span>Máquina <strong>usada</strong> (no nueva)</span>
+            </label>
 
             <div className="flex gap-2 pt-1">
               <button
@@ -330,7 +341,7 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
           <div className="flex items-center gap-1.5 text-[11px] text-accent bg-accent/5 border border-accent/20 px-2 py-1">
             <FileText size={10} />
             <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
-            <span className="text-fg-5 ml-auto">${(lead.latest_quotation.total / 1_000_000).toFixed(1)}M</span>
+            <span className="text-fg-5 ml-auto">{new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(lead.latest_quotation.total)}</span>
           </div>
         )}
 
@@ -468,7 +479,7 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
     }
   };
 
-  const confirmClose = async (closeValue: number) => {
+  const confirmClose = async (closeValue: number, isUsed: boolean) => {
     if (!closingLead) return;
     setClosing(true);
     try {
@@ -476,6 +487,7 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
         stage: "cerrado",
         close_result: "ganado",
         close_value: closeValue,
+        close_is_used: isUsed,
       });
       toast.success(`${closingLead.name ?? "Lead"} cerrado`);
       setClosingLead(null);
