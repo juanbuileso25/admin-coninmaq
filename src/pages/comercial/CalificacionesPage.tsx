@@ -328,11 +328,11 @@ export default function CalificacionesPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 max-w-[200px]">
+                  <td className="px-4 py-3 min-w-[280px] max-w-[420px]">
                     {r.comment ? (
                       <div className="flex items-start gap-1.5">
                         <MessageSquare size={12} className="text-fg-5 mt-0.5 flex-shrink-0" />
-                        <span className="text-fg-4 text-xs line-clamp-2">{r.comment}</span>
+                        <span className="text-fg-4 text-xs whitespace-pre-line break-words">{r.comment}</span>
                       </div>
                     ) : (
                       <span className="text-fg-6 text-xs">—</span>
