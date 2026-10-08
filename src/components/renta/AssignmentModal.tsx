@@ -24,7 +24,17 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
   const [operator, setOperator] = useState(assignment?.operator ?? "");
   const [rate, setRate] = useState(assignment?.rate?.toString() ?? "");
   const [standbyHours, setStandbyHours] = useState(String(assignment?.standby_hours ?? 176));
-  const [projection, setProjection] = useState(assignment?.monthly_projection?.toString() ?? "");
+
+  // Proyección mes = tarifa × standby_hours (calculada automáticamente)
+  const projectionCalc: number | null = (() => {
+    const r = Number(rate);
+    const s = Number(standbyHours);
+    if (!rate || !standbyHours || isNaN(r) || isNaN(s)) return null;
+    return r * s;
+  })();
+  const projectionDisplay = projectionCalc != null
+    ? new Intl.NumberFormat("es-CO").format(projectionCalc)
+    : "";
   const [conditions, setConditions] = useState(assignment?.conditions ?? "");
   const [reportEmails, setReportEmails] = useState<string[]>(assignment?.report_emails ?? []);
   const [newEmail, setNewEmail] = useState("");
@@ -53,7 +63,7 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
         operator: operator.trim() || null,
         rate: rate ? Number(rate) : null,
         standby_hours: Number(standbyHours) || 176,
-        monthly_projection: projection ? Number(projection) : null,
+        monthly_projection: projectionCalc,
         conditions: conditions.trim() || null,
         report_emails: reportEmails,
         start_date: startDate,
@@ -113,7 +123,18 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Standby (h mensuales)" value={standbyHours} onChange={setStandbyHours} type="number" />
-            <Field label="Proyección mes" value={projection} onChange={setProjection} type="number" placeholder="11440000" />
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">
+                Proyección mes <span className="text-fg-6 normal-case ml-1">(tarifa × standby)</span>
+              </label>
+              <input
+                type="text"
+                value={projectionDisplay ? `$ ${projectionDisplay}` : ""}
+                readOnly
+                placeholder="Automática"
+                className="bg-surface-4 border border-border text-sm text-accent px-3 py-2 outline-none cursor-default font-medium placeholder:text-fg-6"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
