@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Paperclip, FileText, CheckCircle2, XCircle, ChevronDown, ChevronRight, Send } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Plus, Trash2, Paperclip, FileText, CheckCircle2, XCircle, ChevronDown, ChevronRight, Send, AlertTriangle } from "lucide-react";
 import {
   api,
   type RentalAssignmentResponse,
@@ -72,7 +73,11 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
     dateFrom: string;
     dateTo: string;
     recipients: string[];
+    readingIds?: number[];
   } | null>(null);
+  const [deletingReading, setDeletingReading] = useState<RentalReadingResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editingReading, setEditingReading] = useState<RentalReadingResponse | null>(null);
 
   async function load() {
     setLoading(true);
@@ -104,7 +109,8 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
 
       const byMonth = new Map<string, RentalReadingResponse[]>();
       for (const r of items) {
-        const [y, m] = r.date.split("-");
+        // Agrupar por mes del date_from
+        const [y, m] = r.date_from.split("-");
         const key = `${y}-${m}`;
         if (!byMonth.has(key)) byMonth.set(key, []);
         byMonth.get(key)!.push(r);
@@ -120,7 +126,7 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
             year: y,
             month: m,
             label: `${MONTH_LABELS[m - 1]} ${y}`,
-            items: monthItems.sort((a, b) => a.date.localeCompare(b.date)),
+            items: monthItems.sort((a, b) => a.date_from.localeCompare(b.date_from)),
             totalHours,
             totalValue,
           };
@@ -138,11 +144,19 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
     return result.sort((a, b) => b.assignment.start_date.localeCompare(a.assignment.start_date));
   }, [readings, assignments]);
 
-  async function handleDelete(id: number) {
-    if (!confirm("¿Eliminar este registro?")) return;
-    await api.rental.deleteReading(id);
-    load();
-    onChange();
+  async function confirmDelete() {
+    if (!deletingReading) return;
+    setDeleting(true);
+    try {
+      await api.rental.deleteReading(deletingReading.id);
+      setDeletingReading(null);
+      load();
+      onChange();
+    } catch {
+      toast.error("No se pudo eliminar el registro");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function toggleCollapse(key: string) {
@@ -218,13 +232,14 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
                   e.stopPropagation();
                   if (g.itemsCount === 0) return;
                   const allItems = g.months.flatMap(m => m.items);
-                  const dates = allItems.map(r => r.date).sort();
+                  const startDates = allItems.map(r => r.date_from).sort();
+                  const endDates = allItems.map(r => r.date_to).sort();
                   setReportContext({
                     assignmentId: g.assignment.id,
                     clientId: g.assignment.client_id,
                     clientName: g.assignment.client_name ?? "Cliente",
-                    dateFrom: dates[0],
-                    dateTo: dates[dates.length - 1],
+                    dateFrom: startDates[0],
+                    dateTo: endDates[endDates.length - 1],
                     recipients: [],
                   });
                 }}
@@ -247,7 +262,8 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
                 <table className="w-full text-sm min-w-[900px]">
                   <thead>
                     <tr className="border-b border-border text-fg-5 text-[10px] uppercase tracking-wider">
-                      <th className="text-left px-3 py-2 font-medium">Fecha</th>
+                      <th className="text-left px-3 py-2 font-medium w-[70px]">Acciones</th>
+                      <th className="text-left px-3 py-2 font-medium">Período</th>
                       <th className="text-left px-3 py-2 font-medium">Horómetro</th>
                       <th className="text-right px-3 py-2 font-medium">Horas</th>
                       <th className="text-right px-3 py-2 font-medium">Tarifa</th>
@@ -256,13 +272,48 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
                       <th className="text-left px-3 py-2 font-medium">Observaciones</th>
                       <th className="text-center px-3 py-2 font-medium">Fact.</th>
                       <th className="text-right px-3 py-2 font-medium">Adj.</th>
-                      <th className="text-right px-3 py-2 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {mg.items.map(r => (
-                      <tr key={r.id} className="hover:bg-surface-3 transition-colors">
-                        <td className="px-3 py-2 text-fg-3 text-xs whitespace-nowrap">{formatDate(r.date)}</td>
+                      <tr
+                        key={r.id}
+                        onClick={() => setEditingReading(r)}
+                        className="hover:bg-surface-3 transition-colors cursor-pointer"
+                      >
+                        <td className="px-3 py-2">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReportContext({
+                                  assignmentId: g.assignment.id,
+                                  clientId: g.assignment.client_id,
+                                  clientName: g.assignment.client_name ?? "Cliente",
+                                  dateFrom: r.date_from,
+                                  dateTo: r.date_to,
+                                  recipients: g.assignment.report_emails ?? [],
+                                  readingIds: [r.id],
+                                });
+                              }}
+                              title="Enviar reporte de este período"
+                              className="text-fg-5 hover:text-accent transition-colors p-1"
+                            >
+                              <Send size={12} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeletingReading(r); }}
+                              title="Eliminar registro"
+                              className="text-fg-5 hover:text-red-400 transition-colors p-1"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-fg-3 text-xs whitespace-nowrap">
+                          {formatDate(r.date_from)}
+                          {r.date_from !== r.date_to && <> <span className="text-fg-6">→</span> {formatDate(r.date_to)}</>}
+                        </td>
                         <td className="px-3 py-2 text-fg-4 text-xs font-mono">
                           {r.horometer_start != null && r.horometer_end != null
                             ? `${Number(r.horometer_start).toFixed(1)} → ${Number(r.horometer_end).toFixed(1)}`
@@ -286,27 +337,36 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
                         </td>
                         <td className="px-3 py-2 text-right relative">
                           <button
-                            onClick={() => setOpenAttachments(openAttachments === r.id ? null : r.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // 1 adjunto → abrir directo. 0 o 2+ → popover para subir / elegir.
+                              if (r.attachments.length === 1) {
+                                window.open(r.attachments[0].file_url, "_blank", "noopener,noreferrer");
+                              } else {
+                                setOpenAttachments(openAttachments === r.id ? null : r.id);
+                              }
+                            }}
+                            title={
+                              r.attachments.length === 1
+                                ? `Ver ${r.attachments[0].file_name}`
+                                : r.attachments.length === 0
+                                  ? "Subir adjunto"
+                                  : `${r.attachments.length} adjuntos — elegir`
+                            }
                             className="inline-flex items-center gap-1 text-fg-4 hover:text-accent transition-colors text-xs"
                           >
                             <Paperclip size={12} />
                             {r.attachments.length}
                           </button>
                           {openAttachments === r.id && (
-                            <ReadingAttachmentsPopover
-                              reading={r}
-                              onClose={() => setOpenAttachments(null)}
-                              onChange={load}
-                            />
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ReadingAttachmentsPopover
+                                reading={r}
+                                onClose={() => setOpenAttachments(null)}
+                                onChange={load}
+                              />
+                            </div>
                           )}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            onClick={() => handleDelete(r.id)}
-                            className="text-fg-5 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
                         </td>
                       </tr>
                     ))}
@@ -328,6 +388,18 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
         />
       )}
 
+      {editingReading && (
+        <NewReadingModal
+          assignments={assignments}
+          initialAssignment={
+            assignments.find(a => a.id === editingReading.assignment_id) ?? assignments[0]
+          }
+          reading={editingReading}
+          onClose={() => setEditingReading(null)}
+          onCreated={() => { setEditingReading(null); load(); onChange(); }}
+        />
+      )}
+
       {reportContext && (
         <ReportPreviewModal
           clientId={reportContext.clientId}
@@ -335,6 +407,7 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
           machineIds={[machineId]}
           dateFrom={reportContext.dateFrom}
           dateTo={reportContext.dateTo}
+          readingIds={reportContext.readingIds}
           suggestedRecipients={reportContext.recipients}
           suggestedCc={[]}
           onClose={() => setReportContext(null)}
@@ -343,6 +416,52 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
             setReportContext(null);
           }}
         />
+      )}
+
+      {deletingReading && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setDeletingReading(null)} />
+          <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle size={18} className="text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-fg font-semibold text-sm">Eliminar registro</h3>
+                  <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                    Período <span className="text-fg font-medium">
+                      {formatDate(deletingReading.date_from)}
+                      {deletingReading.date_from !== deletingReading.date_to && <> → {formatDate(deletingReading.date_to)}</>}
+                    </span>
+                    {deletingReading.total_value != null && <> por <span className="text-fg font-medium">{formatCOP(deletingReading.total_value)}</span></>}
+                    . Esta acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeletingReading(null)}
+                  disabled={deleting}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 size={12} />
+                  {deleting ? "Eliminando..." : "Eliminar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

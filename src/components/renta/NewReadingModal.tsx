@@ -5,6 +5,8 @@ import {
   api,
   type RentalAssignmentResponse,
   type RentalReadingPrefill,
+  type RentalReadingResponse,
+  type RentalReadingAttachmentResponse,
 } from "../../services/api";
 import DatePicker from "../ui/DatePicker";
 import Select from "../ui/Select";
@@ -25,6 +27,7 @@ const KIND_LABELS: Record<string, string> = Object.fromEntries(
 interface Props {
   assignments: RentalAssignmentResponse[];
   initialAssignment: RentalAssignmentResponse;
+  reading?: RentalReadingResponse | null;   // Si viene, es modo edición
   onClose: () => void;
   onCreated: () => void;
 }
@@ -51,19 +54,28 @@ function findAssignmentForDate(
   }) ?? null;
 }
 
-export default function NewReadingModal({ assignments, initialAssignment, onClose, onCreated }: Props) {
-  const [assignmentId, setAssignmentId] = useState<string>(initialAssignment.id);
+function formatDateShortLocal(d: string | null): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y.slice(-2)}`;
+}
+
+export default function NewReadingModal({ assignments, initialAssignment, reading, onClose, onCreated }: Props) {
+  const isEdit = !!reading;
+  const [assignmentId, setAssignmentId] = useState<string>(reading?.assignment_id ?? initialAssignment.id);
   const [prefill, setPrefill] = useState<RentalReadingPrefill | null>(null);
-  const [loadingPrefill, setLoadingPrefill] = useState(true);
-  const [date, setDate] = useState<string | null>(null);
-  const [dateManuallyChanged, setDateManuallyChanged] = useState(false);
-  const [assignmentManuallyChanged, setAssignmentManuallyChanged] = useState(false);
-  const [horometerStart, setHorometerStart] = useState("");
-  const [horometerEnd, setHorometerEnd] = useState("");
-  const [unitValue, setUnitValue] = useState("");
-  const [receiptNumber, setReceiptNumber] = useState("");
-  const [observations, setObservations] = useState("");
-  const [hasInvoice, setHasInvoice] = useState(false);
+  const [loadingPrefill, setLoadingPrefill] = useState(!isEdit);
+  const [dateFrom, setDateFrom] = useState<string | null>(reading?.date_from ?? null);
+  const [dateTo, setDateTo] = useState<string | null>(reading?.date_to ?? null);
+  const [dateManuallyChanged, setDateManuallyChanged] = useState(isEdit);
+  const [assignmentManuallyChanged, setAssignmentManuallyChanged] = useState(isEdit);
+  const [horometerStart, setHorometerStart] = useState(reading?.horometer_start != null ? String(reading.horometer_start) : "");
+  const [horometerEnd, setHorometerEnd] = useState(reading?.horometer_end != null ? String(reading.horometer_end) : "");
+  const [unitValue, setUnitValue] = useState(reading?.unit_value != null ? String(reading.unit_value) : "");
+  const [receiptNumber, setReceiptNumber] = useState(reading?.receipt_number ?? "");
+  const [observations, setObservations] = useState(reading?.observations ?? "");
+  const [hasInvoice, setHasInvoice] = useState(reading?.has_invoice ?? false);
+  const [existingAttachments, setExistingAttachments] = useState<RentalReadingAttachmentResponse[]>(reading?.attachments ?? []);
   const [queuedFiles, setQueuedFiles] = useState<QueuedFile[]>([]);
   const [nextKind, setNextKind] = useState<string>("horometer_photo");
   const [saving, setSaving] = useState(false);
@@ -83,8 +95,9 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
     [assignments],
   );
 
-  // Cargar prefill cada vez que cambia la asignación
+  // Cargar prefill cada vez que cambia la asignación (solo en modo crear)
   useEffect(() => {
+    if (isEdit) return;
     let cancelled = false;
     (async () => {
       setLoadingPrefill(true);
@@ -92,8 +105,10 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
         const p = await api.rental.readingPrefill(assignmentId);
         if (cancelled) return;
         setPrefill(p);
-        // Solo sobrescribir fecha si el usuario no la ha tocado
-        if (!dateManuallyChanged) setDate(p.suggested_date);
+        if (!dateManuallyChanged) {
+          setDateFrom(p.suggested_date_from);
+          setDateTo(p.suggested_date_to);
+        }
         setHorometerStart(p.suggested_horometer_start != null ? String(p.suggested_horometer_start) : "");
         setUnitValue(p.suggested_unit_value != null ? String(p.suggested_unit_value) : "");
       } finally {
@@ -101,17 +116,17 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
       }
     })();
     return () => { cancelled = true; };
-  }, [assignmentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [assignmentId, isEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cuando cambia la fecha, auto-seleccionar asignación que la contenga (a menos que el usuario la haya cambiado manualmente)
+  // Cuando cambia la fecha inicio, auto-seleccionar asignación que la contenga
   useEffect(() => {
-    if (!date) return;
+    if (!dateFrom) return;
     if (assignmentManuallyChanged) return;
-    const match = findAssignmentForDate(assignments, date);
+    const match = findAssignmentForDate(assignments, dateFrom);
     if (match && match.id !== assignmentId) {
       setAssignmentId(match.id);
     }
-  }, [date, assignments, assignmentId, assignmentManuallyChanged]);
+  }, [dateFrom, assignments, assignmentId, assignmentManuallyChanged]);
 
   const computedHours: number | null = (() => {
     const s = Number(horometerStart);
@@ -125,22 +140,30 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
     return computedHours * Number(unitValue);
   })();
 
-  // Advertencia: la fecha no cae dentro del rango de la asignación seleccionada
+  // Advertencia: alguna fecha del rango no cae dentro de la asignación seleccionada
   const dateOutOfRange = (() => {
-    if (!date) return false;
-    if (date < assignment.start_date) return true;
-    if (assignment.end_date && date > assignment.end_date) return true;
-    return false;
+    const checkDate = (d: string | null) => {
+      if (!d) return false;
+      if (d < assignment.start_date) return true;
+      if (assignment.end_date && d > assignment.end_date) return true;
+      return false;
+    };
+    return checkDate(dateFrom) || checkDate(dateTo);
   })();
 
+  const invalidRange = dateFrom && dateTo && dateFrom > dateTo;
+
   async function handleSave() {
-    if (!date) return;
+    if (!dateFrom || !dateTo) return;
+    if (invalidRange) return;
     setSaving(true);
     setError(null);
     try {
-      const created = await api.rental.createReading({
+      let readingId: number;
+      const payload = {
         assignment_id: assignmentId,
-        date,
+        date_from: dateFrom,
+        date_to: dateTo,
         horometer_start: horometerStart ? Number(horometerStart) : null,
         horometer_end: horometerEnd ? Number(horometerEnd) : null,
         hours: computedHours,
@@ -148,11 +171,18 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
         receipt_number: receiptNumber.trim() || null,
         observations: observations.trim() || null,
         has_invoice: hasInvoice,
-      });
+      };
+      if (isEdit && reading) {
+        await api.rental.updateReading(reading.id, payload);
+        readingId = reading.id;
+      } else {
+        const created = await api.rental.createReading(payload);
+        readingId = created.id;
+      }
       // Subir adjuntos encolados
       for (const q of queuedFiles) {
         try {
-          await api.rental.uploadReadingAttachment(created.id, q.file, q.kind);
+          await api.rental.uploadReadingAttachment(readingId, q.file, q.kind);
         } catch (err) {
           console.error("[Rental] Error subiendo adjunto", q.file.name, err);
         }
@@ -162,6 +192,15 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
       setError(e?.detail ?? "Error al guardar");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteExistingAttachment(attachmentId: string) {
+    try {
+      await api.rental.deleteReadingAttachment(attachmentId);
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch {
+      /* ignore */
     }
   }
 
@@ -186,7 +225,7 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="text-fg font-semibold text-sm">Nuevo registro</h2>
+            <h2 className="text-fg font-semibold text-sm">{isEdit ? "Editar registro" : "Nuevo registro"}</h2>
             <p className="text-fg-6 text-xs">Selecciona la fecha y la asignación (cliente/obra) a la que aplica</p>
           </div>
           <button onClick={onClose} className="text-fg-5 hover:text-fg transition-colors">
@@ -196,13 +235,21 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
 
         <div className="p-5 space-y-4">
 
-          {/* Fecha + Asignación */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Rango del periodo + Asignación */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha</label>
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha inicio</label>
               <DatePicker
-                value={date}
-                onChange={(v) => { setDate(v); setDateManuallyChanged(true); }}
+                value={dateFrom}
+                onChange={(v) => { setDateFrom(v); setDateManuallyChanged(true); }}
+                compact
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha fin</label>
+              <DatePicker
+                value={dateTo}
+                onChange={(v) => { setDateTo(v); setDateManuallyChanged(true); }}
                 compact
               />
             </div>
@@ -217,9 +264,15 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
             </div>
           </div>
 
-          {dateOutOfRange && (
+          {invalidRange && (
+            <div className="text-red-400 text-xs bg-red-950/30 border border-red-900/40 px-3 py-2">
+              La fecha fin debe ser posterior o igual a la fecha inicio.
+            </div>
+          )}
+
+          {dateOutOfRange && !invalidRange && (
             <div className="text-amber-300 text-xs bg-amber-950/30 border border-amber-900/40 px-3 py-2">
-              ⚠ La fecha no cae dentro del rango de esta asignación ({formatDateShort(assignment.start_date)} → {assignment.end_date ? formatDateShort(assignment.end_date) : "hoy"}).
+              ⚠ Alguna fecha del período está fuera del rango de la asignación ({formatDateShort(assignment.start_date)} → {assignment.end_date ? formatDateShort(assignment.end_date) : "hoy"}).
             </div>
           )}
 
@@ -303,7 +356,7 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-3">
               <div className="flex items-center gap-2 text-fg-4 text-xs font-medium">
                 <Paperclip size={12} />
-                Adjuntos ({queuedFiles.length})
+                Adjuntos ({existingAttachments.length + queuedFiles.length})
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-40">
@@ -328,12 +381,30 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
                 </button>
               </div>
             </div>
-            {queuedFiles.length === 0 ? (
+            {existingAttachments.length === 0 && queuedFiles.length === 0 ? (
               <div className="px-3 py-4 text-center text-fg-6 text-xs">
                 Sin adjuntos. Puedes subir foto del horómetro, recibo o factura.
               </div>
             ) : (
               <div className="divide-y divide-border">
+                {existingAttachments.map(att => (
+                  <div key={att.id} className="flex items-center gap-2 px-3 py-2 text-xs">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-fg-2 truncate">{att.file_name}</div>
+                      <div className="text-fg-6 text-[10px]">{KIND_LABELS[att.kind] ?? att.kind} · ya subido</div>
+                    </div>
+                    <a href={att.file_url} target="_blank" rel="noreferrer" className="text-fg-5 hover:text-accent transition-colors p-1 text-[10px]">
+                      Ver
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingAttachment(att.id)}
+                      className="text-fg-5 hover:text-red-400 transition-colors p-1"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
                 {queuedFiles.map((q, idx) => (
                   <div key={idx} className="flex items-center gap-2 px-3 py-2 text-xs">
                     <div className="flex-1 min-w-0">
@@ -388,10 +459,10 @@ export default function NewReadingModal({ assignments, initialAssignment, onClos
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !date}
+            disabled={saving || !dateFrom || !dateTo || !!invalidRange}
             className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900 transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saving ? "Guardando..." : "Guardar registro"}
+            {saving ? "Guardando..." : (isEdit ? "Guardar cambios" : "Guardar registro")}
           </button>
         </div>
       </div>

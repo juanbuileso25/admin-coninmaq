@@ -62,10 +62,10 @@ export default function App() {
         <Route path="/inventario/renta"            element={<MaquinariaRentaPage />} />
 
         {/* Renta */}
-        <Route path="/renta" element={<Navigate to="/renta/horometro" replace />} />
-        <Route path="/renta/horometro" element={<RentalOverviewPage />} />
-        <Route path="/renta/horometro/reportes" element={<RentalReportsPage />} />
-        <Route path="/renta/horometro/:id" element={<RentalMachineDetailPage />} />
+        <Route path="/renta" element={<Navigate to="/renta/relaciones" replace />} />
+        <Route path="/renta/relaciones" element={<RentalOverviewPage />} />
+        <Route path="/renta/relaciones/reportes" element={<RentalReportsPage />} />
+        <Route path="/renta/relaciones/:id" element={<RentalMachineDetailPage />} />
 
 
         {/* Comercio exterior */}
