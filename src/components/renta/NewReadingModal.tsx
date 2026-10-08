@@ -54,12 +54,6 @@ function findAssignmentForDate(
   }) ?? null;
 }
 
-function formatDateShortLocal(d: string | null): string {
-  if (!d) return "—";
-  const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y.slice(-2)}`;
-}
-
 export default function NewReadingModal({ assignments, initialAssignment, reading, onClose, onCreated }: Props) {
   const isEdit = !!reading;
   const [assignmentId, setAssignmentId] = useState<string>(reading?.assignment_id ?? initialAssignment.id);
