@@ -91,7 +91,7 @@ export default function RentalOverviewPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => nav("/renta/horometro/reportes")}
+            onClick={() => nav("/renta/relaciones/reportes")}
             className="flex items-center gap-2 border border-border text-fg-3 hover:border-accent hover:text-accent
                        text-xs uppercase tracking-wider px-4 py-2.5 transition-all"
           >
@@ -166,7 +166,7 @@ export default function RentalOverviewPage() {
                 return (
                   <tr
                     key={r.machine.id}
-                    onClick={() => nav(`/renta/horometro/${r.machine.id}`)}
+                    onClick={() => nav(`/renta/relaciones/${r.machine.id}`)}
                     className="hover:bg-surface-3 transition-colors cursor-pointer"
                     style={{ animationDelay: `${idx * 20}ms` }}
                   >

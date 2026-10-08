@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, Send } from "lucide-react";
 import { api } from "../../services/api";
@@ -9,6 +9,7 @@ interface Props {
   machineIds: string[];
   dateFrom: string;
   dateTo: string;
+  readingIds?: number[] | null;  // Si viene, filtrar SOLO estos readings
   suggestedRecipients: string[];
   suggestedCc: string[];
   onClose: () => void;
@@ -16,28 +17,24 @@ interface Props {
 }
 
 export default function ReportPreviewModal({
-  clientId, clientName, machineIds, dateFrom, dateTo,
+  clientId, clientName, machineIds, dateFrom, dateTo, readingIds,
   suggestedRecipients, suggestedCc, onClose, onSent,
 }: Props) {
-  const [subject, setSubject] = useState("");
-  const [html, setHtml] = useState("");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const pdfUrlRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [recipients, setRecipients] = useState<string[]>(suggestedRecipients);
-  const [ccEmails, setCcEmails] = useState<string[]>(suggestedCc);
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  // Nota: no usamos suggestedCc por defecto; queda vacío para que el usuario lo llene si quiere.
+  void suggestedCc;
 
-  // Si no vienen sugerencias pero hay clientId, cargar del cliente
+  // Si no vienen destinatarios pero hay clientId, cargar del billing_email del cliente
   useEffect(() => {
     if (recipients.length > 0 || !clientId) return;
     (async () => {
       try {
         const c = await api.clients.get(clientId);
-        const r: string[] = [];
-        const cc: string[] = [];
-        if (c.billing_email) r.push(c.billing_email);
-        if (c.info_email && !r.includes(c.info_email)) cc.push(c.info_email);
-        if (c.obra_email && !r.includes(c.obra_email) && !cc.includes(c.obra_email)) cc.push(c.obra_email);
-        if (r.length > 0) setRecipients(r);
-        if (cc.length > 0) setCcEmails(cc);
+        if (c.billing_email) setRecipients([c.billing_email]);
       } catch { /* ignore */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,24 +45,35 @@ export default function ReportPreviewModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Carga única del PDF — la nota va solo en el cuerpo del email, no en el PDF
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const r = await api.rental.reportPreview({
+        const blob = await api.rental.reportPreviewPdf({
           client_id: clientId, client_name: clientName,
           machine_ids: machineIds, date_from: dateFrom, date_to: dateTo,
-          note: note || null,
+          reading_ids: readingIds ?? null,
         });
-        setSubject(r.subject);
-        setHtml(r.html);
+        const url = URL.createObjectURL(blob);
+        if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+        pdfUrlRef.current = url;
+        setPdfUrl(url);
       } catch (e: any) {
-        setError(e?.detail ?? "Error al cargar preview");
+        setError(e?.detail ?? "Error al cargar preview del PDF");
       } finally {
         setLoading(false);
       }
     })();
-  }, [clientId, clientName, machineIds, dateFrom, dateTo, note]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+    };
+  }, []);
 
   function addEmail(list: string[], setList: (v: string[]) => void, raw: string, setRaw: (v: string) => void) {
     const e = raw.trim().toLowerCase();
@@ -89,6 +97,7 @@ export default function ReportPreviewModal({
         recipient_emails: recipients,
         cc_emails: ccEmails,
         note: note || null,
+        reading_ids: readingIds ?? null,
       });
       onSent();
     } catch (e: any) {
@@ -110,7 +119,7 @@ export default function ReportPreviewModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
             <h2 className="text-fg font-semibold text-sm">Reporte para {clientName}</h2>
-            <p className="text-fg-6 text-xs">{machineIds.length} máquinas · {dateFrom} → {dateTo}</p>
+            <p className="text-fg-6 text-xs">{machineIds.length} máquinas · {dateFrom} → {dateTo} · PDF adjunto</p>
           </div>
           <button onClick={onClose} className="text-fg-5 hover:text-fg transition-colors">
             <X size={18} />
@@ -118,28 +127,31 @@ export default function ReportPreviewModal({
         </div>
 
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px]">
-          {/* Preview */}
-          <div className="overflow-auto p-4 bg-surface">
+          {/* Preview PDF */}
+          <div className="overflow-hidden p-4 bg-surface relative">
             {loading ? (
               <div className="flex items-center justify-center h-full text-fg-5 text-sm gap-2">
-                <Loader2 size={16} className="animate-spin" /> Generando preview...
+                <Loader2 size={16} className="animate-spin" /> Generando PDF...
               </div>
             ) : (
-              <div className="bg-white border border-border shadow-sm">
-                <iframe
-                  title="preview"
-                  className="w-full h-[70vh] border-0"
-                  srcDoc={html}
-                />
-              </div>
+              <>
+                <div className="bg-white border border-border shadow-sm h-full">
+                  {pdfUrl && (
+                    <iframe
+                      title="preview-pdf"
+                      className="w-full h-[75vh] border-0"
+                      src={pdfUrl}
+                    />
+                  )}
+                </div>
+              </>
             )}
           </div>
 
           {/* Send panel */}
           <div className="border-l border-border p-4 space-y-4 overflow-y-auto bg-surface-2">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Asunto</label>
-              <div className="text-fg-2 text-xs bg-surface-3 border border-border px-3 py-2 mt-1 break-all">{subject || "..."}</div>
+            <div className="bg-accent/5 border border-accent/30 px-3 py-2 text-[11px] text-fg-3">
+              📎 Se enviará como PDF adjunto. El correo lleva un resumen breve.
             </div>
 
             <div>
@@ -203,7 +215,9 @@ export default function ReportPreviewModal({
                 placeholder="Según el acta del mes anterior..."
                 className="w-full bg-surface-3 border border-border text-xs text-fg-2 px-3 py-2 outline-none focus:border-accent resize-none mt-1 placeholder:text-fg-6"
               />
-              <p className="text-fg-6 text-[10px] mt-1">Al escribir la nota se actualiza el preview automáticamente.</p>
+              <p className="text-fg-6 text-[10px] mt-1">
+                Se incluye en el cuerpo del correo (no en el PDF adjunto).
+              </p>
             </div>
 
             {error && (

@@ -1070,6 +1070,7 @@ export type RentalAssignmentResponse = {
   standby_hours: number;
   cutoff_day: number;
   conditions: string | null;
+  report_emails: string[];
   monthly_projection: number | null;
   start_date: string;
   end_date: string | null;
@@ -1091,7 +1092,8 @@ export type RentalReadingResponse = {
   id: number;
   assignment_id: string;
   machine_id: string;
-  date: string;
+  date_from: string;
+  date_to: string;
   horometer_start: number | null;
   horometer_end: number | null;
   hours: number | null;
@@ -1110,7 +1112,8 @@ export type RentalReadingResponse = {
 };
 
 export type RentalReadingPrefill = {
-  suggested_date: string;
+  suggested_date_from: string;
+  suggested_date_to: string;
   suggested_horometer_start: number | null;
   suggested_unit_value: number | null;
   last_receipt_number: string | null;
@@ -1191,6 +1194,7 @@ export type RentalAssignmentCreate = {
   standby_hours?: number;
   cutoff_day?: number;
   conditions?: string | null;
+  report_emails?: string[];
   monthly_projection?: number | null;
   start_date: string;
   end_date?: string | null;
@@ -1200,7 +1204,8 @@ export type RentalAssignmentUpdate = Partial<RentalAssignmentCreate> & { is_acti
 
 export type RentalReadingCreate = {
   assignment_id: string;
-  date: string;
+  date_from: string;
+  date_to: string;
   horometer_start?: number | null;
   horometer_end?: number | null;
   hours?: number | null;
@@ -1956,11 +1961,31 @@ export const api = {
       request<RentalReportOverviewResponse>("/rental/reports/overview", {
         method: "POST", body: JSON.stringify({ date_from, date_to }),
       }),
-    reportPreview: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null }) =>
+    reportPreview: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null }) =>
       request<RentalReportPreviewResponse>("/rental/reports/preview", {
         method: "POST", body: JSON.stringify(data),
       }),
-    reportSend: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; recipient_emails: string[]; cc_emails?: string[]; note?: string | null }) =>
+    reportPreviewPdf: async (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null }): Promise<Blob> => {
+      let token = getToken();
+      const opts: RequestInit = { method: "POST", body: JSON.stringify(data) };
+      let res = await doFetch("/rental/reports/preview-pdf", opts, token);
+      if (res.status === 401) {
+        const newToken = await tryRefresh();
+        if (newToken) {
+          res = await doFetch("/rental/reports/preview-pdf", opts, newToken);
+        } else {
+          clearTokens();
+          window.location.href = "/";
+          throw { status: 401, detail: "Sesión expirada" };
+        }
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw { status: res.status, detail: body.detail ?? "Error generando el PDF" };
+      }
+      return res.blob();
+    },
+    reportSend: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; recipient_emails: string[]; cc_emails?: string[]; note?: string | null; reading_ids?: number[] | null }) =>
       request<RentalReportSendResponse>("/rental/reports/send", {
         method: "POST", body: JSON.stringify(data),
       }),

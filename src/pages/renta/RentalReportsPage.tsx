@@ -104,7 +104,7 @@ export default function RentalReportsPage() {
     <div className="space-y-5">
       <div className="flex items-start gap-3 animate-fade-up">
         <button
-          onClick={() => nav("/renta/horometro")}
+          onClick={() => nav("/renta/relaciones")}
           className="mt-1 text-fg-5 hover:text-fg transition-colors"
         >
           <ArrowLeft size={16} />

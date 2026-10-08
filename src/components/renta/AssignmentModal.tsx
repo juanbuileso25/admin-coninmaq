@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, Mail } from "lucide-react";
 import { api, type RentalAssignmentResponse } from "../../services/api";
 import DatePicker from "../ui/DatePicker";
 import ClientSearchSelect from "../ui/ClientSearchSelect";
@@ -24,16 +24,25 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
   const [operator, setOperator] = useState(assignment?.operator ?? "");
   const [rate, setRate] = useState(assignment?.rate?.toString() ?? "");
   const [standbyHours, setStandbyHours] = useState(String(assignment?.standby_hours ?? 176));
-  const [cutoffDay, setCutoffDay] = useState(String(assignment?.cutoff_day ?? 30));
   const [projection, setProjection] = useState(assignment?.monthly_projection?.toString() ?? "");
   const [conditions, setConditions] = useState(assignment?.conditions ?? "");
+  const [reportEmails, setReportEmails] = useState<string[]>(assignment?.report_emails ?? []);
+  const [newEmail, setNewEmail] = useState("");
   const [startDate, setStartDate] = useState<string | null>(assignment?.start_date ?? todayISO());
   const [endDate, setEndDate] = useState<string | null>(assignment?.end_date ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function addEmail(raw: string) {
+    const e = raw.trim().toLowerCase();
+    if (!e || !e.includes("@")) return;
+    if (reportEmails.includes(e)) { setNewEmail(""); return; }
+    setReportEmails([...reportEmails, e]);
+    setNewEmail("");
+  }
+
   async function handleSave() {
-    if (!startDate) return;
+    if (!startDate || !endDate) return;
     setSaving(true);
     setError(null);
     try {
@@ -44,9 +53,9 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
         operator: operator.trim() || null,
         rate: rate ? Number(rate) : null,
         standby_hours: Number(standbyHours) || 176,
-        cutoff_day: Number(cutoffDay) || 30,
         monthly_projection: projection ? Number(projection) : null,
         conditions: conditions.trim() || null,
+        report_emails: reportEmails,
         start_date: startDate,
         end_date: endDate || null,
       };
@@ -102,9 +111,8 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
             <Field label="Tarifa por hora" value={rate} onChange={setRate} type="number" placeholder="65000" />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Standby (h mensuales)" value={standbyHours} onChange={setStandbyHours} type="number" />
-            <Field label="Día de corte (1-31)" value={cutoffDay} onChange={setCutoffDay} type="number" />
             <Field label="Proyección mes" value={projection} onChange={setProjection} type="number" placeholder="11440000" />
           </div>
 
@@ -114,9 +122,45 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
               <DatePicker value={startDate} onChange={setStartDate} compact />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha fin (opcional)</label>
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha fin</label>
               <DatePicker value={endDate} onChange={setEndDate} compact />
             </div>
+          </div>
+
+          {/* Correos para envío de reportes */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium flex items-center gap-1.5">
+              <Mail size={11} /> Correos para envío de reportes
+            </label>
+            <div className="bg-surface-3 border border-border px-2 py-2 flex flex-wrap gap-1.5 items-center focus-within:border-accent transition-colors">
+              {reportEmails.map((e) => (
+                <span key={e} className="inline-flex items-center gap-1 bg-accent/10 border border-accent/40 text-accent text-xs px-2 py-1">
+                  {e}
+                  <button
+                    type="button"
+                    onClick={() => setReportEmails(reportEmails.filter(x => x !== e))}
+                    className="hover:text-red-400"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addEmail(newEmail);
+                  }
+                }}
+                onBlur={() => newEmail.trim() && addEmail(newEmail)}
+                placeholder={reportEmails.length === 0 ? "Añadir correo (Enter para confirmar)" : "Añadir otro..."}
+                className="flex-1 min-w-[180px] bg-transparent text-xs text-fg-2 outline-none placeholder:text-fg-6 px-1"
+              />
+            </div>
+            <p className="text-fg-6 text-[10px]">Estos correos se sugieren automáticamente al generar el reporte de esta asignación.</p>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -138,7 +182,7 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
           <button onClick={onClose} className="px-4 py-2 text-xs text-fg-4 border border-border hover:border-border-light transition-all">Cancelar</button>
           <button
             onClick={handleSave}
-            disabled={saving || !startDate}
+            disabled={saving || !startDate || !endDate}
             className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900 transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? "Guardando..." : "Guardar"}

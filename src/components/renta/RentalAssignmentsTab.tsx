@@ -59,7 +59,6 @@ export default function RentalAssignmentsTab({ machineId, assignments, onChange 
                 <th className="text-left px-3 py-2 font-medium">Operador</th>
                 <th className="text-right px-3 py-2 font-medium">Tarifa</th>
                 <th className="text-right px-3 py-2 font-medium">Standby h</th>
-                <th className="text-center px-3 py-2 font-medium">Corte</th>
                 <th className="text-right px-3 py-2 font-medium">Proyección</th>
                 <th className="text-center px-3 py-2 font-medium">Inicio</th>
                 <th className="text-center px-3 py-2 font-medium">Fin</th>
@@ -68,10 +67,14 @@ export default function RentalAssignmentsTab({ machineId, assignments, onChange 
             </thead>
             <tbody className="divide-y divide-border">
               {assignments.length === 0 && (
-                <tr><td colSpan={11} className="text-center py-12 text-fg-6 text-sm">Sin asignaciones</td></tr>
+                <tr><td colSpan={10} className="text-center py-12 text-fg-6 text-sm">Sin asignaciones</td></tr>
               )}
               {assignments.map(a => (
-                <tr key={a.id} className="hover:bg-surface-3 transition-colors">
+                <tr
+                  key={a.id}
+                  onClick={() => { setEditing(a); setShowModal(true); }}
+                  className="hover:bg-surface-3 transition-colors cursor-pointer"
+                >
                   <td className="px-3 py-2 text-center">
                     {a.is_active
                       ? <CheckCircle2 size={13} className="text-emerald-400 inline" />
@@ -82,21 +85,20 @@ export default function RentalAssignmentsTab({ machineId, assignments, onChange 
                   <td className="px-3 py-2 text-fg-4 text-xs">{a.operator ?? "—"}</td>
                   <td className="px-3 py-2 text-right text-fg-3 font-mono text-xs">{formatCOP(a.rate)}</td>
                   <td className="px-3 py-2 text-right text-fg-4 font-mono text-xs">{a.standby_hours}</td>
-                  <td className="px-3 py-2 text-center text-fg-4 text-xs">Día {a.cutoff_day}</td>
                   <td className="px-3 py-2 text-right text-fg-3 font-mono text-xs">{formatCOP(a.monthly_projection)}</td>
                   <td className="px-3 py-2 text-center text-fg-4 text-xs whitespace-nowrap">{formatDate(a.start_date)}</td>
                   <td className="px-3 py-2 text-center text-fg-4 text-xs whitespace-nowrap">{formatDate(a.end_date)}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-1">
                       <button
-                        onClick={() => { setEditing(a); setShowModal(true); }}
+                        onClick={(e) => { e.stopPropagation(); setEditing(a); setShowModal(true); }}
                         className="text-fg-5 hover:text-accent transition-colors p-1"
                       >
                         <Pencil size={12} />
                       </button>
                       {a.is_active && (
                         <button
-                          onClick={() => handleDelete(a.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}
                           className="text-fg-5 hover:text-red-400 transition-colors p-1"
                         >
                           <Trash2 size={12} />

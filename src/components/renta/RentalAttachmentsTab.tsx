@@ -44,6 +44,9 @@ export default function RentalAttachmentsTab({ machineId }: Props) {
         ]);
         const all: AttachmentRow[] = [];
         for (const r of readings) {
+          const periodLabel = r.date_from === r.date_to
+            ? r.date_from
+            : `${r.date_from} → ${r.date_to}`;
           for (const a of r.attachments) {
             all.push({
               id: a.id,
@@ -52,7 +55,7 @@ export default function RentalAttachmentsTab({ machineId }: Props) {
               content_type: a.content_type,
               created_at: a.created_at,
               source: "reading",
-              source_label: `Registro ${r.date}`,
+              source_label: `Registro ${periodLabel}`,
               source_ref: String(r.id),
               kind: a.kind,
             });
