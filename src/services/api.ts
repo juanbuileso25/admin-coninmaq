@@ -674,6 +674,8 @@ export type FunnelSummary = {
   pending_value: number;
   leads_to_quotations_rate: number;
   quotations_to_closed_rate: number;
+  pipeline_value_active: number;
+  pipeline_count_active: number;
 };
 
 export type TierFunnelRow = {

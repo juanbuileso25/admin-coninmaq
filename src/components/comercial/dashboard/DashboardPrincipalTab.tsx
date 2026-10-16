@@ -33,12 +33,33 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
 
       {/* Fila 1: 6 Stat Cards principales (como en el PDF) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatBig label="Total leads"       value={String(f.total_leads)}         sub="Funnel general"       icon={<Users         size={14} />} />
-        <StatBig label="Total cotizaciones" value={String(f.total_quotations)}    sub="Funnel general"       icon={<FileText      size={14} />} accent />
-        <StatBig label="Total cerrados"    value={String(f.total_closed)}        sub="Funnel general"       icon={<CheckCircle2  size={14} />} accent />
-        <StatBig label="Valor cotizaciones" value={copFull(f.quotation_value_total)} sub="Valores del funnel"   icon={<DollarSign    size={14} />} />
-        <StatBig label="Valor cerrados"    value={copFull(f.closed_value_total)}  sub="Valores del funnel"   icon={<DollarSign    size={14} />} accent />
-        <StatBig label="Diferencia"        value={copFull(f.pending_value)}       sub="Pendiente de conversión" icon={<Minus         size={14} />} danger />
+        <StatBig label="Total leads"       value={String(f.total_leads)}         sub="Creados en el período"       icon={<Users         size={14} />} />
+        <StatBig label="Total cotizaciones" value={String(f.total_quotations)}    sub="Creadas en el período"       icon={<FileText      size={14} />} accent />
+        <StatBig label="Total cerrados"    value={String(f.total_closed)}        sub="Leads del período que cerraron" icon={<CheckCircle2  size={14} />} accent />
+        <StatBig label="Valor cotizaciones" value={copFull(f.quotation_value_total)} sub="Valor de lo cotizado en el período"   icon={<DollarSign    size={14} />} />
+        <StatBig label="Valor cerrados"    value={copFull(f.closed_value_total)}  sub="Valor cerrado del período"   icon={<DollarSign    size={14} />} accent />
+        <StatBig label="Diferencia"        value={copFull(f.pending_value)}       sub="Cotizado - cerrado del período" icon={<Minus         size={14} />} danger />
+      </div>
+
+      {/* Fila 1b: Pipeline activo (independiente del período) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-surface-2 border border-accent/30 border-l-4 border-l-accent p-4 flex items-start justify-between gap-3 hover:border-accent/50 transition-colors">
+          <div className="min-w-0 flex-1">
+            <p className="text-fg-5 text-[10px] uppercase tracking-wider font-medium">Pipeline activo</p>
+            <p className="text-xl md:text-2xl font-extrabold tracking-tight mt-1 text-accent break-words" title={copFull(f.pipeline_value_active)}>
+              {copFull(f.pipeline_value_active)}
+            </p>
+            <p className="text-fg-6 text-[10px] mt-1">
+              {f.pipeline_count_active} cotización{f.pipeline_count_active === 1 ? "" : "es"} · leads no cerrados ni perdidos (todo el histórico)
+            </p>
+          </div>
+          <FileText size={16} className="text-accent shrink-0" />
+        </div>
+        <div className="bg-surface-3/40 border border-dashed border-border p-4 text-xs text-fg-5 leading-relaxed">
+          <strong className="text-fg-3">💡 Diferencia:</strong> los valores de arriba se calculan por <strong>fecha del período seleccionado</strong>.
+          El <strong className="text-accent">Pipeline activo</strong> es el valor total de oportunidades vivas <strong>hoy</strong>,
+          sin importar cuándo entraron.
+        </div>
       </div>
 
       {/* Fila 2: Funnel + Funnel por tier */}
@@ -310,26 +331,37 @@ function MonthlyRevenueChart({ rows, onMonthClick }: {
   if (rows.length === 0) {
     return <div className="text-fg-6 text-xs text-center py-10">Sin datos del período</div>;
   }
-  const maxVal = Math.max(1, ...rows.map(r => r.closed_value));
-  const minVal = Math.min(0, ...rows.map(r => r.closed_value));
+  // El eje Y se escala al máximo de AMBAS líneas (cotizado y cerrado)
+  const maxVal = Math.max(1, ...rows.map(r => Math.max(r.closed_value, r.quoted_value)));
+  const minVal = Math.min(0, ...rows.map(r => Math.min(r.closed_value, r.quoted_value)));
   const vbW = 1000;
   const vbH = 260;
   const padL = 110, padR = 20, padT = 30, padB = 36;  // padL amplio para etiquetas de valor completo
   const chartW = vbW - padL - padR;
   const chartH = vbH - padT - padB;
 
-  // Calcular coordenadas de cada punto
+  // Calcular coordenadas de cada punto (ambas líneas)
+  const yFor = (val: number): number => {
+    const yRange = maxVal - minVal || 1;
+    return padT + chartH - ((val - minVal) / yRange) * chartH;
+  };
   const points = rows.map((r, i) => {
     const x = padL + (chartW * i) / Math.max(1, rows.length - 1);
-    const yRange = maxVal - minVal || 1;
-    const y = padT + chartH - ((r.closed_value - minVal) / yRange) * chartH;
-    return { x, y, row: r, idx: i };
+    return {
+      x,
+      y: yFor(r.closed_value),
+      yQuoted: yFor(r.quoted_value),
+      row: r,
+      idx: i,
+    };
   });
 
-  // Línea polyline
+  // Línea de cerrado (amarillo)
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  // Área bajo la curva
+  // Área bajo la curva de cerrado
   const areaD = `${pathD} L ${points[points.length - 1].x} ${padT + chartH} L ${padL} ${padT + chartH} Z`;
+  // Línea de cotizado (gris, por debajo)
+  const pathQuotedD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.yQuoted}`).join(" ");
 
   // Líneas horizontales de guía
   const guideLines = [0, 0.5, 1].map(frac => padT + chartH * (1 - frac));
@@ -374,7 +406,18 @@ function MonthlyRevenueChart({ rows, onMonthClick }: {
           </linearGradient>
         </defs>
 
-        {/* Línea */}
+        {/* Línea de cotizado (gris, dasheada, debajo) */}
+        <path
+          d={pathQuotedD}
+          fill="none"
+          stroke="#6b7280"
+          strokeWidth="2"
+          strokeDasharray="5 4"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          opacity="0.7"
+        />
+        {/* Línea de cerrado (amarillo, sólida) */}
         <path d={pathD} fill="none" stroke="#FFC837" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
         {/* Línea vertical del hover */}
@@ -472,9 +515,12 @@ function MonthlyRevenueChart({ rows, onMonthClick }: {
       )}
 
       {/* Nota legend */}
-      <div className="flex items-center justify-end mt-2 text-[10px] text-fg-5">
+      <div className="flex items-center justify-end gap-4 mt-2 text-[10px] text-fg-5">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-accent"></div> Valor cerrado · Millones COP
+          <div className="w-3 h-0.5 bg-accent"></div> Cerrado
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-0.5 bg-fg-5 opacity-70" style={{ borderTop: "2px dashed" }}></div> Cotizado
         </div>
       </div>
     </div>
@@ -557,8 +603,7 @@ function ClosedMonthDetailModal({ month, onClose }: { month: string; onClose: ()
                     <th className="text-left px-3 py-2 font-medium">Empresa</th>
                     <th className="text-left px-3 py-2 font-medium">Creado</th>
                     <th className="text-left px-3 py-2 font-medium">Cerrado</th>
-                    <th className="text-right px-3 py-2 font-medium">Valor en gráfico</th>
-                    <th className="text-left px-3 py-2 font-medium">Fuente del valor</th>
+                    <th className="text-right px-3 py-2 font-medium">Valor</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -578,15 +623,6 @@ function ClosedMonthDetailModal({ month, onClose }: { month: string; onClose: ()
                       </td>
                       <td className="px-3 py-2 text-right text-fg font-mono text-xs">
                         {copFull(l.value_used_in_chart)}
-                      </td>
-                      <td className="px-3 py-2">
-                        {l.value_source === "close_value" ? (
-                          <span className="text-emerald-400 text-[10px]">close_value</span>
-                        ) : l.value_source?.startsWith("quotation_") ? (
-                          <span className="text-sky-400 text-[10px]">{l.value_source.replace("quotation_", "COT ")}</span>
-                        ) : (
-                          <span className="text-fg-6 text-[10px]">sin valor</span>
-                        )}
                       </td>
                     </tr>
                   ))}
