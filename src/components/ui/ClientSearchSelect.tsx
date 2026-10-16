@@ -240,21 +240,21 @@ function QuickCreateClientModal({
 }) {
   const [name, setName]                 = useState(initialName);
   const [documentType, setDocumentType] = useState("NIT");
-  const [document, setDocument]         = useState("");
+  const [documentValue, setDocumentValue] = useState("");
   const [mobile, setMobile]             = useState("");
   const [billingEmail, setBillingEmail] = useState("");
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState<string | null>(null);
 
   async function handleSave() {
-    if (!name.trim())     { setError("El nombre es obligatorio"); return; }
-    if (!document.trim()) { setError("El documento es obligatorio"); return; }
+    if (!name.trim())           { setError("El nombre es obligatorio"); return; }
+    if (!documentValue.trim())  { setError("El documento es obligatorio"); return; }
     setSaving(true);
     setError(null);
     try {
       const payload: Record<string, unknown> = {
         name: name.trim(),
-        document: document.trim(),
+        document: documentValue.trim(),
       };
       if (documentType) payload.document_type = documentType;
       if (mobile.trim()) payload.mobile = mobile.trim();
@@ -313,8 +313,8 @@ function QuickCreateClientModal({
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Documento *</label>
               <input
-                value={document}
-                onChange={(e) => setDocument(e.target.value)}
+                value={documentValue}
+                onChange={(e) => setDocumentValue(e.target.value)}
                 placeholder="900123456-7"
                 className="bg-surface-3 border border-border text-sm text-fg-2 px-3 py-2 outline-none focus:border-accent"
               />
@@ -361,7 +361,7 @@ function QuickCreateClientModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !name.trim() || !document.trim()}
+            disabled={saving || !name.trim() || !documentValue.trim()}
             className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900
                        transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed
                        flex items-center gap-1.5"
