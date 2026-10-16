@@ -1873,6 +1873,25 @@ export const api = {
       const q = qs.toString();
       return request<DashboardMetrics>(`/bot/dashboard-metrics${q ? `?${q}` : ""}`);
     },
+    monthlyClosedDetail: (month: string) =>
+      request<{
+        month: string;
+        count: number;
+        leads: Array<{
+          lead_id: number;
+          name: string | null;
+          email: string | null;
+          company: string | null;
+          phone: string | null;
+          created_at: string;
+          first_closed_at: string;
+          close_value: number | null;
+          latest_quotation_number: string | null;
+          latest_quotation_total: number | null;
+          value_used_in_chart: number | null;
+          value_source: string | null;
+        }>;
+      }>(`/bot/dashboard-metrics/monthly-closed-detail?month=${encodeURIComponent(month)}`),
     sessions: (params?: { phase?: string; bot_active?: boolean; is_active?: boolean; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.phase !== undefined)      qs.set("phase",      params.phase);
