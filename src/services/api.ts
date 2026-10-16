@@ -695,6 +695,8 @@ export type MonthlyRevenueRow = {
   label: string;
   quoted_value: number;
   closed_value: number;
+  quoted_count: number;
+  closed_count: number;
 };
 
 export type NpsSummary = {
