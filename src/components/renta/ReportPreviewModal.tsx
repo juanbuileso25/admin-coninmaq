@@ -68,7 +68,7 @@ export default function ReportPreviewModal({
           date_to: dateTo,
         });
         if (cancelled || suggested.length === 0) return;
-        setExtraItems(prev => prev.length > 0 ? prev : suggested.map(it => ({
+        const nextExtras: ExtraRow[] = suggested.map(it => ({
           _localId: newLocalId(),
           concept_id: it.concept_id ?? null,
           name: it.name,
@@ -76,7 +76,13 @@ export default function ReportPreviewModal({
           qty: Number(it.qty) || 0,
           unit_value: Number(it.unit_value) || 0,
           machine_id: it.machine_id ?? null,
-        })));
+        }));
+        setExtraItems(prev => {
+          if (prev.length > 0) return prev;
+          // Si logramos pre-cargar, refrescar el PDF con esos extras ya incluidos
+          fetchPdf(nextExtras);
+          return nextExtras;
+        });
         toast.message(`Se pre-cargaron ${suggested.length} concepto${suggested.length === 1 ? "" : "s"} de la cotización`);
       } catch {
         /* silencioso: la pre-carga es best-effort */
