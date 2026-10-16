@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, FileText, CheckCircle2, Clock, AlertCircle, ArrowRight,
-  Loader2, Search, Trash2, LayoutList, Kanban, Check, ReceiptText, Mail, DollarSign, Percent, Send, Ghost, XCircle,
-  ChevronDown, Pencil,
+  Loader2, Search, Trash2, LayoutList, Kanban, ReceiptText, Mail, DollarSign, Percent, Send, Ghost, XCircle,
+  ChevronDown,
 } from "lucide-react";
 import { api, type RentalQuotationListItem, type RentalQuotationStatus } from "../../services/api";
 import { toast } from "sonner";
