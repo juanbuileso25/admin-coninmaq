@@ -52,6 +52,40 @@ export default function ReportPreviewModal({
     api.rental.listBillingConcepts(true).then(setCatalog).catch(() => setCatalog([]));
   }, []);
 
+  // Pre-cargar extras desde las cotizaciones origen (solo si no se ha enviado
+  // ningún reporte previo a este cliente y el usuario no ha añadido nada todavía).
+  useEffect(() => {
+    if (!clientId || machineIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const last = await api.rental.reportLastSend(clientId);
+        if (cancelled || last) return;  // ya hubo reportes antes: no pre-cargar
+        const suggested = await api.rental.reportSuggestedExtras({
+          client_id: clientId,
+          machine_ids: machineIds,
+          date_from: dateFrom,
+          date_to: dateTo,
+        });
+        if (cancelled || suggested.length === 0) return;
+        setExtraItems(prev => prev.length > 0 ? prev : suggested.map(it => ({
+          _localId: newLocalId(),
+          concept_id: it.concept_id ?? null,
+          name: it.name,
+          description: it.description ?? null,
+          qty: Number(it.qty) || 0,
+          unit_value: Number(it.unit_value) || 0,
+          machine_id: it.machine_id ?? null,
+        })));
+        toast.message(`Se pre-cargaron ${suggested.length} concepto${suggested.length === 1 ? "" : "s"} de la cotización`);
+      } catch {
+        /* silencioso: la pre-carga es best-effort */
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
+
   const extrasTotal = useMemo(
     () => extraItems.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_value) || 0), 0),
     [extraItems]

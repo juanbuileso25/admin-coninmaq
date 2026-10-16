@@ -2361,6 +2361,14 @@ export const api = {
       }),
     reportLastSend: (clientId: string) =>
       request<RentalReportLastSend | null>(`/rental/reports/last-send?client_id=${encodeURIComponent(clientId)}`),
+    reportSuggestedExtras: (params: { client_id?: string | null; machine_ids: string[]; date_from: string; date_to: string }) => {
+      const qs = new URLSearchParams();
+      if (params.client_id) qs.set("client_id", params.client_id);
+      params.machine_ids.forEach(m => qs.append("machine_id", m));
+      qs.set("date_from", params.date_from);
+      qs.set("date_to", params.date_to);
+      return request<RentalReportExtraItem[]>(`/rental/reports/suggested-extras?${qs}`);
+    },
     reportsHistory: (params?: { client_id?: string; date_from?: string; date_to?: string; limit?: number }) => {
       const qs = new URLSearchParams();
       if (params?.client_id) qs.set("client_id", params.client_id);
