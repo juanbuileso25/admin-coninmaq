@@ -2,18 +2,17 @@ import React from "react";
 import { Users, FileText, CheckCircle2, DollarSign, Minus, TrendingDown, Smile, Radio, MapPin, Factory, Hammer } from "lucide-react";
 import type { DashboardMetrics, DistributionRow, MonthlyRevenueRow, TierFunnelRow } from "../../../services/api";
 
-function copShort(n: number | null | undefined): string {
-  if (n == null) return "—";
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2).replace(".00", "")} MM`;
-  if (abs >= 1_000_000)     return `$${(n / 1_000_000).toFixed(0)} M`;
-  if (abs >= 1_000)         return `$${(n / 1_000).toFixed(0)} K`;
-  return `$${n.toFixed(0)}`;
-}
-
 function copFull(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+}
+
+// Para el gráfico: formato con separador de miles, sin "COP" y sin decimales
+// Ej: 629900001 → "$629.900.001"
+function copChart(n: number | null | undefined): string {
+  if (n == null) return "—";
+  const formatted = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(n));
+  return `$${formatted}`;
 }
 
 const TIER_META: Record<string, { label: string; color: string; textColor: string; bg: string }> = {
@@ -92,8 +91,8 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
         <Card title="Top industrias" subtitle="% de leads por industria">
           <DistributionTable rows={metrics.industries_distribution} valueLabel="Leads" icon={<Factory size={11} />} emptyMessage="Sin datos de industria" />
         </Card>
-        <Card title="Equipos más consultados" subtitle="% de leads por equipo de interés">
-          <DistributionTable rows={metrics.equipment_distribution} valueLabel="Leads" icon={<Hammer size={11} />} emptyMessage="Sin datos de equipos" />
+        <Card title="Equipos más consultados" subtitle="Leads del bot + items cotizados · todas las fuentes">
+          <DistributionTable rows={metrics.equipment_distribution} valueLabel="Menciones" icon={<Hammer size={11} />} emptyMessage="Sin datos de equipos" />
         </Card>
       </div>
 
@@ -305,7 +304,7 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
   const minVal = Math.min(0, ...rows.map(r => r.closed_value));
   const vbW = 1000;
   const vbH = 260;
-  const padL = 30, padR = 20, padT = 30, padB = 36;
+  const padL = 110, padR = 20, padT = 30, padB = 36;  // padL amplio para etiquetas de valor completo
   const chartW = vbW - padL - padR;
   const chartH = vbH - padT - padB;
 
@@ -351,7 +350,7 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
               stroke="currentColor" strokeWidth="1" strokeDasharray="2 3" className="text-border/60" />
             <text x={padL - 6} y={y + 3} textAnchor="end"
               className="fill-fg-6 text-[10px] font-medium" fontSize="10">
-              {copShort(guideLabels[i])}
+              {copChart(guideLabels[i])}
             </text>
           </g>
         ))}
@@ -382,8 +381,8 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
             {/* Etiqueta valor (ocultar en el hovered para que no choque con tooltip) */}
             {hoveredIdx !== i && (
               <text x={p.x} y={p.y - 10} textAnchor="middle"
-                className="fill-fg text-[11px] font-bold" fontSize="11">
-                {copShort(p.row.closed_value)}
+                className="fill-fg text-[10px] font-bold" fontSize="10">
+                {copChart(p.row.closed_value)}
               </text>
             )}
             {/* Punto */}
@@ -446,13 +445,14 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-fg-5">Valor cotizado</span>
-              <span className="text-fg-3">{copShort(hovered.row.quoted_value)}</span>
+              <span className="text-fg-3">{copChart(hovered.row.quoted_value)}</span>
             </div>
-            {hovered.row.quoted_count > 0 && (
-              <div className="flex items-center justify-between gap-3 pt-1 border-t border-border">
-                <span className="text-fg-5">Tasa cierre</span>
+            {hovered.row.closed_count > 0 && hovered.row.quoted_value > 0 && (
+              <div className="flex items-center justify-between gap-3 pt-1 border-t border-border"
+                   title="Porcentaje del valor cotizado que efectivamente se cerró">
+                <span className="text-fg-5">% valor cerrado</span>
                 <span className="text-emerald-400 font-semibold">
-                  {Math.round((hovered.row.closed_count / hovered.row.quoted_count) * 100)}%
+                  {Math.min(100, Math.round((hovered.row.closed_value / hovered.row.quoted_value) * 100))}%
                 </span>
               </div>
             )}
