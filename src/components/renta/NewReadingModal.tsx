@@ -65,6 +65,7 @@ export default function NewReadingModal({ assignments, initialAssignment, readin
   const [assignmentManuallyChanged, setAssignmentManuallyChanged] = useState(isEdit);
   const [horometerStart, setHorometerStart] = useState(reading?.horometer_start != null ? String(reading.horometer_start) : "");
   const [horometerEnd, setHorometerEnd] = useState(reading?.horometer_end != null ? String(reading.horometer_end) : "");
+  const [horometerEndManuallyChanged, setHorometerEndManuallyChanged] = useState(isEdit);
   const [unitValue, setUnitValue] = useState(reading?.unit_value != null ? String(reading.unit_value) : "");
   const [receiptNumber, setReceiptNumber] = useState(reading?.receipt_number ?? "");
   const [observations, setObservations] = useState(reading?.observations ?? "");
@@ -121,6 +122,17 @@ export default function NewReadingModal({ assignments, initialAssignment, readin
       setAssignmentId(match.id);
     }
   }, [dateFrom, assignments, assignmentId, assignmentManuallyChanged]);
+
+  // Sugerir horometro final = inicial + standby_hours de la asignación (solo si no se editó)
+  useEffect(() => {
+    if (horometerEndManuallyChanged) return;
+    const start = Number(horometerStart);
+    const standby = Number(assignment?.standby_hours ?? 0);
+    if (!isNaN(start) && horometerStart !== "" && standby > 0) {
+      const suggested = start + standby;
+      setHorometerEnd(String(suggested));
+    }
+  }, [horometerStart, assignment?.standby_hours, horometerEndManuallyChanged, dateFrom, dateTo]);
 
   const computedHours: number | null = (() => {
     const s = Number(horometerStart);
@@ -303,7 +315,12 @@ export default function NewReadingModal({ assignments, initialAssignment, readin
                 Horómetro inicial
                 {prefill?.suggested_horometer_start != null && <span className="block text-fg-6 normal-case font-normal">sugerido {prefill.suggested_horometer_start}</span>}
               </div>
-              <div className="px-3 py-2 text-[10px] font-semibold text-fg-4 uppercase tracking-wide border-r border-border">Horómetro final</div>
+              <div className="px-3 py-2 text-[10px] font-semibold text-fg-4 uppercase tracking-wide border-r border-border">
+                Horómetro final
+                {!horometerEndManuallyChanged && assignment?.standby_hours ? (
+                  <span className="block text-fg-6 normal-case font-normal">sugerido = inicial + {assignment.standby_hours}h</span>
+                ) : null}
+              </div>
               <div className="px-3 py-2 text-[10px] font-semibold text-fg-4 uppercase tracking-wide">Horas</div>
             </div>
             <div className="grid grid-cols-3">
@@ -314,13 +331,18 @@ export default function NewReadingModal({ assignments, initialAssignment, readin
               />
               <input
                 type="number" step="0.1" value={horometerEnd}
-                onChange={(e) => setHorometerEnd(e.target.value)}
+                onChange={(e) => { setHorometerEnd(e.target.value); setHorometerEndManuallyChanged(true); }}
                 className="w-full bg-transparent text-sm text-fg-2 px-3 py-2 outline-none focus:bg-surface-3 border-r border-border"
               />
               <div className="px-3 py-2 text-sm font-semibold text-accent">
                 {computedHours != null ? computedHours.toFixed(1) : <span className="text-fg-6">—</span>}
               </div>
             </div>
+            {horometerStart && horometerEnd && !isNaN(Number(horometerStart)) && !isNaN(Number(horometerEnd)) && Number(horometerEnd) < Number(horometerStart) && (
+              <div className="px-3 py-1.5 text-[11px] text-red-400 bg-red-950/20 border-t border-red-900/40">
+                ⚠ Horómetro final menor que inicial — ¿reset del horómetro?
+              </div>
+            )}
           </div>
 
           {/* Factura */}

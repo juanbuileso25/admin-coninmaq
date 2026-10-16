@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ClipboardList, Settings, Wrench, Paperclip, ImageOff, ExternalLink } from "lucide-react";
+import { ArrowLeft, ClipboardList, Settings, Wrench, Paperclip, ImageOff, ExternalLink, Pencil } from "lucide-react";
 import { api, type RentalMachineDetail } from "../../services/api";
 import RentalReadingsTab from "../../components/renta/RentalReadingsTab";
 import RentalAssignmentsTab from "../../components/renta/RentalAssignmentsTab";
 import RentalMaintenancesTab from "../../components/renta/RentalMaintenancesTab";
 import RentalAttachmentsTab from "../../components/renta/RentalAttachmentsTab";
+import NewMachineModal from "../../components/renta/NewMachineModal";
+import { toast } from "sonner";
 
 type TabKey = "readings" | "config" | "maintenance" | "attachments";
 
@@ -22,6 +24,7 @@ export default function RentalMachineDetailPage() {
   const [data, setData] = useState<RentalMachineDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("readings");
+  const [showEditModal, setShowEditModal] = useState(false);
 
   async function load() {
     if (!id) return;
@@ -86,13 +89,22 @@ export default function RentalMachineDetailPage() {
             {m.engine_serial && <span>Motor {m.engine_serial}</span>}
           </div>
         </div>
-        {cur && (
-          <div className="bg-surface-2 border border-border px-4 py-2.5 text-right">
-            <div className="text-fg-6 text-[10px] uppercase tracking-wider">Asignación actual</div>
-            <div className="text-fg-2 text-sm font-medium">{cur.client_name ?? "Sin cliente"}</div>
-            <div className="text-fg-5 text-xs">{cur.obra || "Sin obra"}</div>
-          </div>
-        )}
+        <div className="flex items-start gap-2">
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-1.5 text-xs text-fg-3 border border-border hover:border-accent/50 hover:text-accent px-3 py-2 transition-colors"
+            title="Editar datos de la unidad"
+          >
+            <Pencil size={12} /> Editar
+          </button>
+          {cur && (
+            <div className="bg-surface-2 border border-border px-4 py-2.5 text-right">
+              <div className="text-fg-6 text-[10px] uppercase tracking-wider">Asignación actual</div>
+              <div className="text-fg-2 text-sm font-medium">{cur.client_name ?? "Sin cliente"}</div>
+              <div className="text-fg-5 text-xs">{cur.obra || "Sin obra"}</div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -119,6 +131,18 @@ export default function RentalMachineDetailPage() {
         {tab === "maintenance" && <RentalMaintenancesTab machineId={m.id} />}
         {tab === "attachments" && <RentalAttachmentsTab machineId={m.id} />}
       </div>
+
+      {showEditModal && (
+        <NewMachineModal
+          machine={m}
+          onClose={() => setShowEditModal(false)}
+          onCreated={() => {
+            setShowEditModal(false);
+            toast.success("Unidad actualizada");
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

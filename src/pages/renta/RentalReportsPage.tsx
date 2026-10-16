@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, Loader2, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, RefreshCw, ChevronDown, ChevronRight, History, AlertCircle, CheckCircle2 } from "lucide-react";
 import { api, type RentalReportClientBucket } from "../../services/api";
 import DatePicker from "../../components/ui/DatePicker";
 import ReportPreviewModal from "../../components/renta/ReportPreviewModal";
@@ -102,17 +102,26 @@ export default function RentalReportsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start gap-3 animate-fade-up">
-        <button
-          onClick={() => nav("/renta/relaciones")}
-          className="mt-1 text-fg-5 hover:text-fg transition-colors"
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <div>
-          <p className="text-fg-6 text-xs uppercase tracking-wider mb-1">Renta</p>
-          <h1 className="text-fg text-xl font-semibold">Reportes por cliente</h1>
+      <div className="flex items-start justify-between gap-3 animate-fade-up">
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => nav("/renta/relaciones")}
+            className="mt-1 text-fg-5 hover:text-fg transition-colors"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+            <p className="text-fg-6 text-xs uppercase tracking-wider mb-1">Renta</p>
+            <h1 className="text-fg text-xl font-semibold">Reportes por cliente</h1>
+          </div>
         </div>
+        <button
+          onClick={() => nav("/renta/relaciones/reportes/historial")}
+          className="flex items-center gap-2 border border-border text-fg-3 hover:border-accent hover:text-accent
+                     text-xs uppercase tracking-wider px-3 py-2 transition-all"
+        >
+          <History size={13} /> Historial de envíos
+        </button>
       </div>
 
       {/* Controls */}
@@ -164,6 +173,17 @@ export default function RentalReportsPage() {
       {!loading && clients.length === 0 && (
         <div className="bg-surface-2 border border-border p-8 text-center text-fg-6 text-sm animate-fade-up">
           No hay registros en este periodo.
+        </div>
+      )}
+
+      {/* Alerta global: cuántos clientes tienen el corte vencido */}
+      {!loading && clients.filter(c => c.cutoff_overdue).length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 p-3 flex items-center gap-3 animate-fade-up">
+          <AlertCircle size={16} className="text-red-400 shrink-0" />
+          <div className="text-xs text-red-200/90">
+            <strong>{clients.filter(c => c.cutoff_overdue).length} cliente(s) con corte vencido sin reporte enviado.</strong>
+            {" "}Revisa los marcados en rojo abajo.
+          </div>
         </div>
       )}
 
@@ -234,11 +254,26 @@ function ClientBlock({
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 border-b border-border bg-surface-3 hover:bg-surface-4 transition-colors text-left"
       >
-        <div className="flex items-center gap-3">
-          {open ? <ChevronDown size={14} className="text-fg-5" /> : <ChevronRight size={14} className="text-fg-5" />}
-          <div>
-            <div className="text-fg-2 text-sm font-semibold">{client.client_name}</div>
-            <div className="text-fg-6 text-[11px]">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {open ? <ChevronDown size={14} className="text-fg-5 shrink-0" /> : <ChevronRight size={14} className="text-fg-5 shrink-0" />}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-fg-2 text-sm font-semibold">{client.client_name}</div>
+              {/* Alerta corte vencido / Confirmación de enviado */}
+              {client.cutoff_overdue && (
+                <span className="inline-flex items-center gap-1 bg-red-500/15 text-red-300 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse"
+                      title={`El día de corte (${client.max_cutoff_day}) ya pasó y aún no se ha enviado el reporte del período`}>
+                  <AlertCircle size={10} /> Corte vencido
+                </span>
+              )}
+              {client.last_sent_at && (
+                <span className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider"
+                      title={`Último envío: ${new Date(client.last_sent_at).toLocaleString("es-CO")}`}>
+                  <CheckCircle2 size={10} /> Enviado
+                </span>
+              )}
+            </div>
+            <div className="text-fg-6 text-[11px] truncate">
               {selectedIds.length}/{client.machines.length} máquinas seleccionadas · destinatarios: {client.suggested_recipients.join(", ") || "sin correo"}
             </div>
           </div>

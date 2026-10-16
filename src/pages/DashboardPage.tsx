@@ -3,13 +3,18 @@ import {
   MessageSquare, DollarSign,
   Clock, CheckCircle2, XCircle, ArrowRight,
   AlertCircle, Star, Building2, Receipt,
+  LayoutDashboard, Radio, MapPin, Trophy, Home,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import DatePicker from "../components/ui/DatePicker";
 import Select from "../components/ui/Select";
 import { useAuth } from "../hooks/useAuth";
-import { api, type BotMetrics, type BotQuotationResponse } from "../services/api";
+import { api, type BotMetrics, type BotQuotationResponse, type DashboardMetrics } from "../services/api";
+import DashboardPrincipalTab   from "../components/comercial/dashboard/DashboardPrincipalTab";
+import DashboardCanalesTab     from "../components/comercial/dashboard/DashboardCanalesTab";
+import DashboardCiudadesTab    from "../components/comercial/dashboard/DashboardCiudadesTab";
+import DashboardVendedoresTab  from "../components/comercial/dashboard/DashboardVendedoresTab";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -76,15 +81,39 @@ const QUICK_PRESETS: { key: QuickPreset; label: string; range: () => { from: str
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+type TabKey = "resumen" | "principal" | "canales" | "ciudades" | "vendedores";
+
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: "resumen",    label: "Resumen",    icon: <Home             size={13} /> },
+  { key: "principal",  label: "Principal",  icon: <LayoutDashboard  size={13} /> },
+  { key: "canales",    label: "Canales",    icon: <Radio            size={13} /> },
+  { key: "ciudades",   label: "Ciudades",   icon: <MapPin           size={13} /> },
+  { key: "vendedores", label: "Vendedores", icon: <Trophy           size={13} /> },
+];
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [tab, setTab] = useState<TabKey>(() =>
+    (localStorage.getItem("dashboardTab") as TabKey) || "resumen"
+  );
+  function changeTab(k: TabKey) {
+    setTab(k);
+    localStorage.setItem("dashboardTab", k);
+  }
 
   const [dateFrom, setDateFrom] = useState(() => monthStart(MONTH_OPTIONS[0].value));
   const [dateTo,   setDateTo]   = useState(() => toISO(new Date()));
   const [metrics, setMetrics]   = useState<BotMetrics | null>(null);
   const [quotes, setQuotes]     = useState<BotQuotationResponse[]>([]);
   const [loading, setLoading]   = useState(true);
+  const [dashMetrics, setDashMetrics] = useState<DashboardMetrics | null>(null);
+  const [dashLoading, setDashLoading] = useState(false);
+
+  // Notas internas de desarrollo (solo visibles para el autor del dashboard)
+  const DEV_EMAILS = ["juandavidbuilesochoa@gmail.com"];
+  const showDevNotes = !!user?.email && DEV_EMAILS.includes(user.email.toLowerCase());
 
   const monthPreset = (() => {
     if (!dateFrom) return "";
@@ -106,6 +135,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Resumen (contenido actual) solo se carga si está activa esa tab o inicialmente
+    if (tab !== "resumen") return;
     setLoading(true);
     const from = dateFrom || undefined;
     const to   = dateTo   || undefined;
@@ -116,7 +147,20 @@ export default function DashboardPage() {
       .then(([m, q]) => { setMetrics(m); setQuotes(q.data); })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, [dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dashboard comercial (Principal/Canales/Ciudades) carga on-demand
+  useEffect(() => {
+    if (tab === "resumen" || tab === "vendedores") return;
+    if (dashMetrics && !dashLoading) {
+      // ya tenemos data, pero recarga si cambia fecha
+    }
+    setDashLoading(true);
+    api.bot.dashboardMetrics({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
+      .then(setDashMetrics)
+      .catch(() => null)
+      .finally(() => setDashLoading(false));
+  }, [tab, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const now      = new Date();
   const hour     = now.getHours();
@@ -148,6 +192,19 @@ export default function DashboardPage() {
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-fg-4 text-xs">Sistema activo</span>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-border overflow-x-auto">
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => changeTab(t.key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs uppercase tracking-wider font-medium border-b-2 -mb-px transition-colors whitespace-nowrap
+              ${tab === t.key
+                ? "text-accent border-accent"
+                : "text-fg-5 border-transparent hover:text-fg-3"}`}>
+            {t.icon} {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Date filter */}
@@ -186,6 +243,30 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ─── Tabs: Principal / Canales / Ciudades / Vendedores (del PDF) ─── */}
+      {tab === "principal" && dashMetrics && (
+        <DashboardPrincipalTab metrics={dashMetrics} loading={dashLoading} />
+      )}
+      {tab === "canales" && dashMetrics && (
+        <DashboardCanalesTab metrics={dashMetrics} showDevNotes={showDevNotes} />
+      )}
+      {tab === "ciudades" && dashMetrics && (
+        <DashboardCiudadesTab metrics={dashMetrics} showDevNotes={showDevNotes} />
+      )}
+      {tab === "vendedores" && (
+        <DashboardVendedoresTab showDevNotes={showDevNotes} />
+      )}
+
+      {/* Loading placeholder para tabs del PDF */}
+      {(tab === "principal" || tab === "canales" || tab === "ciudades") && !dashMetrics && dashLoading && (
+        <div className="flex items-center justify-center h-64 text-fg-6">
+          <div className="animate-pulse">Cargando métricas...</div>
+        </div>
+      )}
+
+      {/* ─── Tab: Resumen (contenido original) ─── */}
+      {tab === "resumen" && (
+      <>
       {/* KPI Cards — Row 1: período */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -396,6 +477,8 @@ export default function DashboardPage() {
 
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

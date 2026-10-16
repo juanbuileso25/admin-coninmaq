@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
 import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
@@ -55,6 +55,7 @@ export default function CotizacionesPage() {
   const [sendEmails,      setSendEmails]      = useState<string[]>([]);
   const [sendInput,       setSendInput]       = useState("");
   const [sending,         setSending]         = useState(false);
+  const [regenerating,    setRegenerating]    = useState<string | null>(null);
   const sendInputRef = useRef<HTMLInputElement>(null);
 
   const openSendModal = (q: BotQuotationResponse) => {
@@ -90,6 +91,23 @@ export default function CotizacionesPage() {
       toast.error("Error al enviar");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleRegenerate = async (q: BotQuotationResponse) => {
+    const confirmMsg = `¿Regenerar la cotización ${q.quotation_number} con la fecha de hoy?\n\n` +
+      `Se creará una NUEVA cotización con el mismo cliente, los mismos equipos y precios, ` +
+      `pero con nuevo número, fecha actual y validez de 15 días.`;
+    if (!confirm(confirmMsg)) return;
+    setRegenerating(q.quotation_number);
+    try {
+      const res = await api.bot.regenerateQuotation(q.quotation_number);
+      toast.success(`Cotización regenerada: ${res.quotation_number}`);
+      loadQuotations();
+    } catch (e: any) {
+      toast.error(e?.detail ?? "Error al regenerar");
+    } finally {
+      setRegenerating(null);
     }
   };
 
@@ -179,7 +197,7 @@ export default function CotizacionesPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total acumulado"   value={String(metrics.total_quotations)}  icon={ReceiptText} accent delay={0}   />
             <StatCard label="Del período"        value={String(metrics.quotations_period)} icon={ReceiptText}        delay={50}  />
             <StatCard label="Enviadas por email" value={String(metrics.email_sent_period)} icon={Mail}               delay={100} />
@@ -231,7 +249,7 @@ export default function CotizacionesPage() {
           </div>
 
           <div className="bg-surface-2 border border-border overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[1400px]">
               <thead>
                 <tr className="border-b border-border">
                   {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
@@ -317,13 +335,25 @@ export default function CotizacionesPage() {
                       }
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => openSendModal(q)}
-                        title="Enviar por correo"
-                        className="p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors"
-                      >
-                        <Send size={13} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openSendModal(q)}
+                          title="Reenviar por correo (misma cotización)"
+                          className="p-2 sm:p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors"
+                        >
+                          <Send size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleRegenerate(q)}
+                          disabled={regenerating === q.quotation_number}
+                          title="Regenerar con fecha actual (crea nueva cotización)"
+                          className="p-2 sm:p-1.5 text-fg-5 hover:text-sky-400 hover:bg-sky-500/10 rounded-sm transition-colors disabled:opacity-40"
+                        >
+                          {regenerating === q.quotation_number
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <RefreshCw size={13} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   );

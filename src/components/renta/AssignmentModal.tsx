@@ -52,7 +52,7 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
   }
 
   async function handleSave() {
-    if (!startDate || !endDate) return;
+    if (!startDate) return;
     setSaving(true);
     setError(null);
     try {
@@ -143,7 +143,7 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
               <DatePicker value={startDate} onChange={setStartDate} compact />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha fin</label>
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Fecha fin (opcional)</label>
               <DatePicker value={endDate} onChange={setEndDate} compact />
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function AssignmentModal({ machineId, assignment, onClose, onSave
           <button onClick={onClose} className="px-4 py-2 text-xs text-fg-4 border border-border hover:border-border-light transition-all">Cancelar</button>
           <button
             onClick={handleSave}
-            disabled={saving || !startDate || !endDate}
+            disabled={saving || !startDate}
             className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900 transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? "Guardando..." : "Guardar"}
