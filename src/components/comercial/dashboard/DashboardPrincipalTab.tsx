@@ -1,3 +1,4 @@
+import React from "react";
 import { Users, FileText, CheckCircle2, DollarSign, Minus, TrendingDown, Smile, Radio, MapPin, Factory, Hammer } from "lucide-react";
 import type { DashboardMetrics, DistributionRow, MonthlyRevenueRow, TierFunnelRow } from "../../../services/api";
 
@@ -291,6 +292,9 @@ function NpsCard({ label, value }: { label: string; value: number | null }) {
 }
 
 function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
+  const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+
   if (rows.length === 0) {
     return <div className="text-fg-6 text-xs text-center py-10">Sin datos del período</div>;
   }
@@ -307,7 +311,7 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
     const x = padL + (chartW * i) / Math.max(1, rows.length - 1);
     const yRange = maxVal - minVal || 1;
     const y = padT + chartH - ((r.closed_value - minVal) / yRange) * chartH;
-    return { x, y, row: r };
+    return { x, y, row: r, idx: i };
   });
 
   // Línea polyline
@@ -319,9 +323,24 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
   const guideLines = [0, 0.5, 1].map(frac => padT + chartH * (1 - frac));
   const guideLabels = [0, 0.5, 1].map(frac => Math.round((minVal + (maxVal - minVal) * frac)));
 
+  // Ancho de cada "zona" para captura de hover sobre el mes
+  const zoneW = chartW / rows.length;
+
+  const hovered = hoveredIdx !== null ? points[hoveredIdx] : null;
+
+  // Convierte coordenadas del viewbox a pixels de la pantalla para posicionar tooltip HTML
+  function toScreenX(vbX: number): string {
+    return `${(vbX / vbW) * 100}%`;
+  }
+
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${vbW} ${vbH}`} className="w-full h-48 sm:h-64" preserveAspectRatio="xMidYMid meet">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${vbW} ${vbH}`}
+        className="w-full h-48 sm:h-64"
+        preserveAspectRatio="xMidYMid meet"
+      >
         {/* Líneas guía */}
         {guideLines.map((y, i) => (
           <g key={i}>
@@ -346,24 +365,97 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
         {/* Línea */}
         <path d={pathD} fill="none" stroke="#FFC837" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
+        {/* Línea vertical del hover */}
+        {hovered && (
+          <line
+            x1={hovered.x} y1={padT} x2={hovered.x} y2={padT + chartH}
+            stroke="#FFC837" strokeWidth="1" strokeDasharray="3 3" opacity="0.5"
+          />
+        )}
+
         {/* Puntos + etiquetas */}
         {points.map((p, i) => (
           <g key={i}>
-            {/* Etiqueta valor */}
-            <text x={p.x} y={p.y - 10} textAnchor="middle"
-              className="fill-fg text-[11px] font-bold" fontSize="11">
-              {copShort(p.row.closed_value)}
-            </text>
+            {/* Etiqueta valor (ocultar en el hovered para que no choque con tooltip) */}
+            {hoveredIdx !== i && (
+              <text x={p.x} y={p.y - 10} textAnchor="middle"
+                className="fill-fg text-[11px] font-bold" fontSize="11">
+                {copShort(p.row.closed_value)}
+              </text>
+            )}
             {/* Punto */}
-            <circle cx={p.x} cy={p.y} r="4" fill="#0b0f17" stroke="#FFC837" strokeWidth="2" />
+            <circle
+              cx={p.x} cy={p.y}
+              r={hoveredIdx === i ? "7" : "4"}
+              fill={hoveredIdx === i ? "#FFC837" : "#0b0f17"}
+              stroke="#FFC837"
+              strokeWidth="2"
+              className="transition-all"
+            />
             {/* Label mes */}
             <text x={p.x} y={padT + chartH + 20} textAnchor="middle"
-              className="fill-fg-5 text-[10px]" fontSize="10">
+              className={`text-[10px] ${hoveredIdx === i ? "fill-accent font-bold" : "fill-fg-5"}`}
+              fontSize="10">
               {p.row.label}
             </text>
+            {/* Zona de hover invisible — captura mouse en una franja ancha para fácil interacción */}
+            <rect
+              x={p.x - zoneW / 2}
+              y={padT}
+              width={zoneW}
+              height={chartH}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              style={{ cursor: "pointer" }}
+            />
           </g>
         ))}
       </svg>
+
+      {/* Tooltip HTML (más control que SVG) */}
+      {hovered && (
+        <div
+          className="absolute pointer-events-none bg-surface-3 border border-accent/50 shadow-xl p-3 min-w-[200px] z-10"
+          style={{
+            left: toScreenX(hovered.x),
+            top: `${(hovered.y / vbH) * 100}%`,
+            transform: hovered.idx > rows.length / 2
+              ? "translate(calc(-100% - 10px), -50%)"
+              : "translate(10px, -50%)",
+          }}
+        >
+          <div className="text-fg-5 text-[10px] uppercase tracking-wider font-semibold mb-1">
+            {hovered.row.label}
+          </div>
+          <div className="text-fg font-bold text-lg mb-2">
+            {new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(hovered.row.closed_value)}
+          </div>
+          <div className="space-y-1 text-[11px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-fg-5">Leads cerrados</span>
+              <span className="text-accent font-bold">{hovered.row.closed_count}</span>
+            </div>
+            <div className="h-px bg-border my-1" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-fg-5">Cotizaciones</span>
+              <span className="text-fg-3">{hovered.row.quoted_count}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-fg-5">Valor cotizado</span>
+              <span className="text-fg-3">{copShort(hovered.row.quoted_value)}</span>
+            </div>
+            {hovered.row.quoted_count > 0 && (
+              <div className="flex items-center justify-between gap-3 pt-1 border-t border-border">
+                <span className="text-fg-5">Tasa cierre</span>
+                <span className="text-emerald-400 font-semibold">
+                  {Math.round((hovered.row.closed_count / hovered.row.quoted_count) * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Nota legend */}
       <div className="flex items-center justify-end mt-2 text-[10px] text-fg-5">
