@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Trash2, Loader2, Search } from "lucide-react";
+import { X, Plus, Trash2, Loader2, Search, Paperclip, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { api, type SparePart, type SparePartSuggestion, type ManualQuotationResponse } from "../../services/api";
+import { api, type SparePart, type SparePartSuggestion, type ManualQuotationResponse, type QuotationEmailAttachment } from "../../services/api";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
@@ -67,6 +67,45 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState<ManualQuotationResponse | null>(null);
 
+  // Adjuntos
+  const [attachments, setAttachments] = useState<Array<QuotationEmailAttachment & { size?: number }>>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_ATTACHMENT_MB = 10;
+
+  const addFiles = async (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    setUploading(true);
+    try {
+      for (const f of arr) {
+        if (f.size > MAX_ATTACHMENT_MB * 1024 * 1024) {
+          toast.error(`"${f.name}" supera los ${MAX_ATTACHMENT_MB} MB — omitido`);
+          continue;
+        }
+        try {
+          const up = await api.bot.uploadQuotationAttachment(f);
+          setAttachments(prev => [...prev, up]);
+        } catch (e: unknown) {
+          toast.error(`No se pudo subir "${f.name}": ${e instanceof Error ? e.message : "error"}`);
+        }
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (url: string) =>
+    setAttachments(prev => prev.filter(a => a.url !== url));
+
+  const fmtSize = (bytes?: number) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const fromLead = !!(prefill?.session_id?.startsWith("wa_"));
 
   // Reset on close
@@ -77,6 +116,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       setExtraEmails([]); setExtraEmailInput("");
       setModo("email"); setSendToWa(true); setResult(null);
       setSuggestions([]); setSuggestionsLoading(false);
+      setAttachments([]);
     }
   }, [open]);
 
@@ -194,6 +234,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
         delivery_mode: entrega,
         send_email:    hasEmail,
         extra_emails:  extraEmails.length > 0 ? extraEmails : undefined,
+        attachments:   attachments.length > 0 ? attachments.map(a => ({ url: a.url, filename: a.filename, content_type: a.content_type })) : undefined,
         // Extra fields forwarded to the API
         ...(prefill?.session_id        ? { session_id:              prefill.session_id }   : {}),
         ...(prefill?.request_id != null ? { spare_part_request_id: prefill.request_id }   : {}),
@@ -581,6 +622,55 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                     />
                   </div>
                 </div>
+              </section>
+
+              {/* Adjuntos */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Paperclip size={12} /> Adjuntos del correo (opcional)
+                </h3>
+                <p className="text-fg-6 text-[11px] mb-2">
+                  Se envían como adjuntos del email al cliente. Máx. {MAX_ATTACHMENT_MB} MB por archivo.
+                </p>
+                {attachments.length > 0 && (
+                  <ul className="space-y-1.5 mb-2">
+                    {attachments.map(a => (
+                      <li key={a.url} className="flex items-center gap-2 bg-surface-3 border border-border px-2.5 py-1.5 text-xs">
+                        <Paperclip size={11} className="text-fg-5 shrink-0" />
+                        <a href={a.url} target="_blank" rel="noreferrer" className="flex-1 min-w-0 text-fg-2 truncate hover:text-accent">
+                          {a.filename}
+                        </a>
+                        {a.size != null && (
+                          <span className="text-fg-6 text-[10px] shrink-0">{fmtSize(a.size)}</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(a.url)}
+                          className="text-fg-6 hover:text-red-400 p-0.5 shrink-0"
+                          title="Quitar"
+                        >
+                          <X size={11} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => e.target.files && addFiles(e.target.files)}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 text-xs text-fg-3 border border-dashed border-fg-6 hover:border-accent hover:text-accent px-3 py-2 transition-colors disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                  {uploading ? "Subiendo..." : "Añadir archivos"}
+                </button>
               </section>
 
               {/* Delivery */}

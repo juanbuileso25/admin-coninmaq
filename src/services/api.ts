@@ -593,6 +593,17 @@ export type QuotationPageData = {
   items: QuotationItem[]; client: QuotationClient | null; advisor: QuotationAdvisor | null;
   observations: string | null;
 };
+export type QuotationEmailAttachment = {
+  url: string;
+  filename: string;
+  content_type?: string;
+};
+export type QuotationUploadAttachmentResponse = {
+  url: string;
+  filename: string;
+  content_type: string;
+  size: number;
+};
 export type ManualQuotationRequest = {
   client_name: string;
   client_email: string;
@@ -608,6 +619,7 @@ export type ManualQuotationRequest = {
   send_whatsapp?: boolean;
   observations?: string;
   extra_emails?: string[];
+  attachments?: QuotationEmailAttachment[];
   // Calificación del lead (opcional — dispara scoring si vienen los 3)
   num_machines_fleet?: number;
   payment_method?: string;
@@ -1982,11 +1994,24 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    sendQuotationEmail: (quotationNumber: string, emails: string[]) =>
+    sendQuotationEmail: (
+      quotationNumber: string,
+      emails: string[],
+      attachments: QuotationEmailAttachment[] = [],
+    ) =>
       request<{ sent: boolean; emails: string[] }>(`/quotations/${quotationNumber}/send-email`, {
         method: "POST",
-        body: JSON.stringify({ emails }),
+        body: JSON.stringify({ emails, attachments }),
       }),
+    uploadQuotationAttachment: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<QuotationUploadAttachmentResponse>("/quotations/upload-attachment", {
+        method: "POST",
+        body: form,
+        headers: {},
+      });
+    },
     regenerateQuotation: (quotationNumber: string, extra_emails: string[] = []) =>
       request<ManualQuotationResponse>(`/quotations/${quotationNumber}/regenerate`, {
         method: "POST",
