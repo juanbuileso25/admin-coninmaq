@@ -1,5 +1,7 @@
 import React from "react";
-import { Users, FileText, CheckCircle2, DollarSign, Minus, TrendingDown, Smile, Radio, MapPin, Factory, Hammer } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Users, FileText, CheckCircle2, DollarSign, Minus, TrendingDown, Smile, Radio, MapPin, Factory, Hammer, X, Loader2 } from "lucide-react";
+import { api } from "../../../services/api";
 import type { DashboardMetrics, DistributionRow, MonthlyRevenueRow, TierFunnelRow } from "../../../services/api";
 
 function copFull(n: number | null | undefined): string {
@@ -24,6 +26,7 @@ const TIER_META: Record<string, { label: string; color: string; textColor: strin
 
 export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardMetrics; loading?: boolean }) {
   const f = metrics.funnel;
+  const [detailMonth, setDetailMonth] = React.useState<string | null>(null);
 
   return (
     <div className="space-y-4 animate-fade-up">
@@ -97,9 +100,13 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
       </div>
 
       {/* Fila 5: Revenue mensual */}
-      <Card title="Revenue · valor cerrado por mes" subtitle="Últimos 10 meses · fecha en que el lead pasó a Cerrado">
-        <MonthlyRevenueChart rows={metrics.monthly_revenue} />
+      <Card title="Revenue · valor cerrado por mes" subtitle="Últimos 10 meses · click en un punto para ver detalle">
+        <MonthlyRevenueChart rows={metrics.monthly_revenue} onMonthClick={setDetailMonth} />
       </Card>
+
+      {detailMonth && (
+        <ClosedMonthDetailModal month={detailMonth} onClose={() => setDetailMonth(null)} />
+      )}
 
       {/* Ciudades (placeholder si vacío) */}
       {metrics.cities_distribution.length > 0 && (
@@ -293,7 +300,10 @@ function NpsCard({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
+function MonthlyRevenueChart({ rows, onMonthClick }: {
+  rows: MonthlyRevenueRow[];
+  onMonthClick?: (month: string) => void;
+}) {
   const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
@@ -409,7 +419,8 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
               fill="transparent"
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
-              style={{ cursor: "pointer" }}
+              onClick={() => onMonthClick?.(p.row.month)}
+              style={{ cursor: onMonthClick ? "pointer" : "default" }}
             />
           </g>
         ))}
@@ -467,5 +478,130 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Modal: detalle de leads cerrados en un mes específico ─────────────────
+
+type ClosedLeadRow = {
+  lead_id: number;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  phone: string | null;
+  created_at: string;
+  first_closed_at: string;
+  close_value: number | null;
+  latest_quotation_number: string | null;
+  latest_quotation_total: number | null;
+  value_used_in_chart: number | null;
+  value_source: string | null;
+};
+
+function ClosedMonthDetailModal({ month, onClose }: { month: string; onClose: () => void }) {
+  const [loading, setLoading] = React.useState(true);
+  const [leads, setLeads] = React.useState<ClosedLeadRow[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setLoading(true);
+    api.bot.monthlyClosedDetail(month)
+      .then(res => setLeads(res.leads))
+      .catch(e => setError(e?.detail ?? "Error cargando detalle"))
+      .finally(() => setLoading(false));
+  }, [month]);
+
+  const totalChart = leads.reduce((s, l) => s + (l.value_used_in_chart ?? 0), 0);
+  const monthLabel = (() => {
+    const [y, m] = month.split("-").map(Number);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  })();
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
+          <div>
+            <h2 className="text-fg font-semibold text-sm">
+              Leads cerrados — {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+            </h2>
+            <p className="text-fg-6 text-xs mt-0.5">
+              {leads.length} lead{leads.length === 1 ? "" : "s"} · Total: {copFull(totalChart)}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-fg-5 hover:text-fg">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading && (
+            <div className="flex items-center justify-center py-10 text-fg-6">
+              <Loader2 size={18} className="animate-spin mr-2" /> Cargando...
+            </div>
+          )}
+          {error && <div className="text-red-400 text-sm text-center py-6">{error}</div>}
+          {!loading && !error && leads.length === 0 && (
+            <div className="text-center py-10 text-fg-6 text-sm">
+              Sin leads cerrados en este mes.
+            </div>
+          )}
+          {!loading && !error && leads.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-fg-6 text-[10px] uppercase tracking-wider">
+                    <th className="text-left px-3 py-2 font-medium">Lead</th>
+                    <th className="text-left px-3 py-2 font-medium">Empresa</th>
+                    <th className="text-left px-3 py-2 font-medium">Creado</th>
+                    <th className="text-left px-3 py-2 font-medium">Cerrado</th>
+                    <th className="text-right px-3 py-2 font-medium">Valor en gráfico</th>
+                    <th className="text-left px-3 py-2 font-medium">Fuente del valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {leads.map(l => (
+                    <tr key={l.lead_id} className="hover:bg-surface-3">
+                      <td className="px-3 py-2">
+                        <div className="text-fg-2">{l.name || <span className="italic text-fg-6">Sin nombre</span>}</div>
+                        {l.email && <div className="text-fg-6 text-[10px]">{l.email}</div>}
+                        {l.phone && <div className="text-fg-6 text-[10px]">{l.phone}</div>}
+                      </td>
+                      <td className="px-3 py-2 text-fg-3">{l.company || "—"}</td>
+                      <td className="px-3 py-2 text-fg-5 text-[10px]">
+                        {new Date(l.created_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-3 py-2 text-emerald-400 text-[10px] font-mono">
+                        {new Date(l.first_closed_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-3 py-2 text-right text-fg font-mono text-xs">
+                        {copFull(l.value_used_in_chart)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {l.value_source === "close_value" ? (
+                          <span className="text-emerald-400 text-[10px]">close_value</span>
+                        ) : l.value_source?.startsWith("quotation_") ? (
+                          <span className="text-sky-400 text-[10px]">{l.value_source.replace("quotation_", "COT ")}</span>
+                        ) : (
+                          <span className="text-fg-6 text-[10px]">sin valor</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-border text-[10px] text-fg-6">
+          Nota: el gráfico cuenta solo la <strong>primera vez</strong> que el lead pasó a Cerrado.
+          Si un lead fue cerrado antes y re-marcado, NO cuenta en este mes.
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
