@@ -10,6 +10,11 @@ function copShort(n: number | null | undefined): string {
   return `$${n.toFixed(0)}`;
 }
 
+function copFull(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+}
+
 const TIER_META: Record<string, { label: string; color: string; textColor: string; bg: string }> = {
   A:        { label: "Tier A",   color: "bg-green-500",  textColor: "text-green-400",  bg: "bg-green-500/10" },
   B:        { label: "Tier B",   color: "bg-yellow-500", textColor: "text-yellow-400", bg: "bg-yellow-500/10" },
@@ -28,9 +33,9 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
         <StatBig label="Total leads"       value={String(f.total_leads)}         sub="Funnel general"       icon={<Users         size={14} />} />
         <StatBig label="Total cotizaciones" value={String(f.total_quotations)}    sub="Funnel general"       icon={<FileText      size={14} />} accent />
         <StatBig label="Total cerrados"    value={String(f.total_closed)}        sub="Funnel general"       icon={<CheckCircle2  size={14} />} accent />
-        <StatBig label="Valor cotizaciones" value={copShort(f.quotation_value_total)} sub="Valores del funnel"   icon={<DollarSign    size={14} />} />
-        <StatBig label="Valor cerrados"    value={copShort(f.closed_value_total)}  sub="Valores del funnel"   icon={<DollarSign    size={14} />} accent />
-        <StatBig label="Diferencia"        value={copShort(f.pending_value)}       sub="Pendiente de conversión" icon={<Minus         size={14} />} danger />
+        <StatBig label="Valor cotizaciones" value={copFull(f.quotation_value_total)} sub="Valores del funnel"   icon={<DollarSign    size={14} />} />
+        <StatBig label="Valor cerrados"    value={copFull(f.closed_value_total)}  sub="Valores del funnel"   icon={<DollarSign    size={14} />} accent />
+        <StatBig label="Diferencia"        value={copFull(f.pending_value)}       sub="Pendiente de conversión" icon={<Minus         size={14} />} danger />
       </div>
 
       {/* Fila 2: Funnel + Funnel por tier */}
