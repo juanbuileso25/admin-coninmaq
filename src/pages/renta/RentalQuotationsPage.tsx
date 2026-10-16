@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, FileText, CheckCircle2, Clock, AlertCircle, ArrowRight,
   Loader2, Search, Trash2, LayoutList, Kanban, ReceiptText, Mail, DollarSign, Percent, Send, Ghost, XCircle,
-  ChevronDown,
+  ChevronDown, AlertTriangle,
 } from "lucide-react";
 import { api, type RentalQuotationListItem, type RentalQuotationStatus } from "../../services/api";
 import { toast } from "sonner";
@@ -118,6 +118,8 @@ export default function RentalQuotationsPage() {
   const [search, setSearch] = useState("");
   const [acting, setActing] = useState<string | null>(null);
   const [lostModalId, setLostModalId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; number: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   // Filtro de etapas en el pipeline (toggle para ocultar/mostrar columnas)
   const [hiddenStages, setHiddenStages] = useState<Set<string>>(() => {
     const stored = localStorage.getItem("rentalQuotationsHiddenStages");
@@ -208,14 +210,22 @@ export default function RentalQuotationsPage() {
     setShowModal(true);
   }
 
-  async function handleDelete(id: string, number: string) {
-    if (!confirm(`¿Eliminar la cotización ${number}? Esta acción no se puede deshacer visualmente.`)) return;
+  function handleDelete(id: string, number: string) {
+    setConfirmDelete({ id, number });
+  }
+
+  async function confirmDeleteAction() {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await api.rental.deleteQuotation(id);
+      await api.rental.deleteQuotation(confirmDelete.id);
       toast.success("Cotización eliminada");
+      setConfirmDelete(null);
       load();
     } catch {
       toast.error("No se pudo eliminar");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -647,7 +657,66 @@ export default function RentalQuotationsPage() {
           onDone={() => { setLostModalId(null); load(); }}
         />
       )}
+      {confirmDelete && (
+        <ConfirmDeleteQuotationModal
+          number={confirmDelete.number}
+          loading={deleting}
+          onConfirm={confirmDeleteAction}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function ConfirmDeleteQuotationModal({
+  number, loading, onConfirm, onCancel,
+}: {
+  number: string;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={loading ? undefined : onCancel} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+              <AlertTriangle size={18} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-fg font-semibold text-sm">Eliminar cotización</h3>
+              <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                La cotización <span className="text-fg font-medium">{number}</span> quedará inactiva
+                y no aparecerá en el listado. Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={12} />
+              {loading ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
