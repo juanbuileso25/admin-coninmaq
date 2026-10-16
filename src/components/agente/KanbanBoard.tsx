@@ -343,27 +343,59 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
           const isClosedStage = lead.pipeline_stage === "cerrado";
           const displayValue = lead.close_value ?? lead.latest_quotation.total;
           const missingCloseValue = isClosedStage && !hasCloseValue;
+          const preview = lead.latest_quotation.machines_preview ?? [];
+          const itemsCount = lead.latest_quotation.items_count ?? preview.length;
           return (
-            <div className={`flex items-center gap-1.5 text-[11px] px-2 py-1 border
-              ${missingCloseValue
-                ? "text-amber-300 bg-amber-950/20 border-amber-900/40"
-                : "text-accent bg-accent/5 border-accent/20"}`}>
-              <FileText size={10} />
-              <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
-              <span
-                className="ml-auto"
-                title={
-                  hasCloseValue
-                    ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(lead.latest_quotation.total)})`
-                    : missingCloseValue
-                      ? `Sin valor de cierre — usando cotización ${fmt(lead.latest_quotation.total)}. Edítalo desde el detalle.`
-                      : undefined
-                }
-              >
-                {fmt(displayValue)}
-                {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
-                {missingCloseValue && <span className="ml-1">⚠</span>}
-              </span>
+            <div className="space-y-1">
+              {/* Mini preview de productos cotizados (sin valor — ya se muestra en la pastilla de abajo) */}
+              {preview.length > 0 && (
+                <div className="space-y-1">
+                  {preview.map((mp, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border p-1.5">
+                      {mp.image_url ? (
+                        <img src={mp.image_url} alt="" className="w-9 h-9 object-contain bg-surface-3 shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 bg-surface-3 border border-border shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        {mp.code && <div className="text-fg-2 text-[11px] font-mono font-bold truncate">{mp.code}</div>}
+                        <div className="text-fg-6 text-[9px] truncate">{mp.name || "—"}</div>
+                      </div>
+                      {mp.quantity > 1 && (
+                        <div className="text-fg-5 text-[10px] font-semibold shrink-0">x{mp.quantity}</div>
+                      )}
+                    </div>
+                  ))}
+                  {itemsCount > preview.length && (
+                    <div className="text-fg-6 text-[9px] text-center">
+                      + {itemsCount - preview.length} ítem{itemsCount - preview.length === 1 ? "" : "s"} más
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Pastilla de cotización (número + total) */}
+              <div className={`flex items-center gap-1.5 text-[11px] px-2 py-1 border
+                ${missingCloseValue
+                  ? "text-amber-300 bg-amber-950/20 border-amber-900/40"
+                  : "text-accent bg-accent/5 border-accent/20"}`}>
+                <FileText size={10} />
+                <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
+                <span
+                  className="ml-auto"
+                  title={
+                    hasCloseValue
+                      ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(lead.latest_quotation.total)})`
+                      : missingCloseValue
+                        ? `Sin valor de cierre — usando cotización ${fmt(lead.latest_quotation.total)}. Edítalo desde el detalle.`
+                        : undefined
+                  }
+                >
+                  {fmt(displayValue)}
+                  {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
+                  {missingCloseValue && <span className="ml-1">⚠</span>}
+                </span>
+              </div>
             </div>
           );
         })()}
@@ -397,8 +429,12 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
             {menuOpen && (
               <div
                 ref={menuRef}
-                style={{ position: "fixed", top: menuPos.top, right: `calc(100vw - ${menuPos.left}px)` }}
-                className="z-[9999] bg-surface-3 border border-border shadow-xl min-w-[180px]"
+                style={{
+                  position: "fixed",
+                  top: menuPos.top,
+                  right: `max(8px, calc(100vw - ${menuPos.left}px))`,
+                }}
+                className="z-[9999] bg-surface-3 border border-border shadow-xl min-w-[180px] max-w-[90vw]"
               >
                 {PIPELINE_STAGES.filter(s => s !== lead.pipeline_stage).map(s => (
                   <button
@@ -598,7 +634,7 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
       {/* Kanban board */}
       <div
         ref={boardRef}
-        className="flex gap-3 overflow-x-auto pb-4 min-h-[calc(100vh-320px)]"
+        className="flex gap-3 overflow-x-auto pb-4 min-h-[70vh] sm:min-h-[calc(100vh-320px)]"
       >
         {visibleStages.map(stage => {
           const col    = columns.find(c => c.stage === stage);

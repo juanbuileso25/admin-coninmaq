@@ -8,6 +8,10 @@ import MaquinariaRentaPage  from "./pages/inventario/MaquinariaRentaPage";
 import RentalOverviewPage      from "./pages/renta/RentalOverviewPage";
 import RentalMachineDetailPage from "./pages/renta/RentalMachineDetailPage";
 import RentalReportsPage       from "./pages/renta/RentalReportsPage";
+import RentalReportsHistoryPage from "./pages/renta/RentalReportsHistoryPage";
+import RentalQuotationsPage       from "./pages/renta/RentalQuotationsPage";
+import RentalQuotationDetailPage  from "./pages/renta/RentalQuotationDetailPage";
+import CondicionesCotizacionRentaPage from "./pages/ajustes/CondicionesCotizacionRentaPage";
 import UsersPage            from "./pages/usuarios/UsersPage";
 import RolesPage            from "./pages/ajustes/RolesPage";
 import AreasPage            from "./pages/ajustes/AreasPage";
@@ -26,6 +30,7 @@ import LeadScorePage       from "./pages/agente/LeadScorePage";
 import CotizacionesPage    from "./pages/agente/CotizacionesPage";
 import CalificacionesPage  from "./pages/comercial/CalificacionesPage";
 import ScoringConfigPage   from "./pages/ajustes/ScoringConfigPage";
+import ConceptosRentaPage  from "./pages/ajustes/ConceptosRentaPage";
 import QuotationPage       from "./pages/public/QuotationPage";
 import ProveedoresPage      from "./pages/ajustes/ProveedoresPage";
 import ModulosPage          from "./pages/ajustes/ModulosPage";
@@ -65,7 +70,10 @@ export default function App() {
         <Route path="/renta" element={<Navigate to="/renta/relaciones" replace />} />
         <Route path="/renta/relaciones" element={<RentalOverviewPage />} />
         <Route path="/renta/relaciones/reportes" element={<RentalReportsPage />} />
+        <Route path="/renta/relaciones/reportes/historial" element={<RentalReportsHistoryPage />} />
         <Route path="/renta/relaciones/:id" element={<RentalMachineDetailPage />} />
+        <Route path="/renta/cotizaciones" element={<RentalQuotationsPage />} />
+        <Route path="/renta/cotizaciones/:id" element={<RentalQuotationDetailPage />} />
 
 
         {/* Comercio exterior */}
@@ -111,7 +119,9 @@ export default function App() {
         <Route path="/ajustes"        element={<Navigate to="/ajustes/roles" replace />} />
         <Route path="/ajustes/roles"    element={<RolesPage />} />
         <Route path="/ajustes/areas"    element={<AreasPage />} />
-        <Route path="/ajustes/scoring"    element={<ScoringConfigPage />} />
+        <Route path="/ajustes/scoring"           element={<ScoringConfigPage />} />
+        <Route path="/ajustes/conceptos-renta"   element={<ConceptosRentaPage />} />
+        <Route path="/ajustes/condiciones-cotizacion-renta" element={<CondicionesCotizacionRentaPage />} />
         <Route path="/ajustes/proveedores" element={<ProveedoresPage />} />
         <Route path="/ajustes/modulos"     element={<ModulosPage />} />
         <Route path="/ajustes/menu"        element={<MenuPage />} />

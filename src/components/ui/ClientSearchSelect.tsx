@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Search, X, Loader2 } from "lucide-react";
+import { ChevronDown, Search, X, Loader2, Plus, UserPlus } from "lucide-react";
 import { api, type ClientResponse } from "../../services/api";
+
+const DOCUMENT_TYPES = [
+  { value: "",      label: "—" },
+  { value: "NIT",   label: "NIT" },
+  { value: "CC",    label: "CC" },
+  { value: "CE",    label: "CE" },
+  { value: "PP",    label: "Pasaporte" },
+  { value: "RUT",   label: "RUT" },
+];
 
 interface Props {
   value: string | null;                 // client id
@@ -21,6 +30,7 @@ export default function ClientSearchSelect({
   const [loading, setLoading]     = useState(false);
   const [selectedName, setSelectedName] = useState<string | null>(displayValue ?? null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [createOpen, setCreateOpen] = useState(false);
   const buttonRef                 = useRef<HTMLButtonElement>(null);
   const dropdownRef               = useRef<HTMLDivElement>(null);
   const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -186,9 +196,182 @@ export default function ClientSearchSelect({
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setCreateOpen(true);
+              setOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-accent hover:bg-accent/10
+                       border-t border-border transition-colors font-medium"
+          >
+            <UserPlus size={13} />
+            {query.trim() ? `Crear cliente "${query.trim()}"` : "Crear nuevo cliente"}
+          </button>
         </div>,
         document.body
       )}
+
+      {createOpen && (
+        <QuickCreateClientModal
+          initialName={query.trim()}
+          onClose={() => setCreateOpen(false)}
+          onCreated={(c) => {
+            setCreateOpen(false);
+            onSelect(c);
+            setSelectedName(c.name);
+            setQuery("");
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+
+function QuickCreateClientModal({
+  initialName, onClose, onCreated,
+}: {
+  initialName: string;
+  onClose: () => void;
+  onCreated: (c: ClientResponse) => void;
+}) {
+  const [name, setName]                 = useState(initialName);
+  const [documentType, setDocumentType] = useState("NIT");
+  const [document, setDocument]         = useState("");
+  const [mobile, setMobile]             = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [saving, setSaving]             = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!name.trim())     { setError("El nombre es obligatorio"); return; }
+    if (!document.trim()) { setError("El documento es obligatorio"); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const payload: Record<string, unknown> = {
+        name: name.trim(),
+        document: document.trim(),
+      };
+      if (documentType) payload.document_type = documentType;
+      if (mobile.trim()) payload.mobile = mobile.trim();
+      if (billingEmail.trim()) payload.billing_email = billingEmail.trim();
+
+      const created = await api.clients.create(payload);
+      onCreated(created);
+    } catch (e: any) {
+      setError(e?.detail ?? e?.message ?? "Error al crear el cliente");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Plus size={16} className="text-accent" />
+            <h2 className="text-fg font-semibold text-sm">Nuevo cliente</h2>
+          </div>
+          <button onClick={onClose} className="text-fg-5 hover:text-fg transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">
+              Razón social / Nombre *
+            </label>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Constructora XYZ S.A.S."
+              className="bg-surface-3 border border-border text-sm text-fg-2 px-3 py-2 outline-none focus:border-accent"
+            />
+          </div>
+
+          <div className="grid grid-cols-[110px_1fr] gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Tipo doc</label>
+              <select
+                value={documentType}
+                onChange={(e) => setDocumentType(e.target.value)}
+                className="bg-surface-3 border border-border text-sm text-fg-2 px-2 py-2 outline-none focus:border-accent"
+              >
+                {DOCUMENT_TYPES.map((d) => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Documento *</label>
+              <input
+                value={document}
+                onChange={(e) => setDocument(e.target.value)}
+                placeholder="900123456-7"
+                className="bg-surface-3 border border-border text-sm text-fg-2 px-3 py-2 outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Celular</label>
+              <input
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                placeholder="3001234567"
+                className="bg-surface-3 border border-border text-sm text-fg-2 px-3 py-2 outline-none focus:border-accent"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-fg-5 font-medium">Email facturación</label>
+              <input
+                type="email"
+                value={billingEmail}
+                onChange={(e) => setBillingEmail(e.target.value)}
+                placeholder="facturacion@cliente.com"
+                className="bg-surface-3 border border-border text-sm text-fg-2 px-3 py-2 outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-red-400 text-xs bg-red-950/30 border border-red-900/40 px-3 py-2">{error}</div>
+          )}
+
+          <p className="text-fg-6 text-[10px]">
+            Se crea con lo mínimo. Luego puedes completar dirección, contactos y documentos en <strong>Clientes</strong>.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-xs text-fg-4 border border-border hover:border-border-light transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim() || !document.trim()}
+            className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900
+                       transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed
+                       flex items-center gap-1.5"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+            {saving ? "Creando..." : "Crear y seleccionar"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }

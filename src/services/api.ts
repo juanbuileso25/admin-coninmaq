@@ -449,6 +449,14 @@ export type BotSessionDetail = BotSessionListItem & {
   lead_phone: string | null;
 };
 
+export interface BotQuotationMachinePreview {
+  code: string;
+  name: string;
+  image_url: string | null;
+  quantity: number;
+  total: number;
+}
+
 export interface BotQuotationSummary {
   id: number;
   quotation_number: string;
@@ -457,6 +465,8 @@ export interface BotQuotationSummary {
   page_url: string | null;
   email_sent: boolean;
   created_at: string;
+  machines_preview: BotQuotationMachinePreview[];
+  items_count: number;
 }
 
 export type PipelineStage =
@@ -650,6 +660,60 @@ export type PaginatedResponse<T> = {
   page: number;
   page_size: number;
   pages: number;
+};
+
+// ── Dashboard de métricas comerciales ────────────────────────────────────────
+
+export type FunnelSummary = {
+  total_leads: number;
+  total_quotations: number;
+  total_closed: number;
+  total_lost: number;
+  quotation_value_total: number;
+  closed_value_total: number;
+  pending_value: number;
+  leads_to_quotations_rate: number;
+  quotations_to_closed_rate: number;
+};
+
+export type TierFunnelRow = {
+  tier: string;
+  total_leads: number;
+  total_quotations: number;
+  total_closed: number;
+  conv_rate: number;
+};
+
+export type DistributionRow = {
+  label: string;
+  count: number;
+  pct: number;
+};
+
+export type MonthlyRevenueRow = {
+  month: string;
+  label: string;
+  quoted_value: number;
+  closed_value: number;
+};
+
+export type NpsSummary = {
+  nps_relational: number | null;
+  nps: number | null;
+  responses_count: number;
+};
+
+export type DashboardMetrics = {
+  date_from: string;
+  date_to: string;
+  funnel: FunnelSummary;
+  tier_funnel: TierFunnelRow[];
+  sources_distribution: DistributionRow[];
+  cities_distribution: DistributionRow[];
+  industries_distribution: DistributionRow[];
+  equipment_distribution: DistributionRow[];
+  monthly_revenue: MonthlyRevenueRow[];
+  nps_summary: NpsSummary;
 };
 
 // ── Machine types ──────────────────────────────────────────────────────────────
@@ -1256,6 +1320,9 @@ export type RentalReportClientBucket = {
   machines: RentalReportMachineItem[];
   total_value: number;
   total_hours: number;
+  last_sent_at: string | null;
+  max_cutoff_day: number | null;
+  cutoff_overdue: boolean;
 };
 
 export type RentalReportOverviewResponse = {
@@ -1278,6 +1345,221 @@ export type RentalReportSendResponse = {
   sent_at: string;
 };
 
+export type RentalBillingConcept = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  default_qty: number;
+  default_unit_value: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RentalBillingConceptCreate = {
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  default_qty?: number;
+  default_unit_value?: number | null;
+};
+
+export type RentalBillingConceptUpdate = Partial<RentalBillingConceptCreate> & { is_active?: boolean };
+
+export type RentalReportExtraItem = {
+  concept_id?: string | null;
+  name: string;
+  description?: string | null;
+  qty: number;
+  unit_value: number;
+  machine_id?: string | null;
+};
+
+// ── Rental Quotations ─────────────────────────────────────────────────────────
+
+export type RentalQuotationItemSnapshot = {
+  code?: string | null;
+  model?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  plate?: string | null;
+  image_url?: string | null;
+  pdf_url?: string | null;
+  description?: string | null;
+  specs?: Array<{ label: string; value: string; icon?: string; order?: number }>;
+  highlights?: Array<{ text: string; icon?: string; order?: number }>;
+};
+
+export type RentalQuotationItem = {
+  rental_machine_id?: string | null;
+  snapshot: RentalQuotationItemSnapshot;
+  rate_hour: number;
+  standby_hours?: number;
+  standby_amount?: number | null;
+  notes?: string | null;
+};
+
+export type RentalQuotationExtraItem = {
+  concept_id?: string | null;
+  name: string;
+  description?: string | null;
+  qty: number;
+  unit_value: number;
+  machine_id?: string | null;
+  is_optional?: boolean;
+};
+
+export type RentalQuotationConditions = {
+  alquiler: string[];
+  entrega: string[];
+  credito: string[];
+};
+
+export type RentalQuotationStatus = "draft" | "sent" | "approved" | "rejected" | "lost" | "expired" | "converted";
+
+export type RentalQuotationResponse = {
+  id: string;
+  number: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_document: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  project_name: string | null;
+  items: RentalQuotationItem[];
+  extra_items: RentalQuotationExtraItem[];
+  conditions: RentalQuotationConditions;
+  notes: string | null;
+  status: RentalQuotationStatus;
+  valid_days: number;
+  valid_until: string | null;
+  issued_date: string;
+  subtotal_hour: number | null;
+  subtotal_standby: number | null;
+  extras_total: number | null;
+  total_estimated: number | null;
+  page_url: string | null;
+  pdf_url: string | null;
+  email_sent: boolean;
+  sent_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  lost_at: string | null;
+  lost_reason: string | null;
+  converted_assignment_id: string | null;
+  converted_at: string | null;
+  created_by_id: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+  is_expired: boolean;
+};
+
+export type RentalQuotationMachinePreview = {
+  code: string;
+  model: string;
+  brand: string;
+  image_url: string | null;
+  plate: string | null;
+  rate_hour: number;
+  standby_hours: number;
+  standby_amount: number;
+};
+
+export type RentalQuotationListItem = {
+  id: string;
+  number: string;
+  client_id: string | null;
+  client_name: string | null;
+  project_name: string | null;
+  items_count: number;
+  machines_summary: string;
+  machines_preview: RentalQuotationMachinePreview[];
+  status: RentalQuotationStatus;
+  valid_until: string | null;
+  sent_at: string | null;
+  issued_date: string;
+  subtotal_standby: number | null;
+  extras_total: number | null;
+  total_estimated: number | null;
+  created_at: string;
+  is_expired: boolean;
+};
+
+export type RentalQuotationCreate = {
+  client_id?: string | null;
+  client_name?: string | null;
+  client_document?: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  project_name?: string | null;
+  items: RentalQuotationItem[];
+  extra_items?: RentalQuotationExtraItem[];
+  conditions?: RentalQuotationConditions | null;
+  notes?: string | null;
+  valid_days?: number;
+  issued_date?: string | null;
+};
+
+export type RentalQuotationUpdate = Partial<RentalQuotationCreate>;
+
+export type RentalQuotationSendRequest = {
+  recipient_emails: string[];
+  cc_emails?: string[];
+  subject?: string | null;
+  note?: string | null;
+};
+
+export type RentalQuotationSendHistoryItem = {
+  id: string;
+  quotation_id: string;
+  sent_at: string;
+  sent_by_id: string | null;
+  sent_by_name: string | null;
+  recipient_emails: string[];
+  cc_emails: string[];
+  subject: string;
+  note: string | null;
+  status: string;
+  error: string | null;
+};
+
+export type RentalConditionsTemplate = {
+  alquiler: string[];
+  entrega: string[];
+  credito: string[];
+  updated_at: string;
+};
+
+export type RentalMachineLastRate = {
+  rate_hour: number | null;
+  standby_hours: number | null;
+  source: "quotation" | "reading" | null;
+};
+
+export type RentalReportLastSend = {
+  id: string;
+  client_id: string | null;
+  date_from: string;
+  date_to: string;
+  recipient_emails: string[];
+  cc_emails: string[];
+  extra_items: Array<{
+    concept_id?: string | null;
+    name: string;
+    description?: string | null;
+    qty: number;
+    unit_value: number;
+    machine_id?: string | null;
+  }>;
+  note: string | null;
+  sent_at: string;
+};
+
 export type RentalReportHistoryItem = {
   id: string;
   client_id: string | null;
@@ -1292,6 +1574,16 @@ export type RentalReportHistoryItem = {
   status: string;
   error: string | null;
   sent_at: string;
+  sent_by_id: string | null;
+  sent_by_name: string | null;
+  extra_items: Array<{
+    concept_id?: string | null;
+    name: string;
+    description?: string | null;
+    qty: number;
+    unit_value: number;
+    machine_id?: string | null;
+  }>;
 };
 
 export const api = {
@@ -1572,6 +1864,13 @@ export const api = {
       const q = qs.toString();
       return request<BotMetrics>(`/bot/metrics${q ? `?${q}` : ""}`);
     },
+    dashboardMetrics: (params?: { date_from?: string; date_to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      const q = qs.toString();
+      return request<DashboardMetrics>(`/bot/dashboard-metrics${q ? `?${q}` : ""}`);
+    },
     sessions: (params?: { phase?: string; bot_active?: boolean; is_active?: boolean; page?: number; page_size?: number }) => {
       const qs = new URLSearchParams();
       if (params?.phase !== undefined)      qs.set("phase",      params.phase);
@@ -1629,6 +1928,11 @@ export const api = {
       request<{ sent: boolean; emails: string[] }>(`/quotations/${quotationNumber}/send-email`, {
         method: "POST",
         body: JSON.stringify({ emails }),
+      }),
+    regenerateQuotation: (quotationNumber: string, extra_emails: string[] = []) =>
+      request<ManualQuotationResponse>(`/quotations/${quotationNumber}/regenerate`, {
+        method: "POST",
+        body: JSON.stringify({ extra_emails }),
       }),
     pipeline: (params?: { lead_type?: string; search?: string; date_from?: string; date_to?: string }) => {
       const qs = new URLSearchParams();
@@ -1910,6 +2214,8 @@ export const api = {
     updateMachine: (id: string, data: RentalMachineUpdate) =>
       request<RentalMachineResponse>(`/rental/machines/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     deleteMachine: (id: string) => request<void>(`/rental/machines/${id}`, { method: "DELETE" }),
+    getMachineLastRate: (machineId: string) =>
+      request<RentalMachineLastRate>(`/rental/machines/${machineId}/last-rate`),
 
     listAssignments: (machineId: string) =>
       request<RentalAssignmentResponse[]>(`/rental/machines/${machineId}/assignments`),
@@ -1961,11 +2267,11 @@ export const api = {
       request<RentalReportOverviewResponse>("/rental/reports/overview", {
         method: "POST", body: JSON.stringify({ date_from, date_to }),
       }),
-    reportPreview: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null }) =>
+    reportPreview: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null; extra_items?: RentalReportExtraItem[] }) =>
       request<RentalReportPreviewResponse>("/rental/reports/preview", {
         method: "POST", body: JSON.stringify(data),
       }),
-    reportPreviewPdf: async (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null }): Promise<Blob> => {
+    reportPreviewPdf: async (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; note?: string | null; reading_ids?: number[] | null; extra_items?: RentalReportExtraItem[] }): Promise<Blob> => {
       let token = getToken();
       const opts: RequestInit = { method: "POST", body: JSON.stringify(data) };
       let res = await doFetch("/rental/reports/preview-pdf", opts, token);
@@ -1985,16 +2291,104 @@ export const api = {
       }
       return res.blob();
     },
-    reportSend: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; recipient_emails: string[]; cc_emails?: string[]; note?: string | null; reading_ids?: number[] | null }) =>
+    reportSend: (data: { client_id?: string | null; client_name?: string | null; machine_ids: string[]; date_from: string; date_to: string; recipient_emails: string[]; cc_emails?: string[]; note?: string | null; reading_ids?: number[] | null; extra_items?: RentalReportExtraItem[] }) =>
       request<RentalReportSendResponse>("/rental/reports/send", {
         method: "POST", body: JSON.stringify(data),
       }),
-    reportsHistory: (params?: { client_id?: string; limit?: number }) => {
+    reportLastSend: (clientId: string) =>
+      request<RentalReportLastSend | null>(`/rental/reports/last-send?client_id=${encodeURIComponent(clientId)}`),
+    reportsHistory: (params?: { client_id?: string; date_from?: string; date_to?: string; limit?: number }) => {
       const qs = new URLSearchParams();
       if (params?.client_id) qs.set("client_id", params.client_id);
-      if (params?.limit) qs.set("limit", String(params.limit));
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      if (params?.limit)     qs.set("limit",     String(params.limit));
       const suffix = qs.toString() ? `?${qs}` : "";
       return request<RentalReportHistoryItem[]>(`/rental/reports/history${suffix}`);
     },
+
+    // Catálogo de conceptos de facturación
+    listBillingConcepts: (only_active = true) =>
+      request<RentalBillingConcept[]>(`/rental/billing-concepts?only_active=${only_active}`),
+    createBillingConcept: (data: RentalBillingConceptCreate) =>
+      request<RentalBillingConcept>("/rental/billing-concepts", { method: "POST", body: JSON.stringify(data) }),
+    updateBillingConcept: (id: string, data: RentalBillingConceptUpdate) =>
+      request<RentalBillingConcept>(`/rental/billing-concepts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteBillingConcept: (id: string) =>
+      request<void>(`/rental/billing-concepts/${id}`, { method: "DELETE" }),
+
+    // Cotizaciones de renta
+    listQuotations: (params?: { status?: string; client_id?: string; search?: string; date_from?: string; date_to?: string; limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status)    qs.set("status",    params.status);
+      if (params?.client_id) qs.set("client_id", params.client_id);
+      if (params?.search)    qs.set("search",    params.search);
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      if (params?.limit)     qs.set("limit",     String(params.limit));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<RentalQuotationListItem[]>(`/rental/quotations${suffix}`);
+    },
+    getQuotation: (id: string) => request<RentalQuotationResponse>(`/rental/quotations/${id}`),
+    createQuotation: (data: RentalQuotationCreate) =>
+      request<RentalQuotationResponse>("/rental/quotations", { method: "POST", body: JSON.stringify(data) }),
+    updateQuotation: (id: string, data: RentalQuotationUpdate) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteQuotation: (id: string) => request<void>(`/rental/quotations/${id}`, { method: "DELETE" }),
+
+    previewQuotationPdf: async (data: RentalQuotationCreate): Promise<Blob> => {
+      let token = getToken();
+      const opts: RequestInit = { method: "POST", body: JSON.stringify(data) };
+      let res = await doFetch("/rental/quotations/preview-pdf", opts, token);
+      if (res.status === 401) {
+        const newToken = await tryRefresh();
+        if (newToken) res = await doFetch("/rental/quotations/preview-pdf", opts, newToken);
+        else throw { status: 401, detail: "Sesión expirada" };
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw { status: res.status, detail: body.detail ?? "Error generando el PDF" };
+      }
+      return res.blob();
+    },
+
+    getQuotationPdf: async (id: string): Promise<Blob> => {
+      let token = getToken();
+      const opts: RequestInit = { method: "GET" };
+      let res = await doFetch(`/rental/quotations/${id}/pdf`, opts, token);
+      if (res.status === 401) {
+        const newToken = await tryRefresh();
+        if (newToken) res = await doFetch(`/rental/quotations/${id}/pdf`, opts, newToken);
+        else throw { status: 401, detail: "Sesión expirada" };
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw { status: res.status, detail: body.detail ?? "Error descargando el PDF" };
+      }
+      return res.blob();
+    },
+
+    sendQuotation: (id: string, data: RentalQuotationSendRequest) =>
+      request<RentalQuotationSendHistoryItem>(`/rental/quotations/${id}/send`, { method: "POST", body: JSON.stringify(data) }),
+    listQuotationSends: (id: string) =>
+      request<RentalQuotationSendHistoryItem[]>(`/rental/quotations/${id}/sends`),
+
+    approveQuotation: (id: string) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/approve`, { method: "POST", body: "{}" }),
+    revertApproval: (id: string) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/revert-approval`, { method: "POST", body: "{}" }),
+    rejectQuotation: (id: string, reason?: string) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
+    loseQuotation: (id: string, reason?: string) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/lost`, { method: "POST", body: JSON.stringify({ reason }) }),
+    convertQuotation: (id: string, data: { start_date?: string; cutoff_day?: number; obra?: string; operator?: string } = {}) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/convert`, { method: "POST", body: JSON.stringify({ cutoff_day: 30, ...data }) }),
+    duplicateQuotation: (id: string) =>
+      request<RentalQuotationResponse>(`/rental/quotations/${id}/duplicate`, { method: "POST", body: "{}" }),
+
+    getQuotationConditionsTemplate: () =>
+      request<RentalConditionsTemplate>("/rental/quotations-conditions-template"),
+    updateQuotationConditionsTemplate: (data: Partial<RentalConditionsTemplate>) =>
+      request<RentalConditionsTemplate>("/rental/quotations-conditions-template", { method: "PATCH", body: JSON.stringify(data) }),
   },
 };

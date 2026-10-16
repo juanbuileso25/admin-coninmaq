@@ -55,8 +55,12 @@ type MonthGroup = {
 type AssignmentGroup = {
   assignment: RentalAssignmentResponse;
   months: MonthGroup[];
-  totalHours: number;
-  totalValue: number;
+  totalHours: number;        // trabajadas (sin compensación)
+  totalValue: number;        // valor de las horas trabajadas (sin compensación)
+  standbyDeltaHours: number; // compensación a agregar
+  standbyValue: number;      // $ de la compensación
+  totalBilled: number;       // suma final a facturar (trabajadas + stand-by)
+  hasStandby: boolean;
   itemsCount: number;
 };
 
@@ -132,11 +136,26 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
           };
         });
 
+      const totalHours = months.reduce((s, m) => s + m.totalHours, 0);
+      const totalValue = months.reduce((s, m) => s + m.totalValue, 0);
+      const standbyDeltaHours = Math.max(0, a.standby_hours - totalHours);
+      // Tarifa de referencia para stand-by: la de la asignación con fallback al último unit_value no-nulo
+      let rateRef = a.rate ?? 0;
+      if (!rateRef) {
+        for (let i = items.length - 1; i >= 0; i--) {
+          if (items[i].unit_value) { rateRef = Number(items[i].unit_value); break; }
+        }
+      }
+      const standbyValue = standbyDeltaHours * rateRef;
       result.push({
         assignment: a,
         months,
-        totalHours: months.reduce((s, m) => s + m.totalHours, 0),
-        totalValue: months.reduce((s, m) => s + m.totalValue, 0),
+        totalHours,
+        totalValue,
+        standbyDeltaHours,
+        standbyValue,
+        totalBilled: totalValue + standbyValue,
+        hasStandby: standbyDeltaHours > 0,
         itemsCount: items.length,
       });
     }
@@ -223,8 +242,20 @@ export default function RentalReadingsTab({ machineId, assignments, currentAssig
               <span className="text-fg-5">
                 Horas: <span className="text-fg-3 font-mono">{g.totalHours.toFixed(1)}</span>
                 <span className="text-fg-6"> / {g.assignment.standby_hours} stand-by</span>
+                {g.hasStandby && (
+                  <span className="ml-2 inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/40 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
+                    + {g.standbyDeltaHours.toFixed(1)}h stand-by
+                  </span>
+                )}
               </span>
-              <span className="text-accent font-semibold font-mono">{formatCOP(g.totalValue)}</span>
+              <div className="flex flex-col items-end leading-tight">
+                <span className="text-accent font-semibold font-mono">{formatCOP(g.totalBilled)}</span>
+                {g.hasStandby && (
+                  <span className="text-fg-6 text-[10px] font-mono">
+                    {formatCOP(g.totalValue)} + {formatCOP(g.standbyValue)}
+                  </span>
+                )}
+              </div>
               <span
                 role="button"
                 tabIndex={0}

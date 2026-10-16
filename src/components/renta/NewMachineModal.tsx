@@ -1,32 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Package, ImageOff, ChevronDown, Search, Check } from "lucide-react";
-import { api, type MachineResponse } from "../../services/api";
+import { api, type MachineResponse, type RentalMachineResponse } from "../../services/api";
 
 interface Props {
   onClose: () => void;
   onCreated: () => void;
+  machine?: RentalMachineResponse | null;   // Si viene, modo edición
 }
 
-export default function NewMachineModal({ onClose, onCreated }: Props) {
+export default function NewMachineModal({ onClose, onCreated, machine }: Props) {
+  const isEdit = !!machine;
+
   const [catalog, setCatalog] = useState<MachineResponse[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [selectedCatalog, setSelectedCatalog] = useState<MachineResponse | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
-  const [manualMode, setManualMode] = useState(false);
-  const [plate, setPlate] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [year, setYear] = useState("");
-  const [engineSerial, setEngineSerial] = useState("");
-  const [notes, setNotes] = useState("");
+  const [manualMode, setManualMode] = useState(isEdit && !machine?.catalog_machine_id);
+  const [plate, setPlate] = useState(machine?.plate ?? "");
+  const [nickname, setNickname] = useState(machine?.nickname ?? "");
+  const [year, setYear] = useState(machine?.year ? String(machine.year) : "");
+  const [engineSerial, setEngineSerial] = useState(machine?.engine_serial ?? "");
+  const [notes, setNotes] = useState(machine?.notes ?? "");
 
   // Modo manual (fallback)
-  const [manualCode, setManualCode] = useState("");
-  const [manualModel, setManualModel] = useState("");
-  const [manualBrand, setManualBrand] = useState("");
-  const [manualType, setManualType] = useState("");
+  const [manualCode, setManualCode] = useState(isEdit && !machine?.catalog_machine_id ? (machine?.code ?? "") : "");
+  const [manualModel, setManualModel] = useState(isEdit && !machine?.catalog_machine_id ? (machine?.model ?? "") : "");
+  const [manualBrand, setManualBrand] = useState(isEdit && !machine?.catalog_machine_id ? (machine?.brand ?? "") : "");
+  const [manualType, setManualType] = useState(isEdit && !machine?.catalog_machine_id ? (machine?.machine_type ?? "") : "");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +40,16 @@ export default function NewMachineModal({ onClose, onCreated }: Props) {
       try {
         const data = await api.machines.list({ machine_type: "rental" });
         setCatalog(data);
+        // Si se está editando y la máquina estaba ligada a un modelo del catálogo, preseleccionar
+        if (isEdit && machine?.catalog_machine_id) {
+          const found = data.find(m => m.id === machine.catalog_machine_id);
+          if (found) setSelectedCatalog(found);
+        }
       } finally {
         setLoadingCatalog(false);
       }
     })();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   const filteredCatalog = useMemo(() => {
@@ -60,21 +69,26 @@ export default function NewMachineModal({ onClose, onCreated }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await api.rental.createMachine({
+      const payload = {
         plate: plate.trim(),
         nickname: nickname.trim() || undefined,
         year: year ? Number(year) : undefined,
         engine_serial: engineSerial.trim() || undefined,
         notes: notes.trim() || undefined,
-        catalog_machine_id: manualMode ? null : selectedCatalog?.id,
+        catalog_machine_id: manualMode ? null : selectedCatalog?.id ?? null,
         code: manualMode ? manualCode.trim() : undefined,
         model: manualMode ? manualModel.trim() : undefined,
         brand: manualMode ? (manualBrand.trim() || undefined) : undefined,
         machine_type: manualMode ? (manualType.trim() || undefined) : undefined,
-      });
+      };
+      if (isEdit && machine) {
+        await api.rental.updateMachine(machine.id, payload);
+      } else {
+        await api.rental.createMachine(payload);
+      }
       onCreated();
     } catch (e: any) {
-      setError(e?.detail ?? "Error al crear la máquina");
+      setError(e?.detail ?? `Error al ${isEdit ? "actualizar" : "crear"} la máquina`);
     } finally {
       setSaving(false);
     }
@@ -90,7 +104,7 @@ export default function NewMachineModal({ onClose, onCreated }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-fg font-semibold text-sm">Nueva unidad de renta</h2>
+          <h2 className="text-fg font-semibold text-sm">{isEdit ? "Editar unidad de renta" : "Nueva unidad de renta"}</h2>
           <button onClick={onClose} className="text-fg-5 hover:text-fg transition-colors">
             <X size={18} />
           </button>
@@ -248,7 +262,7 @@ export default function NewMachineModal({ onClose, onCreated }: Props) {
             disabled={!canSave || saving}
             className="px-4 py-2 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900 transition-all hover:shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saving ? "Guardando..." : "Crear unidad"}
+            {saving ? "Guardando..." : (isEdit ? "Guardar cambios" : "Crear unidad")}
           </button>
         </div>
       </div>
