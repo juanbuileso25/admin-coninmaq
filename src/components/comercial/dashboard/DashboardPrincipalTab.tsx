@@ -98,7 +98,7 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
       </div>
 
       {/* Fila 5: Revenue mensual */}
-      <Card title="Revenue · valor cerrado por mes" subtitle="Millones COP">
+      <Card title="Revenue · valor cerrado por mes" subtitle="Últimos 10 meses · fecha en que el lead pasó a Cerrado">
         <MonthlyRevenueChart rows={metrics.monthly_revenue} />
       </Card>
 
@@ -135,6 +135,9 @@ function StatBig({ label, value, sub, icon, accent, danger }: {
   accent?: boolean; danger?: boolean;
 }) {
   const color = danger ? "text-red-400" : accent ? "text-accent" : "text-fg";
+  // Reduce el font-size cuando el valor es muy largo (ej. $629.900.001 COP)
+  const valueLen = value.length;
+  const valueSize = valueLen > 18 ? "text-sm" : valueLen > 14 ? "text-base" : valueLen > 10 ? "text-lg" : "text-2xl";
   return (
     <div className="bg-surface-2 border border-border p-4 relative overflow-hidden hover:border-border-light transition-colors">
       {accent && <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent" />}
@@ -142,7 +145,7 @@ function StatBig({ label, value, sub, icon, accent, danger }: {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-fg-5 text-[10px] uppercase tracking-wider font-medium">{label}</p>
-          <p className={`text-2xl font-extrabold tracking-tight mt-1 truncate ${color}`}>{value}</p>
+          <p className={`${valueSize} font-extrabold tracking-tight mt-1 break-words ${color}`} title={value}>{value}</p>
           {sub && <p className="text-fg-6 text-[10px] mt-1">{sub}</p>}
         </div>
         {icon && <div className="text-fg-5 shrink-0">{icon}</div>}
@@ -432,13 +435,13 @@ function MonthlyRevenueChart({ rows }: { rows: MonthlyRevenueRow[] }) {
             {new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(hovered.row.closed_value)}
           </div>
           <div className="space-y-1 text-[11px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-fg-5">Leads cerrados</span>
+            <div className="flex items-center justify-between gap-3" title="Leads que pasaron a 'Cerrado' durante este mes (sin importar cuándo se crearon)">
+              <span className="text-fg-5">Cerrados ese mes</span>
               <span className="text-accent font-bold">{hovered.row.closed_count}</span>
             </div>
             <div className="h-px bg-border my-1" />
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-fg-5">Cotizaciones</span>
+            <div className="flex items-center justify-between gap-3" title="Cotizaciones creadas durante este mes">
+              <span className="text-fg-5">Cotizaciones nuevas</span>
               <span className="text-fg-3">{hovered.row.quoted_count}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
