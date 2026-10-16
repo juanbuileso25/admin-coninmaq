@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import RentalQuotationModal from "../../components/renta/RentalQuotationModal";
 import LostQuotationModal from "../../components/renta/LostQuotationModal";
+import ConvertQuotationModal from "../../components/renta/ConvertQuotationModal";
 
 function formatCOP(v: number | null | undefined): string {
   if (v == null) return "—";
@@ -39,7 +40,7 @@ export default function RentalQuotationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLostModal, setShowLostModal] = useState(false);
-  const [converting, setConverting] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
   const [acting, setActing] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -140,39 +141,17 @@ export default function RentalQuotationDetailPage() {
     } finally { setActing(false); }
   }
 
-  async function handleConvert() {
+  function handleConvert() {
     if (!q) return;
-    // Validación rápida: debe haber al menos un equipo con unidad física
-    const assignableCount = q.items.filter(it => it.rental_machine_id).length;
-    if (assignableCount === 0) {
-      toast.error("Ningún equipo tiene unidad física asignada. Regístrala primero en Inventario → Renta.");
-      return;
-    }
-    const confirmMsg = assignableCount === 1
-      ? "¿Convertir esta cotización en una asignación activa?\n\nSe creará la asignación con los datos de la cotización. Podrás ajustar fecha, corte y operador en Relaciones."
-      : `¿Convertir esta cotización en ${assignableCount} asignaciones activas?\n\nSe crearán las asignaciones con los datos de la cotización. Podrás ajustar fecha, corte y operador en Relaciones.`;
-    if (!confirm(confirmMsg)) return;
+    setShowConvertModal(true);
+  }
 
-    setConverting(true);
-    try {
-      // Usa defaults razonables: fecha de hoy, corte día 30, obra = proyecto, sin operador
-      await api.rental.convertQuotation(q.id, {
-        start_date: new Date().toISOString().slice(0, 10),
-        cutoff_day: 30,
-        obra: q.project_name ?? undefined,
-      });
-      toast.success("Cotización convertida — ajusta los detalles en Relaciones");
-      // Si hay un solo equipo convertido, navegar directo a su detalle
-      const firstMachineId = q.items.find(it => it.rental_machine_id)?.rental_machine_id;
-      if (assignableCount === 1 && firstMachineId) {
-        nav(`/renta/relaciones/${firstMachineId}`);
-      } else {
-        nav("/renta/relaciones");
-      }
-    } catch (e: any) {
-      toast.error(e?.detail ?? "Error al convertir");
-    } finally {
-      setConverting(false);
+  function handleConverted() {
+    setShowConvertModal(false);
+    if (q && q.items.length === 1) {
+      nav("/renta/relaciones");
+    } else {
+      nav("/renta/relaciones");
     }
   }
 
@@ -249,9 +228,9 @@ export default function RentalQuotationDetailPage() {
             </button>
           )}
           {canConvert && (
-            <button onClick={handleConvert} disabled={converting}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40">
-              {converting ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
+            <button onClick={handleConvert}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white">
+              <ArrowRight size={12} />
               Convertir en asignación
             </button>
           )}
@@ -415,6 +394,13 @@ export default function RentalQuotationDetailPage() {
       )}
       {showLostModal && (
         <LostQuotationModal quotationId={q.id} onClose={() => setShowLostModal(false)} onDone={() => { setShowLostModal(false); load(); }} />
+      )}
+      {showConvertModal && (
+        <ConvertQuotationModal
+          quotation={q}
+          onClose={() => setShowConvertModal(false)}
+          onConverted={handleConverted}
+        />
       )}
     </div>
   );

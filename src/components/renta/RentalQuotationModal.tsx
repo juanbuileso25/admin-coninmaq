@@ -6,7 +6,7 @@ import {
 import {
   api,
   type RentalBillingConcept,
-  type RentalMachineResponse,
+  type RentalCatalogModel,
   type RentalQuotationItem,
   type RentalQuotationExtraItem,
   type RentalQuotationConditions,
@@ -50,7 +50,7 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
   const [conditions, setConditions] = useState<RentalQuotationConditions>({ alquiler: [], entrega: [], credito: [] });
 
   // Catálogos
-  const [rentalMachines, setRentalMachines] = useState<RentalMachineResponse[]>([]);
+  const [catalogModels, setCatalogModels] = useState<RentalCatalogModel[]>([]);
   const [catalog, setCatalog] = useState<RentalBillingConcept[]>([]);
 
   // UI state
@@ -66,10 +66,10 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
   // Carga inicial de catálogos + plantilla
   useEffect(() => {
     Promise.all([
-      api.rental.listMachines(true),
+      api.rental.listCatalog(),
       api.rental.listBillingConcepts(true),
-    ]).then(([rmachines, concepts]) => {
-      setRentalMachines(rmachines);
+    ]).then(([models, concepts]) => {
+      setCatalogModels(models);
       setCatalog(concepts);
     }).catch(() => {});
   }, []);
@@ -166,52 +166,35 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
   }
 
   // ── Items (equipos) ─────────────────────────────────────────────────────
-  async function addMachine(rm: RentalMachineResponse) {
+  function addMachine(model: RentalCatalogModel) {
     const snapshot = {
-      code: rm.code,
-      model: rm.model,
-      brand: rm.brand ?? null,
-      category: rm.catalog?.category ?? null,
-      plate: rm.plate,
-      image_url: rm.catalog?.image_url ?? null,
+      code: model.code,
+      model: model.model,
+      brand: model.brand ?? null,
+      category: model.category ?? null,
+      plate: null,  // Cotización por modelo: la placa se asigna al convertir
+      image_url: model.image_url ?? null,
       specs: [],
       highlights: [],
     };
-    const localId = newLocalId();
-    // Push el ítem inmediatamente con defaults; luego, si hay historia, pre-rellenar.
     setItems(prev => [...prev, {
-      _localId: localId,
-      rental_machine_id: rm.id,
+      _localId: newLocalId(),
+      catalog_machine_id: model.id,
       snapshot,
       rate_hour: 0,
       standby_hours: 176,
       notes: null,
     }]);
-    try {
-      const last = await api.rental.getMachineLastRate(rm.id);
-      if (last && (last.rate_hour != null || last.standby_hours != null)) {
-        setItems(prev => prev.map(it => it._localId === localId
-          ? {
-              ...it,
-              rate_hour: last.rate_hour != null ? last.rate_hour : it.rate_hour,
-              standby_hours: last.standby_hours != null ? last.standby_hours : it.standby_hours,
-            }
-          : it));
-        if (last.source) {
-          const label = last.source === "quotation" ? "última cotización" : "última lectura";
-          toast.success(`Tarifa pre-rellenada desde ${label}`);
-        }
-      }
-    } catch { /* silencioso: solo es sugerencia */ }
   }
 
   function removeItem(localId: string) {
     setItems(prev => prev.filter(it => it._localId !== localId));
-    // Limpia extras asociadas a este equipo (que apuntaban por rental_machine_id)
+    // Limpia extras asociadas a este equipo (que apuntaban por catalog_machine_id)
     const removed = items.find(it => it._localId === localId);
-    if (removed?.rental_machine_id) {
+    const refId = removed?.catalog_machine_id || removed?.rental_machine_id;
+    if (refId) {
       setExtraItems(prev => prev.map(e =>
-        e.machine_id === removed.rental_machine_id ? { ...e, machine_id: null } : e
+        e.machine_id === refId ? { ...e, machine_id: null } : e
       ));
     }
   }
@@ -414,14 +397,14 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
               <Section title={`Equipos cotizados (${items.length})`}
                        action={
                          <AddMachineBtn
-                           rentalMachines={rentalMachines}
-                           alreadyRentalIds={items.map(i => i.rental_machine_id ?? "").filter(Boolean)}
-                           onAddRental={addMachine}
+                           catalogModels={catalogModels}
+                           alreadyCatalogIds={items.map(i => i.catalog_machine_id ?? "").filter(Boolean)}
+                           onAddModel={addMachine}
                          />
                        }>
                 {items.length === 0 && (
                   <div className="text-fg-6 text-xs text-center py-6 border border-dashed border-border">
-                    Añade al menos un equipo del inventario de renta.
+                    Añade al menos un modelo del catálogo de renta.
                   </div>
                 )}
                 <div className="space-y-3">
@@ -434,6 +417,9 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
                             {[it.snapshot.brand, it.snapshot.model].filter(Boolean).join(" · ")}
                             {it.snapshot.plate && (
                               <> · placa <span className="font-mono text-fg-3">{it.snapshot.plate}</span></>
+                            )}
+                            {!it.snapshot.plate && it.catalog_machine_id && (
+                              <> · <span className="text-fg-6">la unidad física se asigna al convertir</span></>
                             )}
                           </div>
                         </div>
@@ -494,29 +480,35 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
                             <Trash2 size={12} />
                           </button>
                         </div>
-                        <div className={`grid gap-2 ${items.filter(it => it.rental_machine_id).length >= 2 ? "grid-cols-[80px_1fr_1fr]" : "grid-cols-[80px_1fr]"}`}>
-                          <input type="number" value={e.qty || ""}
-                            onChange={ev => updateExtra(e._localId, { qty: Number(ev.target.value) })}
-                            placeholder="Cant" step="0.01"
-                            className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent" />
-                          <input type="number" value={e.unit_value || ""}
-                            onChange={ev => updateExtra(e._localId, { unit_value: Number(ev.target.value) })}
-                            placeholder="V. unit"
-                            className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent" />
-                          {items.filter(it => it.rental_machine_id).length >= 2 && (
-                            <select value={e.machine_id ?? ""}
-                              onChange={ev => updateExtra(e._localId, { machine_id: ev.target.value || null })}
-                              className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent"
-                              title="Alcance del concepto">
-                              <option value="">General</option>
-                              {items.filter(it => it.rental_machine_id).map(it => (
-                                <option key={it._localId} value={it.rental_machine_id!}>
-                                  {it.snapshot.code}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
+                        {(() => {
+                          const refItems = items.filter(it => it.catalog_machine_id || it.rental_machine_id);
+                          const showMachinePicker = refItems.length >= 2;
+                          return (
+                            <div className={`grid gap-2 ${showMachinePicker ? "grid-cols-[80px_1fr_1fr]" : "grid-cols-[80px_1fr]"}`}>
+                              <input type="number" value={e.qty || ""}
+                                onChange={ev => updateExtra(e._localId, { qty: Number(ev.target.value) })}
+                                placeholder="Cant" step="0.01"
+                                className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent" />
+                              <input type="number" value={e.unit_value || ""}
+                                onChange={ev => updateExtra(e._localId, { unit_value: Number(ev.target.value) })}
+                                placeholder="V. unit"
+                                className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent" />
+                              {showMachinePicker && (
+                                <select value={e.machine_id ?? ""}
+                                  onChange={ev => updateExtra(e._localId, { machine_id: ev.target.value || null })}
+                                  className="bg-surface-2 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent"
+                                  title="Alcance del concepto">
+                                  <option value="">General</option>
+                                  {refItems.map(it => (
+                                    <option key={it._localId} value={(it.catalog_machine_id || it.rental_machine_id)!}>
+                                      {it.snapshot.code}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <div className="flex items-center justify-between text-[11px]">
                           <label className="flex items-center gap-1 text-fg-5 cursor-pointer">
                             <input type="checkbox" checked={!!e.is_optional}
@@ -648,70 +640,71 @@ function Input({ value, onChange, placeholder, type = "text" }: { value: string;
 }
 
 function AddMachineBtn({
-  rentalMachines, alreadyRentalIds, onAddRental,
+  catalogModels, alreadyCatalogIds, onAddModel,
 }: {
-  rentalMachines: RentalMachineResponse[];
-  alreadyRentalIds: string[];
-  onAddRental: (m: RentalMachineResponse) => void;
+  catalogModels: RentalCatalogModel[];
+  alreadyCatalogIds: string[];
+  onAddModel: (m: RentalCatalogModel) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
-  const filteredFleet = rentalMachines.filter(m =>
-    !alreadyRentalIds.includes(m.id) &&
-    (!q || `${m.code} ${m.model} ${m.plate}`.toLowerCase().includes(q.toLowerCase()))
+  const filtered = catalogModels.filter(m =>
+    !alreadyCatalogIds.includes(m.id) &&
+    (!q || `${m.code} ${m.model} ${m.brand ?? ""}`.toLowerCase().includes(q.toLowerCase()))
   ).slice(0, 50);
 
   return (
     <div className="relative">
       <button onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1 text-[10px] uppercase tracking-wider bg-accent/10 text-accent hover:bg-accent/20 border border-accent/30 px-2 py-1 transition-colors">
-        <Plus size={11} /> Añadir
+        <Plus size={11} /> Añadir modelo
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 w-80 bg-surface-2 border border-border shadow-xl z-50">
-          {/* Header */}
           <div className="px-3 py-2 border-b border-border bg-surface-3">
             <div className="text-[10px] uppercase tracking-wider text-fg-3 font-semibold">
-              Unidades de renta disponibles
+              Modelos del catálogo (renta)
             </div>
             <div className="text-[10px] text-fg-6 mt-0.5">
-              {rentalMachines.length - alreadyRentalIds.length} unidad{rentalMachines.length - alreadyRentalIds.length === 1 ? "" : "es"} en inventario
+              Cotizas el modelo. La unidad física se asigna al convertir.
             </div>
           </div>
 
-          {/* Search */}
           <div className="p-2 border-b border-border">
             <input autoFocus value={q} onChange={e => setQ(e.target.value)}
-              placeholder="Buscar por código, modelo o placa..."
+              placeholder="Buscar por código, modelo o marca..."
               className="w-full bg-surface-3 border border-border px-2 py-1.5 text-xs text-fg-2 outline-none focus:border-accent" />
           </div>
 
           <div className="max-h-72 overflow-y-auto">
-            {filteredFleet.length === 0 ? (
+            {filtered.length === 0 ? (
               <div className="text-center py-6 text-fg-6 text-xs">
-                {rentalMachines.length === 0 ? (
+                {catalogModels.length === 0 ? (
                   <>
-                    Aún no hay máquinas registradas como renta.<br />
+                    Aún no hay modelos en el catálogo de renta.<br />
                     <a href="/inventario/renta" className="text-accent hover:underline">
-                      Regístralas en Inventario → Renta
+                      Regístralos en Inventario → Renta
                     </a>
                   </>
                 ) : "Sin resultados"}
               </div>
-            ) : filteredFleet.map(m => (
+            ) : filtered.map(m => (
               <button key={m.id}
-                onClick={() => { onAddRental(m); setOpen(false); setQ(""); }}
+                onClick={() => { onAddModel(m); setOpen(false); setQ(""); }}
                 className="w-full text-left px-3 py-2 hover:bg-surface-3 border-b border-border/50 transition-colors flex items-center gap-2">
-                {m.catalog?.image_url ? (
-                  <img src={m.catalog.image_url} alt="" className="w-9 h-9 object-contain bg-surface-3 shrink-0" />
+                {m.image_url ? (
+                  <img src={m.image_url} alt="" className="w-9 h-9 object-contain bg-surface-3 shrink-0" />
                 ) : (
                   <div className="w-9 h-9 bg-surface-3 border border-border shrink-0" />
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="text-fg-2 text-xs font-mono font-semibold">{m.code}</div>
                   <div className="text-fg-5 text-[10px] truncate">
-                    {m.model} · placa <span className="font-mono text-fg-4">{m.plate}</span>
+                    {[m.brand, m.model].filter(Boolean).join(" · ")}
+                  </div>
+                  <div className="text-fg-6 text-[10px] mt-0.5">
+                    {m.available_units_count} de {m.units_count} unidad{m.units_count === 1 ? "" : "es"} disponibles
                   </div>
                 </div>
               </button>

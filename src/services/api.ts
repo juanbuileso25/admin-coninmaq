@@ -1396,12 +1396,47 @@ export type RentalQuotationItemSnapshot = {
 };
 
 export type RentalQuotationItem = {
+  catalog_machine_id?: string | null;
   rental_machine_id?: string | null;
   snapshot: RentalQuotationItemSnapshot;
   rate_hour: number;
   standby_hours?: number;
   standby_amount?: number | null;
   notes?: string | null;
+};
+
+export type RentalCatalogModel = {
+  id: string;
+  code: string;
+  model: string;
+  brand: string | null;
+  category: string | null;
+  image_url: string | null;
+  slug: string | null;
+  description: string | null;
+  units_count: number;
+  available_units_count: number;
+};
+
+export type RentalMachineAvailability = {
+  machine: RentalMachineResponse;
+  current_assignment_obra: string | null;
+  current_assignment_client: string | null;
+  is_available: boolean;
+};
+
+export type RentalQuotationConvertNewUnit = {
+  plate: string;
+  nickname?: string | null;
+  engine_serial?: string | null;
+  year?: number | null;
+  notes?: string | null;
+};
+
+export type RentalQuotationConvertItemAssignment = {
+  item_index: number;
+  rental_machine_id?: string | null;
+  new_unit?: RentalQuotationConvertNewUnit | null;
 };
 
 export type RentalQuotationExtraItem = {
@@ -2229,6 +2264,12 @@ export const api = {
       const suffix = qs.toString() ? `?${qs}` : "";
       return request<RentalMachineOverview[]>(`/rental/overview${suffix}`);
     },
+    // Catálogo (modelos) de renta
+    listCatalog: () =>
+      request<RentalCatalogModel[]>(`/rental/catalog`),
+    listUnitsByCatalog: (catalogMachineId: string) =>
+      request<RentalMachineAvailability[]>(`/rental/catalog/${catalogMachineId}/units`),
+
     listMachines: (only_active = true) =>
       request<RentalMachineResponse[]>(`/rental/machines?only_active=${only_active}`),
     getMachine: (id: string) => request<RentalMachineDetail>(`/rental/machines/${id}`),
@@ -2404,7 +2445,16 @@ export const api = {
       request<RentalQuotationResponse>(`/rental/quotations/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
     loseQuotation: (id: string, reason?: string) =>
       request<RentalQuotationResponse>(`/rental/quotations/${id}/lost`, { method: "POST", body: JSON.stringify({ reason }) }),
-    convertQuotation: (id: string, data: { start_date?: string; cutoff_day?: number; obra?: string; operator?: string } = {}) =>
+    convertQuotation: (
+      id: string,
+      data: {
+        start_date?: string;
+        cutoff_day?: number;
+        obra?: string;
+        operator?: string;
+        item_assignments?: RentalQuotationConvertItemAssignment[];
+      } = {},
+    ) =>
       request<RentalQuotationResponse>(`/rental/quotations/${id}/convert`, { method: "POST", body: JSON.stringify({ cutoff_day: 30, ...data }) }),
     duplicateQuotation: (id: string) =>
       request<RentalQuotationResponse>(`/rental/quotations/${id}/duplicate`, { method: "POST", body: "{}" }),
