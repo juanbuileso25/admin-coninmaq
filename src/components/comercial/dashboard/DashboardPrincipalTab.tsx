@@ -41,25 +41,18 @@ export default function DashboardPrincipalTab({ metrics }: { metrics: DashboardM
         <StatBig label="Diferencia"        value={copFull(f.pending_value)}       sub="Cotizado - cerrado del período" icon={<Minus         size={14} />} danger />
       </div>
 
-      {/* Fila 1b: Pipeline activo (independiente del período) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-surface-2 border border-accent/30 border-l-4 border-l-accent p-4 flex items-start justify-between gap-3 hover:border-accent/50 transition-colors">
-          <div className="min-w-0 flex-1">
-            <p className="text-fg-5 text-[10px] uppercase tracking-wider font-medium">Pipeline activo</p>
-            <p className="text-xl md:text-2xl font-extrabold tracking-tight mt-1 text-accent break-words" title={copFull(f.pipeline_value_active)}>
-              {copFull(f.pipeline_value_active)}
-            </p>
-            <p className="text-fg-6 text-[10px] mt-1">
-              {f.pipeline_count_active} cotización{f.pipeline_count_active === 1 ? "" : "es"} · leads no cerrados ni perdidos (todo el histórico)
-            </p>
-          </div>
-          <FileText size={16} className="text-accent shrink-0" />
+      {/* Fila 1b: Pipeline activo del período */}
+      <div className="bg-surface-2 border border-accent/30 border-l-4 border-l-accent p-4 flex items-start justify-between gap-3 hover:border-accent/50 transition-colors">
+        <div className="min-w-0 flex-1">
+          <p className="text-fg-5 text-[10px] uppercase tracking-wider font-medium">Pipeline activo del período</p>
+          <p className="text-xl md:text-2xl font-extrabold tracking-tight mt-1 text-accent break-words" title={copFull(f.pipeline_value_active)}>
+            {copFull(f.pipeline_value_active)}
+          </p>
+          <p className="text-fg-6 text-[10px] mt-1">
+            {f.pipeline_count_active} cotización{f.pipeline_count_active === 1 ? "" : "es"} creadas en el período · leads no cerrados ni perdidos
+          </p>
         </div>
-        <div className="bg-surface-3/40 border border-dashed border-border p-4 text-xs text-fg-5 leading-relaxed">
-          <strong className="text-fg-3">💡 Diferencia:</strong> los valores de arriba se calculan por <strong>fecha del período seleccionado</strong>.
-          El <strong className="text-accent">Pipeline activo</strong> es el valor total de oportunidades vivas <strong>hoy</strong>,
-          sin importar cuándo entraron.
-        </div>
+        <FileText size={16} className="text-accent shrink-0" />
       </div>
 
       {/* Fila 2: Funnel + Funnel por tier */}
