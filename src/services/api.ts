@@ -334,6 +334,34 @@ export type SparePartCreate = {
 
 export type SparePartUpdate = Partial<SparePartCreate> & { is_active?: boolean };
 
+export type SparePartRequestItem = {
+  id: number;
+  description: string;
+  quantity: number;
+  photo_url: string | null;
+  photo_r2_key: string | null;
+  spare_part_id: number | null;
+  spare_part_code: string | null;
+  spare_part_name: string | null;
+  notes: string | null;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SparePartRequestItemCreate = {
+  description: string;
+  quantity?: number;
+  photo_url?: string | null;
+  photo_r2_key?: string | null;
+  spare_part_id?: number | null;
+  notes?: string | null;
+};
+
+export type SparePartRequestItemUpdate = Partial<SparePartRequestItemCreate> & {
+  order_index?: number;
+};
+
 export type SparePartRequest = {
   id: number;
   request_number: string;
@@ -353,6 +381,7 @@ export type SparePartRequest = {
   photo_url: string | null;
   status: string;
   notes: string | null;
+  items?: SparePartRequestItem[];     // viene en el detalle
   created_at: string;
   updated_at: string;
 };
@@ -365,8 +394,6 @@ export type SparePartRequestPatch = {
 export const SPARE_PART_STAGES = [
   "solicitudes_recibidas",
   "cotizado",
-  "esperando_respuesta",
-  "negociacion",
   "venta_ganada",
   "venta_perdida",
 ] as const;
@@ -376,8 +403,6 @@ export type SparePartStage = typeof SPARE_PART_STAGES[number];
 export const SPARE_PART_STAGE_LABELS: Record<SparePartStage, string> = {
   solicitudes_recibidas: "Solicitudes recibidas",
   cotizado:              "Cotizado",
-  esperando_respuesta:   "Esperando respuesta",
-  negociacion:           "Negociación",
   venta_ganada:          "Venta ganada",
   venta_perdida:         "Venta perdida",
 };
@@ -388,6 +413,174 @@ export type EmailClickEvent = {
   first_clicked_at: string;
   last_clicked_at: string;
   ip_address: string | null;
+};
+
+
+// ─── Service orders (postventa) ─────────────────────────────────────────────
+
+export const SERVICE_TYPES = [
+  "coninmaq_care",
+  "preventivo",
+  "garantia",
+  "correctivo",
+  "renta",
+] as const;
+export type ServiceType = typeof SERVICE_TYPES[number];
+export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  coninmaq_care: "Coninmaq Care",
+  preventivo:    "Preventivo",
+  garantia:      "Garantía",
+  correctivo:    "Correctivo",
+  renta:         "Alquiler / Renta",
+};
+
+export const SERVICE_STATUSES = [
+  "solicitado",
+  "programado",
+  "en_camino",
+  "en_ejecucion",
+  "esperando_repuesto",
+  "finalizado",
+  "cerrado",
+] as const;
+export type ServiceStatus = typeof SERVICE_STATUSES[number];
+export const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
+  solicitado:         "Solicitado",
+  programado:         "Programado",
+  en_camino:          "En camino",
+  en_ejecucion:       "En ejecución",
+  esperando_repuesto: "Esperando repuesto",
+  finalizado:         "Finalizado",
+  cerrado:            "Cerrado",
+};
+
+export type ServiceMachineInfo = {
+  brand?: string | null;
+  model?: string | null;
+  serial?: string | null;
+  horometer?: number | null;
+  owned_or_rental?: "owned" | "rental";
+  rental_machine_id?: string | null;
+  description?: string | null;
+};
+
+export type ServiceOrderPart = {
+  id: number;
+  spare_part_id: number | null;
+  spare_part_code: string | null;
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  created_at: string;
+};
+
+export type ServiceOrderAttachment = {
+  id: number;
+  file_url: string;
+  file_name: string;
+  file_size: number | null;
+  content_type: string | null;
+  category: string;
+  uploaded_by: string | null;
+  created_at: string;
+};
+
+export type ServiceOrderStatusHistoryItem = {
+  id: number;
+  from_status: string | null;
+  to_status: string;
+  changed_by: string | null;
+  changed_by_name: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type ServiceOrderChecklistItem = {
+  id: number;
+  template_key: string | null;
+  label: string;
+  order_index: number;
+  is_done: boolean;
+  done_by_id: string | null;
+  done_at: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type ChecklistTemplateInfo = {
+  key: string;
+  label: string;
+  item_count: number;
+};
+
+export type ServiceOrderListItem = {
+  id: number;
+  order_number: string;
+  client_id: string | null;
+  client_name: string | null;
+  machine_info: ServiceMachineInfo;
+  rental_machine_id: string | null;
+  service_type: ServiceType;
+  status: ServiceStatus;
+  technician_id: string | null;
+  technician_name: string | null;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  location: string | null;
+  created_at: string;
+  updated_at: string;
+  progress_pct: number;
+  is_overdue: boolean;
+};
+
+export type ServiceOrderDetail = ServiceOrderListItem & {
+  fault_reported: string | null;
+  diagnosis: string | null;
+  work_done: string | null;
+  labor_hours: number | null;
+  labor_cost: number | null;
+  notes: string | null;
+  created_by_id: string | null;
+  created_by_name: string | null;
+  parts: ServiceOrderPart[];
+  attachments: ServiceOrderAttachment[];
+  status_history: ServiceOrderStatusHistoryItem[];
+  checklist: ServiceOrderChecklistItem[];
+  parts_total: number;
+  grand_total: number;
+  checklist_done: number;
+  checklist_total: number;
+  is_active: boolean;
+};
+
+export type ServiceOrderCreate = {
+  client_id?: string | null;
+  client_name?: string | null;
+  machine_info?: ServiceMachineInfo;
+  rental_machine_id?: string | null;
+  service_type?: ServiceType;
+  technician_id?: string | null;
+  scheduled_at?: string | null;
+  fault_reported?: string | null;
+  location?: string | null;
+  notes?: string | null;
+};
+
+export type ServiceOrderUpdate = Partial<ServiceOrderCreate> & {
+  started_at?: string | null;
+  completed_at?: string | null;
+  diagnosis?: string | null;
+  work_done?: string | null;
+  labor_hours?: number | null;
+  labor_cost?: number | null;
+};
+
+export type ServiceOrderMetrics = {
+  active_count: number;
+  scheduled_this_week: number;
+  waiting_part_count: number;
+  overdue_count: number;
 };
 
 export type SparePartSuggestion = {
@@ -514,10 +707,37 @@ export type PipelineColumnResponse = {
   count: number;
 };
 
+export type LeadChannelResponse = {
+  id: number;
+  code: string;
+  label: string;
+  color: string | null;
+  sort_order: number;
+  fingerprints: string[];
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadChannelCreate = {
+  code: string;
+  label: string;
+  color?: string | null;
+  sort_order?: number;
+  fingerprints?: string[];
+  is_active?: boolean;
+};
+
+export type LeadChannelUpdate = Partial<Omit<LeadChannelCreate, "code">>;
+
 export type BotLeadResponse = {
   id: number;
   session_id: string | null;
   lead_source: string;
+  channel_id: number | null;
+  channel_label: string | null;
+  channel_color: string | null;
   phone_number: string | null;
   name: string | null;
   email: string | null;
@@ -566,7 +786,13 @@ export type BotQuotationResponse = {
   created_at: string;
 };
 
-export type ManualQuotationItem = { machine_code: string; quantity: number; sale_price?: number; tax_value?: number };
+export type ManualQuotationItem = {
+  machine_code?: string;   // opcional: en repuestos puede faltar si es ítem manual
+  quantity: number;
+  sale_price?: number;
+  tax_value?: number;
+  part_name?: string;      // requerido si falta machine_code (ítem manual)
+};
 
 // ── Quotation page (public) ───────────────────────────────────────────────────
 export type QuotationMachineSpec      = { label: string; value: string; icon: string; order: number };
@@ -624,6 +850,8 @@ export type ManualQuotationRequest = {
   num_machines_fleet?: number;
   payment_method?: string;
   client_role?: string;
+  // Canal de origen (solo si se crea un lead implícito, no para leads existentes)
+  channel_id?: number;
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
@@ -730,6 +958,57 @@ export type DashboardMetrics = {
   equipment_distribution: DistributionRow[];
   monthly_revenue: MonthlyRevenueRow[];
   nps_summary: NpsSummary;
+};
+
+// ── Channel metrics (Fase C) ────────────────────────────────────────────────
+
+export type ChannelMonthlyRow = {
+  month: string;         // "May 2026"
+  leads: number;
+  quoted: number;
+  won: number;
+  value_quoted: number;
+  value_won: number;
+};
+
+export type ChannelTotals = {
+  leads: number;
+  quoted: number;
+  won: number;
+  quote_rate: number;
+  close_rate: number;
+  conv_rate: number;
+  value_quoted: number;
+  value_won: number;
+};
+
+export type ChannelMetricsRow = {
+  channel_id: number | null;
+  label: string;
+  color: string | null;
+  totals: ChannelTotals;
+  monthly: ChannelMonthlyRow[];
+};
+
+export type ChannelHighlight = {
+  channel_id: number | null;
+  label: string | null;
+  value: number;
+};
+
+export type ChannelHighlights = {
+  best_quote_rate: ChannelHighlight | null;
+  best_close_rate: ChannelHighlight | null;
+  biggest_value_won: ChannelHighlight | null;
+  worst_quote_rate: ChannelHighlight | null;
+};
+
+export type ChannelMetricsResponse = {
+  date_from: string;
+  date_to: string;
+  months_in_series: number;
+  channels: ChannelMetricsRow[];
+  highlights: ChannelHighlights;
 };
 
 // ── Machine types ──────────────────────────────────────────────────────────────
@@ -1915,6 +2194,14 @@ export const api = {
       const q = qs.toString();
       return request<BotMetrics>(`/bot/metrics${q ? `?${q}` : ""}`);
     },
+    channelMetrics: (params?: { date_from?: string; date_to?: string; months?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      if (params?.months)    qs.set("months",    String(params.months));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<ChannelMetricsResponse>(`/bot/dashboard-metrics/channels${suffix}`);
+    },
     dashboardMetrics: (params?: { date_from?: string; date_to?: string }) => {
       const qs = new URLSearchParams();
       if (params?.date_from) qs.set("date_from", params.date_from);
@@ -1955,6 +2242,8 @@ export const api = {
       request<BotSessionDetail>(`/bot/sessions/${sessionId}`, { method: "PATCH", body: JSON.stringify(data) }),
     sendMessage: (sessionId: string, content: string) =>
       request<BotMessageResponse>(`/bot/sessions/${sessionId}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
+    sendDocumentToPhone: (data: { phone_number: string; pdf_url: string; filename: string; caption?: string }) =>
+      request<{ sent: boolean; phone_number: string }>(`/bot/wa/send-document`, { method: "POST", body: JSON.stringify(data) }),
     sendDocument: (sessionId: string, data: { pdf_url: string; filename: string; caption?: string }) =>
       request<{ sent: boolean }>(`/bot/sessions/${sessionId}/send-document`, { method: "POST", body: JSON.stringify(data) }),
     leads: (params?: { industry?: string; client_type?: string; tier?: string; lead_type?: string; search?: string; date_from?: string; date_to?: string; page?: number; page_size?: number }) => {
@@ -2033,6 +2322,31 @@ export const api = {
       request<LeadStageHistoryResponse[]>(`/bot/leads/${leadId}/stage-history`),
     qualifyLead: (leadId: number, data: { num_machines?: number; payment_method?: string; role?: string; product_code?: string }) =>
       request<BotLeadResponse>(`/bot/leads/${leadId}/qualify`, { method: "POST", body: JSON.stringify(data) }),
+    updateLeadChannel: (leadId: number, channel_id: number | null) =>
+      request<BotLeadResponse>(`/bot/leads/${leadId}/channel`, {
+        method: "PATCH",
+        body: JSON.stringify({ channel_id }),
+      }),
+    createManualLead: (data: {
+      channel_id: number;
+      name?: string;
+      phone_number?: string;
+      email?: string;
+      company?: string;
+      equipment_interest?: string;
+      notes?: string;
+    }) => request<BotLeadResponse>(`/bot/leads`, { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  leadChannels: {
+    list: (only_active = false) =>
+      request<LeadChannelResponse[]>(`/lead-channels${only_active ? "?only_active=true" : ""}`),
+    create: (data: LeadChannelCreate) =>
+      request<LeadChannelResponse>(`/lead-channels`, { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: LeadChannelUpdate) =>
+      request<LeadChannelResponse>(`/lead-channels/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    remove: (id: number) =>
+      request<void>(`/lead-channels/${id}`, { method: "DELETE" }),
   },
   quotations: {
     getPage: (quotationNumber: string) =>
@@ -2161,6 +2475,12 @@ export const api = {
     },
     request: (id: number) =>
       request<SparePartRequest>(`/spare-parts/requests/${id}`),
+    addRequestItem: (requestId: number, data: SparePartRequestItemCreate) =>
+      request<SparePartRequestItem>(`/spare-parts/requests/${requestId}/items`, { method: "POST", body: JSON.stringify(data) }),
+    updateRequestItem: (requestId: number, itemId: number, data: SparePartRequestItemUpdate) =>
+      request<SparePartRequestItem>(`/spare-parts/requests/${requestId}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteRequestItem: (requestId: number, itemId: number) =>
+      request<void>(`/spare-parts/requests/${requestId}/items/${itemId}`, { method: "DELETE" }),
     patchRequest: (id: number, data: SparePartRequestPatch) =>
       request<SparePartRequest>(`/spare-parts/requests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     suggestions: (requestId: number, limit = 6) =>
@@ -2294,6 +2614,8 @@ export const api = {
       request<RentalCatalogModel[]>(`/rental/catalog`),
     listUnitsByCatalog: (catalogMachineId: string) =>
       request<RentalMachineAvailability[]>(`/rental/catalog/${catalogMachineId}/units`),
+    listAllUnitsAvailability: () =>
+      request<RentalMachineAvailability[]>(`/rental/machines/availability`),
 
     listMachines: (only_active = true) =>
       request<RentalMachineResponse[]>(`/rental/machines?only_active=${only_active}`),
@@ -2496,5 +2818,99 @@ export const api = {
       request<RentalConditionsTemplate>("/rental/quotations-conditions-template"),
     updateQuotationConditionsTemplate: (data: Partial<RentalConditionsTemplate>) =>
       request<RentalConditionsTemplate>("/rental/quotations-conditions-template", { method: "PATCH", body: JSON.stringify(data) }),
+  },
+
+  serviceOrders: {
+    metrics: () => request<ServiceOrderMetrics>(`/service-orders/metrics`),
+    list: (params?: {
+      status?: string;
+      service_type?: string;
+      technician_id?: string;
+      client_id?: string;
+      search?: string;
+      date_from?: string;
+      date_to?: string;
+      limit?: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.status)         qs.set("status", params.status);
+      if (params?.service_type)   qs.set("service_type", params.service_type);
+      if (params?.technician_id)  qs.set("technician_id", params.technician_id);
+      if (params?.client_id)      qs.set("client_id", params.client_id);
+      if (params?.search)         qs.set("search", params.search);
+      if (params?.date_from)      qs.set("date_from", params.date_from);
+      if (params?.date_to)        qs.set("date_to", params.date_to);
+      if (params?.limit)          qs.set("limit", String(params.limit));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<ServiceOrderListItem[]>(`/service-orders${suffix}`);
+    },
+    get: (id: number) => request<ServiceOrderDetail>(`/service-orders/${id}`),
+    create: (data: ServiceOrderCreate) =>
+      request<ServiceOrderDetail>(`/service-orders`, { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: ServiceOrderUpdate) =>
+      request<ServiceOrderDetail>(`/service-orders/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    changeStatus: (id: number, status: ServiceStatus, note?: string) =>
+      request<ServiceOrderDetail>(`/service-orders/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, note: note ?? null }),
+      }),
+    remove: (id: number) =>
+      request<void>(`/service-orders/${id}`, { method: "DELETE" }),
+
+    addPart: (orderId: number, data: { description: string; quantity?: number; unit_cost?: number; spare_part_id?: number | null }) =>
+      request<ServiceOrderPart>(`/service-orders/${orderId}/parts`, { method: "POST", body: JSON.stringify(data) }),
+    updatePart: (orderId: number, partId: number, data: { description?: string; quantity?: number; unit_cost?: number; spare_part_id?: number | null }) =>
+      request<ServiceOrderPart>(`/service-orders/${orderId}/parts/${partId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deletePart: (orderId: number, partId: number) =>
+      request<void>(`/service-orders/${orderId}/parts/${partId}`, { method: "DELETE" }),
+
+    uploadAttachment: (orderId: number, file: File, category: string = "otro") => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("category", category);
+      return request<ServiceOrderAttachment>(`/service-orders/${orderId}/attachments`, { method: "POST", body: form, headers: {} });
+    },
+    deleteAttachment: (orderId: number, attachmentId: number) =>
+      request<void>(`/service-orders/${orderId}/attachments/${attachmentId}`, { method: "DELETE" }),
+
+    downloadReportPdf: (orderId: number, orderNumber: string) =>
+      downloadBlobAs(`/service-orders/${orderId}/report.pdf`, `reporte-servicio-${orderNumber}.pdf`),
+
+    previewReportPdfUrl: async (orderId: number): Promise<string> => {
+      const blob = await requestBlob(`/service-orders/${orderId}/report.pdf`);
+      return URL.createObjectURL(blob);
+    },
+
+    sendReport: (orderId: number, body: { to: string[]; cc?: string[]; subject?: string; message?: string }) =>
+      request<void>(`/service-orders/${orderId}/send-report`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+
+    checklistTemplates: () => request<ChecklistTemplateInfo[]>(`/service-orders/checklist/templates`),
+
+    applyChecklistTemplate: (orderId: number, template: string, replace: boolean = false) =>
+      request<ServiceOrderDetail>(`/service-orders/${orderId}/checklist/apply-template`, {
+        method: "POST",
+        body: JSON.stringify({ template, replace }),
+      }),
+
+    addChecklistItem: (orderId: number, data: { label: string; note?: string; order_index?: number }) =>
+      request<ServiceOrderChecklistItem>(`/service-orders/${orderId}/checklist`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    updateChecklistItem: (
+      orderId: number, itemId: number,
+      data: { label?: string; note?: string; is_done?: boolean; order_index?: number },
+    ) =>
+      request<ServiceOrderChecklistItem>(`/service-orders/${orderId}/checklist/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+
+    deleteChecklistItem: (orderId: number, itemId: number) =>
+      request<void>(`/service-orders/${orderId}/checklist/${itemId}`, { method: "DELETE" }),
   },
 };

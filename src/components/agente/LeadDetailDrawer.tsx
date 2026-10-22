@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import {
   X, Phone, Mail, Building2, Briefcase, Clock, FileText, ChevronRight,
   Download, ExternalLink, Plus, Loader2, MessageSquare, CheckCircle2,
-  Globe,
+  Globe, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   api,
   type BotLeadResponse,
+  type LeadChannelResponse,
   type LeadStageHistoryResponse,
   type PipelineStage,
   PIPELINE_STAGES,
@@ -60,10 +61,13 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-fg-4 text-[10px] font-semibold uppercase tracking-wider mb-3">{title}</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-fg-4 text-[10px] font-semibold uppercase tracking-wider">{title}</h3>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -87,6 +91,15 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   const [qualifying, setQualifying]       = useState(false);
   const [qNumMachines, setQNumMachines]   = useState("");
   const [qRole, setQRole]                 = useState("");
+  const [editingScore, setEditingScore]   = useState(false);
+
+  // Canales
+  const [channels, setChannels]           = useState<LeadChannelResponse[]>([]);
+  const [savingChannel, setSavingChannel] = useState(false);
+
+  useEffect(() => {
+    api.leadChannels.list(true).then(setChannels).catch(() => {});
+  }, []);
 
   // Edición de valor de cierre
   const [closeValueInput, setCloseValueInput] = useState("");
@@ -98,13 +111,14 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
   useEffect(() => {
     if (!lead) {
       setHistory([]); setSelStage(""); setNote("");
-      setQNumMachines(""); setQRole("");
+      setQNumMachines(""); setQRole(""); setEditingScore(false);
       setCloseValueInput(""); setCloseIsUsed(false);
       return;
     }
     setSelStage(lead.pipeline_stage);
-    setQNumMachines("");
-    setQRole("");
+    setQNumMachines(lead.num_machines != null ? String(lead.num_machines) : "");
+    setQRole(lead.role ?? "");
+    setEditingScore(false);
     setCloseValueInput(lead.close_value != null ? Number(lead.close_value).toLocaleString("es-CO") : "");
     setCloseIsUsed(!!lead.close_is_used);
     setHL(true);
@@ -167,6 +181,21 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
     }
   };
 
+  const handleChangeChannel = async (channelIdStr: string) => {
+    if (!lead) return;
+    const channel_id = channelIdStr === "" ? null : parseInt(channelIdStr, 10);
+    setSavingChannel(true);
+    try {
+      await api.bot.updateLeadChannel(lead.id, channel_id);
+      toast.success("Canal actualizado");
+      onStageChanged();
+    } catch (e: any) {
+      toast.error(e?.detail ?? "No se pudo actualizar el canal");
+    } finally {
+      setSavingChannel(false);
+    }
+  };
+
   const handleQualify = async () => {
     if (!qualifyReady || !lead) return;
     setQualifying(true);
@@ -175,7 +204,8 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
         num_machines: parseInt(qNumMachines, 10),
         role:         qRole.trim(),
       });
-      toast.success("Lead calificado");
+      toast.success(lead.score ? "Lead recalificado" : "Lead calificado");
+      setEditingScore(false);
       onStageChanged();
     } catch {
       toast.error("No se pudo calificar el lead");
@@ -245,6 +275,32 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+            {/* ── Canal de origen ─────────────────────────────────────────── */}
+            <Section title="Canal de origen">
+              <div className="flex items-center gap-2">
+                {lead.channel_color && (
+                  <span className="inline-block w-3 h-3 shrink-0" style={{ background: lead.channel_color }} />
+                )}
+                <select
+                  value={lead.channel_id ?? ""}
+                  disabled={savingChannel}
+                  onChange={e => handleChangeChannel(e.target.value)}
+                  className="flex-1 bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent disabled:opacity-40"
+                >
+                  <option value="">— Sin canal —</option>
+                  {channels.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                {savingChannel && <Loader2 size={14} className="animate-spin text-accent" />}
+              </div>
+              {!lead.channel_id && (
+                <p className="text-amber-300/80 text-[11px] mt-2">
+                  Este lead no tiene canal asignado. Elegí uno para que aparezca en las métricas.
+                </p>
+              )}
+            </Section>
 
             {/* ── Gestión de etapa ────────────────────────────────────────── */}
             <Section title="Etapa del pipeline">
@@ -403,7 +459,18 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
 
             {/* ── Scoring ICP ──────────────────────────────────────────────── */}
             {lead.score ? (
-              <Section title="Calificación ICP">
+              <Section
+                title="Calificación ICP"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setEditingScore(v => !v)}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-accent border border-accent hover:bg-accent hover:text-black px-2.5 py-1 transition-colors"
+                  >
+                    <Sparkles size={11} /> {editingScore ? "Cancelar" : "Recalificar"}
+                  </button>
+                }
+              >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between bg-surface-3 border border-border px-3 py-2">
                     <span className="text-fg-4 text-xs">Puntuación</span>
@@ -425,6 +492,42 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                       </div>
                     </div>
                   ))}
+
+                  {editingScore && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-3">
+                      <p className="text-fg-5 text-[11px]">Ajusta los datos y vuelve a calcular el score.</p>
+                      <div>
+                        <label className="block text-[11px] font-medium text-fg-4 mb-1">Máquinas en su flota</label>
+                        <input
+                          type="number" min="0"
+                          value={qNumMachines}
+                          onChange={e => setQNumMachines(e.target.value)}
+                          placeholder="Ej: 3"
+                          className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-fg-4 mb-1">Rol del contacto</label>
+                        <Select
+                          value={qRole}
+                          onChange={setQRole}
+                          placeholder="Seleccionar..."
+                          options={CLIENT_ROLE_OPTIONS}
+                          clearable
+                          compact
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleQualify}
+                        disabled={!qualifyReady || qualifying}
+                        className="w-full px-3 py-2 bg-accent text-black text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      >
+                        {qualifying && <Loader2 size={12} className="animate-spin" />}
+                        {qualifying ? "Calculando..." : "Recalcular score"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Section>
             ) : (
