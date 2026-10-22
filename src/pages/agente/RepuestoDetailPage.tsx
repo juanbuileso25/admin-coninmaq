@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { api, type SparePartRequest, type BotMessageResponse } from "../../services/api";
+import { api, type SparePartRequest, type SparePartRequestItem, type BotMessageResponse } from "../../services/api";
 import ChatViewer from "../../components/agente/ChatViewer";
 import NuevoPresupuestoRepuestosDrawer from "../../components/agente/NuevoPresupuestoRepuestosDrawer";
 
@@ -40,6 +40,67 @@ export default function RepuestoDetailPage() {
   const [status, setStatus] = useState("");
   const [notes, setNotes]   = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Items
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [newItemDesc, setNewItemDesc] = useState("");
+  const [newItemQty, setNewItemQty]   = useState(1);
+  const [savingItem, setSavingItem]   = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editDesc, setEditDesc] = useState("");
+  const [editQty, setEditQty]   = useState(1);
+
+  const refetchRequest = async () => {
+    if (!id) return;
+    const data = await api.spareParts.request(Number(id));
+    setReq(data);
+  };
+
+  const addItem = async () => {
+    if (!id) return;
+    const desc = newItemDesc.trim();
+    if (!desc) { toast.error("Ingresa la descripción"); return; }
+    setSavingItem(true);
+    try {
+      await api.spareParts.addRequestItem(Number(id), { description: desc, quantity: Math.max(1, newItemQty) });
+      setNewItemDesc(""); setNewItemQty(1); setAddItemOpen(false);
+      await refetchRequest();
+    } catch (e: any) {
+      toast.error(e?.detail ?? "No se pudo añadir el item");
+    } finally {
+      setSavingItem(false);
+    }
+  };
+
+  const startEdit = (it: SparePartRequestItem) => {
+    setEditingItemId(it.id);
+    setEditDesc(it.description);
+    setEditQty(it.quantity);
+  };
+
+  const saveEdit = async () => {
+    if (!id || !editingItemId) return;
+    const desc = editDesc.trim();
+    if (!desc) { toast.error("La descripción no puede estar vacía"); return; }
+    try {
+      await api.spareParts.updateRequestItem(Number(id), editingItemId, { description: desc, quantity: Math.max(1, editQty) });
+      setEditingItemId(null);
+      await refetchRequest();
+    } catch (e: any) {
+      toast.error(e?.detail ?? "No se pudo actualizar");
+    }
+  };
+
+  const removeItem = async (itemId: number) => {
+    if (!id) return;
+    if (!confirm("¿Eliminar este repuesto de la solicitud?")) return;
+    try {
+      await api.spareParts.deleteRequestItem(Number(id), itemId);
+      await refetchRequest();
+    } catch (e: any) {
+      toast.error(e?.detail ?? "No se pudo eliminar");
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -218,32 +279,106 @@ export default function RepuestoDetailPage() {
                 </div>
               )}
 
-              {req.part_description && (
-                <div className="px-4 py-3">
-                  <span className="text-fg-5 block mb-1.5">Repuesto solicitado</span>
-                  <p className="text-fg">{req.part_description}</p>
+              {/* Items: lista editable de repuestos solicitados */}
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-fg-5 block">Repuestos solicitados ({req.items?.length ?? 0})</span>
+                  <button type="button" onClick={() => setAddItemOpen(v => !v)}
+                    className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
+                    <Plus size={12} /> Añadir repuesto
+                  </button>
                 </div>
-              )}
 
-              {req.quantity != null && (
-                <div className="px-4 py-3 flex justify-between items-center gap-3">
-                  <span className="text-fg-5 shrink-0">Cantidad</span>
-                  <span className="text-fg font-semibold">{req.quantity}</span>
-                </div>
-              )}
-
-              {req.photo_url && (
-                <div className="px-4 py-4">
-                  <span className="text-fg-5 block mb-2">Foto</span>
-                  <a href={req.photo_url} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={req.photo_url}
-                      alt="foto del repuesto"
-                      className="max-w-[300px] border border-border hover:border-accent transition-colors"
+                {addItemOpen && (
+                  <div className="mb-3 border border-accent/40 bg-accent/5 p-2.5 space-y-2">
+                    <input autoFocus type="text"
+                      className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                      placeholder="Descripción del repuesto"
+                      value={newItemDesc}
+                      onChange={e => setNewItemDesc(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addItem(); }}
                     />
-                  </a>
-                </div>
-              )}
+                    <div className="flex items-center gap-2">
+                      <label className="text-fg-6 text-[10px] uppercase tracking-wider">Cant</label>
+                      <input type="number" min={1}
+                        className="w-20 bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                        value={newItemQty}
+                        onChange={e => setNewItemQty(parseInt(e.target.value) || 1)}
+                      />
+                      <div className="flex-1" />
+                      <button type="button" onClick={() => { setAddItemOpen(false); setNewItemDesc(""); setNewItemQty(1); }}
+                        className="px-3 py-1 text-xs text-fg-5 border border-border hover:border-border-light">
+                        Cancelar
+                      </button>
+                      <button type="button" onClick={addItem} disabled={savingItem}
+                        className="px-3 py-1 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900 disabled:opacity-40">
+                        {savingItem ? <Loader2 size={11} className="animate-spin" /> : "Añadir"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(!req.items || req.items.length === 0) ? (
+                  <div className="text-fg-6 text-xs text-center py-4 border border-dashed border-border">
+                    Esta solicitud aún no tiene items.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {req.items.map(it => (
+                      <li key={it.id} className="bg-surface-3 border border-border p-2.5">
+                        {editingItemId === it.id ? (
+                          <div className="space-y-2">
+                            <input type="text" autoFocus
+                              className="w-full bg-surface-2 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                              value={editDesc}
+                              onChange={e => setEditDesc(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingItemId(null); }}
+                            />
+                            <div className="flex items-center gap-2">
+                              <label className="text-fg-6 text-[10px] uppercase tracking-wider">Cant</label>
+                              <input type="number" min={1}
+                                className="w-20 bg-surface-2 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                                value={editQty}
+                                onChange={e => setEditQty(parseInt(e.target.value) || 1)}
+                              />
+                              <div className="flex-1" />
+                              <button type="button" onClick={() => setEditingItemId(null)}
+                                className="p-1 text-fg-5 hover:text-fg"><X size={14} /></button>
+                              <button type="button" onClick={saveEdit}
+                                className="p-1 text-emerald-400 hover:text-emerald-300"><Check size={14} /></button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-fg text-sm">{it.description}</p>
+                              {it.spare_part_code && (
+                                <p className="text-fg-5 text-[11px] font-mono mt-0.5">
+                                  Catálogo: {it.spare_part_code} · {it.spare_part_name}
+                                </p>
+                              )}
+                              {it.photo_url && (
+                                <a href={it.photo_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-1.5">
+                                  <img src={it.photo_url} alt="foto" className="max-h-16 border border-border hover:border-accent" />
+                                </a>
+                              )}
+                            </div>
+                            <span className="text-fg-5 text-xs shrink-0 whitespace-nowrap">×{it.quantity}</span>
+                            <button type="button" onClick={() => startEdit(it)}
+                              className="text-fg-6 hover:text-accent shrink-0" title="Editar">
+                              <Pencil size={13} />
+                            </button>
+                            <button type="button" onClick={() => removeItem(it.id)}
+                              className="text-fg-6 hover:text-red-400 shrink-0" title="Eliminar">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             {/* Notes */}

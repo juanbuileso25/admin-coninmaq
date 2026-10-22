@@ -13,8 +13,6 @@ import {
 const STAGE_COLORS: Record<SparePartStage, { col: string; badge: string; dot: string }> = {
   solicitudes_recibidas: { col: "border-t-slate-400",   badge: "bg-slate-500/15 text-slate-300 border-slate-500/30",    dot: "bg-slate-400"   },
   cotizado:              { col: "border-t-blue-400",    badge: "bg-blue-500/15 text-blue-300 border-blue-500/30",        dot: "bg-blue-400"    },
-  esperando_respuesta:   { col: "border-t-amber-400",   badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",     dot: "bg-amber-400"   },
-  negociacion:           { col: "border-t-violet-400",  badge: "bg-violet-500/15 text-violet-300 border-violet-500/30",  dot: "bg-violet-400"  },
   venta_ganada:          { col: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400" },
   venta_perdida:         { col: "border-t-red-400",     badge: "bg-red-500/15 text-red-300 border-red-500/30",           dot: "bg-red-400"     },
 };
