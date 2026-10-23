@@ -74,7 +74,6 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [extraEmailInput, setExtraEmailInput] = useState("");
 
   // Delivery
-  const [modoEntrega, setModo]  = useState<"email" | "chat" | "ambas">("email");
   const [sendToWa, setSendToWa] = useState(true);
 
   // Suggestions
@@ -168,7 +167,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       setItems([]); setSpSearch(""); setSpResults([]); setShowSearch(true);
       setNombre(""); setEmail(""); setEmpresa(""); setNIT(""); setDir("");
       setExtraEmails([]); setExtraEmailInput("");
-      setModo("email"); setSendToWa(true); setResult(null);
+      setSendToWa(true); setResult(null);
       setSuggestions([]); setSuggestionsLoading(false);
       setAttachments([]);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);

@@ -13,7 +13,6 @@ const METRIC_LABELS: Record<Metric, string> = {
   value_won: "Valor ganado",
 };
 
-const COP = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 const compactCOP = (n: number) => {
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;

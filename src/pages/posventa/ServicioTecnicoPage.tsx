@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Loader2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import {
   api,
-  SERVICE_TYPES, SERVICE_TYPE_LABELS,
+  SERVICE_TYPE_LABELS,
   SERVICE_STATUS_LABELS,
   type ServiceOrderListItem,
   type ServiceOrderMetrics,
