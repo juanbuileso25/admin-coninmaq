@@ -172,11 +172,14 @@ function SparePartCard({ request: req, onMove, onDragStart, onTouchOver, onClick
           </div>
         )}
 
-        {/* Cotización vinculada */}
-        {req.notes && (
-          <div className="flex items-center gap-1.5 text-[11px] text-accent bg-accent/5 border border-accent/20 px-2 py-1">
+        {/* Pastilla de cotización vinculada (número + total) */}
+        {req.latest_quotation_number && (
+          <div className="flex items-center gap-1.5 text-[11px] px-2 py-1 border text-accent bg-accent/5 border-accent/20">
             <FileText size={10} />
-            <span className="truncate">{req.notes}</span>
+            <span className="font-mono truncate">{req.latest_quotation_number}</span>
+            <span className="ml-auto font-semibold whitespace-nowrap">
+              ${(req.latest_quotation_total ?? 0).toLocaleString("es-CO")}
+            </span>
           </div>
         )}
 

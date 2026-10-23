@@ -377,13 +377,28 @@ export default function RepuestoDetailPage() {
                                   Catálogo: {it.spare_part_code} · {it.spare_part_name}
                                 </p>
                               )}
+                              {(it.sale_price != null && it.sale_price > 0) && (
+                                <p className="text-accent text-xs font-semibold mt-1">
+                                  ${(it.sale_price).toLocaleString("es-CO")}
+                                  {it.tax_value != null && it.tax_value > 0 && (
+                                    <span className="text-fg-5 font-normal ml-1.5">+ IVA ${it.tax_value.toLocaleString("es-CO")}</span>
+                                  )}
+                                </p>
+                              )}
                               {it.photo_url && (
                                 <a href={it.photo_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-1.5">
                                   <img src={it.photo_url} alt="foto" className="max-h-16 border border-border hover:border-accent" />
                                 </a>
                               )}
                             </div>
-                            <span className="text-fg-5 text-xs shrink-0 whitespace-nowrap">×{it.quantity}</span>
+                            <div className="flex flex-col items-end shrink-0 gap-0.5">
+                              <span className="text-fg-5 text-xs whitespace-nowrap">×{it.quantity}</span>
+                              {(it.sale_price != null && it.sale_price > 0) && (
+                                <span className="text-fg text-xs font-semibold whitespace-nowrap">
+                                  ${((it.sale_price + (it.tax_value ?? 0)) * it.quantity).toLocaleString("es-CO")}
+                                </span>
+                              )}
+                            </div>
                             <button type="button" onClick={() => startEdit(it)}
                               className="text-fg-6 hover:text-accent shrink-0" title="Editar">
                               <Pencil size={13} />
@@ -400,6 +415,30 @@ export default function RepuestoDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Cotización vinculada */}
+            {req.latest_quotation_number && (
+              <div className="bg-surface-2 border border-accent/30 p-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <FileText size={14} className="text-accent" />
+                    <span className="text-fg-5 text-xs uppercase tracking-wider font-medium">Cotización emitida</span>
+                  </div>
+                  {req.latest_quotation_pdf_url && (
+                    <a href={req.latest_quotation_pdf_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-light border border-accent/40 hover:border-accent px-2.5 py-1 transition-colors">
+                      Ver PDF
+                    </a>
+                  )}
+                </div>
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <span className="font-mono text-sm text-accent font-semibold">{req.latest_quotation_number}</span>
+                  <span className="text-fg text-xl font-bold">
+                    ${(req.latest_quotation_total ?? 0).toLocaleString("es-CO")} COP
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div className="bg-surface-2 border border-border p-4 space-y-2">

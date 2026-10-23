@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
 import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink } from "lucide-react";
 import StatCard from "../../components/StatCard";
-import { api, type BotQuotationResponse } from "../../services/api";
+import Select from "../../components/ui/Select";
+import { api, type BotQuotationResponse, type BotMetrics } from "../../services/api";
 import NuevoPresupuestoRepuestosDrawer from "../../components/agente/NuevoPresupuestoRepuestosDrawer";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
+
+function buildMonthOptions() {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("es-CO", { month: "long", year: "numeric" });
+    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), value });
+  }
+  return options;
+}
+const MONTH_OPTIONS = buildMonthOptions();
 
 const DELIVERY_LABELS: Record<string, string> = {
   chat:  "Solo link",
@@ -23,22 +37,38 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function CotizacionesRepuestosPage() {
-  const [quotes, setQuotes]     = useState<BotQuotationResponse[]>([]);
-  const [total, setTotal]       = useState(0);
-  const [page, setPage]         = useState(1);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
+  const [quotes, setQuotes]       = useState<BotQuotationResponse[]>([]);
+  const [metrics, setMetrics]     = useState<BotMetrics | null>(null);
+  const [total, setTotal]         = useState(0);
+  const [page, setPage]           = useState(1);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState("");
   const [statusFilter, setStatus] = useState("");
-  const [drawerOpen, setDrawer] = useState(false);
+  const [drawerOpen, setDrawer]   = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
 
   const PAGE_SIZE = 20;
 
+  const loadMetrics = (month: string) => {
+    const [year, m] = month.split("-").map(Number);
+    const date_from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay   = new Date(year, m, 0).getDate();
+    const date_to   = `${year}-${String(m).padStart(2, "0")}-${lastDay}`;
+    api.bot.metrics({ date_from, date_to, quotation_type: "repuestos" }).then(setMetrics).catch(() => null);
+  };
+
   const load = async () => {
     setLoading(true);
+    const [year, m] = selectedMonth.split("-").map(Number);
+    const date_from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay   = new Date(year, m, 0).getDate();
+    const date_to   = `${year}-${String(m).padStart(2, "0")}-${lastDay}`;
     try {
       const res = await api.bot.quotations({
         quotation_type: "repuestos",
         status: statusFilter || undefined,
+        date_from,
+        date_to,
         page,
         page_size: PAGE_SIZE,
       });
@@ -49,7 +79,8 @@ export default function CotizacionesRepuestosPage() {
     }
   };
 
-  useEffect(() => { load(); }, [page, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [page, statusFilter, selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadMetrics(selectedMonth); }, [selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = search
     ? quotes.filter(q =>
@@ -67,7 +98,7 @@ export default function CotizacionesRepuestosPage() {
       <NuevoPresupuestoRepuestosDrawer
         open={drawerOpen}
         onClose={() => setDrawer(false)}
-        onCreated={() => { setPage(1); load(); }}
+        onCreated={() => { setPage(1); load(); loadMetrics(selectedMonth); }}
       />
       <div className="space-y-5">
 
@@ -84,12 +115,28 @@ export default function CotizacionesRepuestosPage() {
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          <StatCard label="Total cotizaciones" value={String(total)}                                          icon={ReceiptText} accent delay={0}   />
-          <StatCard label="Enviadas por email"  value={String(quotes.filter(q => q.email_sent).length)}       icon={Mail}        delay={50}  />
-          <StatCard label="Revenue total"       value={COP(quotes.reduce((s, q) => s + q.total, 0))}         icon={DollarSign}  delay={100} />
-        </div>
+        {/* Stats + selector de período */}
+        {metrics && (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-fg-5 text-xs uppercase tracking-wider font-medium">Métricas del período</p>
+              <div className="w-44">
+                <Select
+                  value={selectedMonth}
+                  onChange={setSelectedMonth}
+                  options={MONTH_OPTIONS}
+                  compact
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard label="Total acumulado"    value={String(metrics.total_quotations)}  icon={ReceiptText} accent delay={0}   />
+              <StatCard label="Del período"        value={String(metrics.quotations_period)} icon={ReceiptText}        delay={50}  />
+              <StatCard label="Enviadas por email" value={String(metrics.email_sent_period)} icon={Mail}               delay={100} />
+              <StatCard label="Revenue período"    value={COP(metrics.revenue_period)}       icon={DollarSign}         delay={150} />
+            </div>
+          </>
+        )}
 
         {/* Filters */}
         <div className="flex gap-3 flex-wrap">
