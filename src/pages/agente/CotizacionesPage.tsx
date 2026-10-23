@@ -118,7 +118,7 @@ export default function CotizacionesPage() {
     const date_from = `${year}-${String(m).padStart(2, "0")}-01`;
     const lastDay   = new Date(year, m, 0).getDate();
     const date_to   = `${year}-${String(m).padStart(2, "0")}-${lastDay}`;
-    api.bot.metrics({ date_from, date_to }).then(setMetrics).catch(() => null);
+    api.bot.metrics({ date_from, date_to, quotation_type: "maquinaria" }).then(setMetrics).catch(() => null);
     api.track.clicks()
       .then(data => setClicks(new Map(data.map(e => [e.quotation_number, e]))))
       .catch(() => null);

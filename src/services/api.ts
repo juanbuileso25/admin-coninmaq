@@ -2187,10 +2187,12 @@ export const api = {
     },
   },
   bot: {
-    metrics: (params?: { date_from?: string; date_to?: string }) => {
+    metrics: (params?: { date_from?: string; date_to?: string; quotation_type?: string; lead_type?: string }) => {
       const qs = new URLSearchParams();
-      if (params?.date_from) qs.set("date_from", params.date_from);
-      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      if (params?.date_from)      qs.set("date_from", params.date_from);
+      if (params?.date_to)        qs.set("date_to",   params.date_to);
+      if (params?.quotation_type) qs.set("quotation_type", params.quotation_type);
+      if (params?.lead_type)      qs.set("lead_type", params.lead_type);
       const q = qs.toString();
       return request<BotMetrics>(`/bot/metrics${q ? `?${q}` : ""}`);
     },

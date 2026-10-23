@@ -282,17 +282,17 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                 {lead.channel_color && (
                   <span className="inline-block w-3 h-3 shrink-0" style={{ background: lead.channel_color }} />
                 )}
-                <select
-                  value={lead.channel_id ?? ""}
-                  disabled={savingChannel}
-                  onChange={e => handleChangeChannel(e.target.value)}
-                  className="flex-1 bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent disabled:opacity-40"
-                >
-                  <option value="">— Sin canal —</option>
-                  {channels.map(c => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <Select
+                    value={lead.channel_id != null ? String(lead.channel_id) : ""}
+                    onChange={handleChangeChannel}
+                    options={channels.map(c => ({ value: String(c.id), label: c.label }))}
+                    placeholder="— Sin canal —"
+                    disabled={savingChannel}
+                    clearable
+                    compact
+                  />
+                </div>
                 {savingChannel && <Loader2 size={14} className="animate-spin text-accent" />}
               </div>
               {!lead.channel_id && (

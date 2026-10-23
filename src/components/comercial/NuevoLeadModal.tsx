@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, Loader2, UserPlus, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { api, type LeadChannelResponse } from "../../services/api";
+import Select from "../ui/Select";
 
 interface Props {
   onClose: () => void;
@@ -76,16 +77,15 @@ export default function NuevoLeadModal({ onClose, onCreated }: Props) {
           <Field label="Canal de origen *" help="Obligatorio para que entre a las métricas correctas.">
             <div className="flex items-center gap-2">
               <Radio size={14} className="text-accent shrink-0" />
-              <select
-                value={channelId}
-                onChange={e => setChannelId(e.target.value)}
-                className="flex-1 bg-surface-3 border border-border text-fg px-2 py-2 text-sm outline-none focus:border-accent"
-              >
-                <option value="">— Elegí un canal —</option>
-                {channels.map(c => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <Select
+                  value={channelId}
+                  onChange={setChannelId}
+                  options={channels.map(c => ({ value: String(c.id), label: c.label }))}
+                  placeholder="— Elegí un canal —"
+                  compact
+                />
+              </div>
             </div>
           </Field>
 

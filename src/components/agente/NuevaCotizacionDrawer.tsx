@@ -545,16 +545,12 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
               {!prefill?.lead_id && (
                 <section>
                   <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Canal de origen *</h3>
-                  <select
+                  <Select
                     value={channelId}
-                    onChange={e => setChannelId(e.target.value)}
-                    className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
-                  >
-                    <option value="">— Elegí un canal —</option>
-                    {channels.map(c => (
-                      <option key={c.id} value={c.id}>{c.label}</option>
-                    ))}
-                  </select>
+                    onChange={setChannelId}
+                    options={channels.map(c => ({ value: String(c.id), label: c.label }))}
+                    placeholder="— Elegí un canal —"
+                  />
                   <p className="text-fg-6 text-[11px] mt-1.5">
                     De dónde llegó este cliente. Se usa para medir qué canal funciona mejor.
                   </p>
