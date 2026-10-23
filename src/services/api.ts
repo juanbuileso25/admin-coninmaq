@@ -340,6 +340,8 @@ export type SparePartRequestItem = {
   quantity: number;
   photo_url: string | null;
   photo_r2_key: string | null;
+  sale_price: number | null;
+  tax_value: number | null;
   spare_part_id: number | null;
   spare_part_code: string | null;
   spare_part_name: string | null;
@@ -384,6 +386,10 @@ export type SparePartRequest = {
   items?: SparePartRequestItem[];     // viene en el detalle
   created_at: string;
   updated_at: string;
+  // Última cotización vinculada
+  latest_quotation_number: string | null;
+  latest_quotation_total: number | null;
+  latest_quotation_pdf_url: string | null;
 };
 
 export type SparePartRequestPatch = {
