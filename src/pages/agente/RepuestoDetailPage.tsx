@@ -181,13 +181,33 @@ export default function RepuestoDetailPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-black text-sm font-semibold hover:bg-accent/90 transition-colors flex-shrink-0"
-        >
-          <FileText size={14} />
-          Generar cotización
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={async () => {
+              if (!req) return;
+              if (!confirm(`¿Eliminar la solicitud ${req.request_number}?`)) return;
+              try {
+                await api.spareParts.deleteRequest(req.id);
+                toast.success("Solicitud eliminada");
+                navigate("/posventa/leads");
+              } catch (err: any) {
+                toast.error(err?.detail ?? "No se pudo eliminar");
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-2 border border-border text-fg-4 text-sm hover:border-red-400 hover:text-red-400 transition-colors"
+            title="Eliminar solicitud"
+          >
+            <Trash2 size={14} />
+            Eliminar
+          </button>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-black text-sm font-semibold hover:bg-accent/90 transition-colors"
+          >
+            <FileText size={14} />
+            Generar cotización
+          </button>
+        </div>
       </div>
 
       {/* Drawer */}

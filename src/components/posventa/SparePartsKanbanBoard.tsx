@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Clock, Phone, Wrench, FileText, GripVertical, ChevronDown, Package } from "lucide-react";
+import { Clock, Phone, Wrench, FileText, GripVertical, ChevronDown, Package, Trash2 } from "lucide-react";
 import {
   api,
   type SparePartRequest,
@@ -32,9 +32,10 @@ interface CardProps {
   onDragStart: (e: React.DragEvent, req: SparePartRequest) => void;
   onTouchOver: (stage: SparePartStage | null) => void;
   onClick: (req: SparePartRequest) => void;
+  onDelete: (req: SparePartRequest) => void;
 }
 
-function SparePartCard({ request: req, onMove, onDragStart, onTouchOver, onClick }: CardProps) {
+function SparePartCard({ request: req, onMove, onDragStart, onTouchOver, onClick, onDelete }: CardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos]   = useState({ top: 0, left: 0 });
   const btnRef  = useRef<HTMLButtonElement>(null);
@@ -137,6 +138,14 @@ function SparePartCard({ request: req, onMove, onDragStart, onTouchOver, onClick
               <p className="text-fg-5 text-xs truncate">{req.lead_company}</p>
             )}
           </div>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onDelete(req); }}
+            className="text-fg-6 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+            title="Eliminar solicitud"
+          >
+            <Trash2 size={13} />
+          </button>
         </div>
 
         {/* Repuesto solicitado */}
@@ -265,6 +274,17 @@ export default function SparePartsKanbanBoard({ grouped, onRefresh }: Props) {
     }
   };
 
+  const handleDelete = async (req: SparePartRequest) => {
+    if (!confirm(`¿Eliminar la solicitud ${req.request_number}?`)) return;
+    try {
+      await api.spareParts.deleteRequest(req.id);
+      toast.success("Solicitud eliminada");
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.detail ?? "No se pudo eliminar");
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, req: SparePartRequest) => {
     draggingReq.current = req;
     e.dataTransfer.effectAllowed = "move";
@@ -360,6 +380,7 @@ export default function SparePartsKanbanBoard({ grouped, onRefresh }: Props) {
                     onDragStart={handleDragStart}
                     onTouchOver={handleTouchOver}
                     onClick={req => navigate(`/posventa/leads/${req.id}`)}
+                    onDelete={handleDelete}
                   />
                 ))}
                 {cards.length === 0 && !isOver && (
