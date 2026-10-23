@@ -2488,6 +2488,8 @@ export const api = {
       request<void>(`/spare-parts/requests/${requestId}/items/${itemId}`, { method: "DELETE" }),
     patchRequest: (id: number, data: SparePartRequestPatch) =>
       request<SparePartRequest>(`/spare-parts/requests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteRequest: (id: number) =>
+      request<void>(`/spare-parts/requests/${id}`, { method: "DELETE" }),
     suggestions: (requestId: number, limit = 6) =>
       request<SparePartSuggestion[]>(`/spare-parts/requests/${requestId}/suggestions?limit=${limit}`),
     pipeline: async (params?: { search?: string; date_from?: string; date_to?: string }): Promise<Record<string, SparePartRequest[]>> => {

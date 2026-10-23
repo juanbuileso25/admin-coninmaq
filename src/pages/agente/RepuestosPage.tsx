@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, LayoutList, Kanban, Wrench, Send, CheckCircle2, XCircle, Percent } from "lucide-react";
+import { Search, LayoutList, Kanban, Wrench, Send, CheckCircle2, XCircle, Percent, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import StatCard from "../../components/StatCard";
 import SparePartsKanbanBoard from "../../components/posventa/SparePartsKanbanBoard";
 import DatePicker from "../../components/ui/DatePicker";
@@ -263,17 +264,17 @@ export default function RepuestosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  {["N° Solicitud", "Cliente", "Teléfono", "Máquina", "Repuesto solicitado", "Cant.", "Foto", "Estado", "Fecha"].map(h => (
+                  {["N° Solicitud", "Cliente", "Teléfono", "Máquina", "Repuesto solicitado", "Cant.", "Foto", "Estado", "Fecha", ""].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>
                 )}
                 {!loading && requests.length === 0 && (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-fg-5">Sin solicitudes</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-8 text-center text-fg-5">Sin solicitudes</td></tr>
                 )}
                 {!loading && requests.map(r => (
                   <tr
@@ -312,6 +313,25 @@ export default function RepuestosPage() {
                     </td>
                     <td className="px-4 py-3 text-fg-5 text-xs whitespace-nowrap">
                       {new Date(r.created_at).toLocaleDateString("es-CO")}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm(`¿Eliminar la solicitud ${r.request_number}?`)) return;
+                          try {
+                            await api.spareParts.deleteRequest(r.id);
+                            setRequests(prev => prev.filter(x => x.id !== r.id));
+                            toast.success("Solicitud eliminada");
+                          } catch (err: any) {
+                            toast.error(err?.detail ?? "No se pudo eliminar");
+                          }
+                        }}
+                        className="text-fg-6 hover:text-red-400 transition-colors"
+                        title="Eliminar solicitud"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}
