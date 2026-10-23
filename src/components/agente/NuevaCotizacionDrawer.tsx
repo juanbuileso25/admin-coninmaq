@@ -3,7 +3,7 @@ import { X, Plus, Trash2, Loader2, Search, UserCheck, Clock, Paperclip, Upload }
 import PhoneInput from "../ui/PhoneInput";
 import Select from "../ui/Select";
 import { toast } from "sonner";
-import { api, type BotLeadResponse, type ClientResponse, type MachineResponse, type ManualQuotationResponse, type QuotationEmailAttachment } from "../../services/api";
+import { api, type BotLeadResponse, type ClientResponse, type LeadChannelResponse, type MachineResponse, type ManualQuotationResponse, type QuotationEmailAttachment } from "../../services/api";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
@@ -130,6 +130,10 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [numMachinesFleet, setNumMachinesFleet] = useState<string>("");
   const [clientRole, setClientRole]     = useState<string>("");
 
+  // Canal de origen (solo relevante cuando se crea un lead nuevo)
+  const [channels, setChannels] = useState<LeadChannelResponse[]>([]);
+  const [channelId, setChannelId] = useState<string>("");
+
   useEffect(() => {
     if (!open) return;
     setLM(true);
@@ -167,6 +171,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
       setShowQualify(true); setNumMachinesFleet(""); setClientRole("");
+      setChannelId("");
     } else if (prefill) {
       if (prefill.name)    setNombre(prefill.name);
       if (prefill.email)   setEmail(prefill.email);
@@ -175,6 +180,15 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       if (prefill.address) setAddress(prefill.address);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cargar canales una sola vez
+  useEffect(() => {
+    api.leadChannels.list(true).then(cs => {
+      setChannels(cs);
+      const office = cs.find(c => c.code === "oficina_presencial");
+      if (office) setChannelId(String(office.id));
+    }).catch(() => {});
+  }, []);
 
   // Buscar clientes con debounce
   useEffect(() => {
@@ -299,6 +313,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
     if (!clienteNombre.trim()) return toast.error("Ingresa el nombre del contacto");
     if (fromLead && modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
     if (items.length === 0) return toast.error("Agrega al menos un equipo");
+    // Canal obligatorio sólo cuando se crea un lead nuevo (sin lead_id previo)
+    if (!prefill?.lead_id && !channelId) return toast.error("Elegí el canal de origen del lead");
 
     setSubmitting(true);
     try {
@@ -328,6 +344,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         attachments:    attachments.length > 0 ? attachments.map(a => ({ url: a.url, filename: a.filename, content_type: a.content_type })) : undefined,
         num_machines_fleet: numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined,
         client_role:        clientRole.trim() || undefined,
+        channel_id:         !prefill?.lead_id && channelId ? parseInt(channelId, 10) : undefined,
       });
 
       // Si viene de una sesión activa de WA, también enviar por el chat
@@ -523,6 +540,22 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                   </div>
                 )}
               </section>
+
+              {/* Canal de origen (solo cuando se crea lead nuevo) */}
+              {!prefill?.lead_id && (
+                <section>
+                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Canal de origen *</h3>
+                  <Select
+                    value={channelId}
+                    onChange={setChannelId}
+                    options={channels.map(c => ({ value: String(c.id), label: c.label }))}
+                    placeholder="— Elegí un canal —"
+                  />
+                  <p className="text-fg-6 text-[11px] mt-1.5">
+                    De dónde llegó este cliente. Se usa para medir qué canal funciona mejor.
+                  </p>
+                </section>
+              )}
 
               {/* Cliente */}
               <section>

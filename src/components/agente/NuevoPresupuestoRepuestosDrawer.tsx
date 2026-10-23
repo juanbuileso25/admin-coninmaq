@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Trash2, Loader2, Search, Paperclip, Upload } from "lucide-react";
+import { X, Plus, Trash2, Loader2, Search, Paperclip, Upload, UserCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { api, type SparePart, type SparePartSuggestion, type ManualQuotationResponse, type QuotationEmailAttachment } from "../../services/api";
+import { api, type SparePart, type SparePartSuggestion, type ManualQuotationResponse, type QuotationEmailAttachment, type ClientResponse, type BotLeadResponse } from "../../services/api";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
 const fmtInput = (n: number) => (n > 0 ? n.toLocaleString("es-CO") : "");
 
 type LineItem = {
-  id:         number;
-  code:       string;
+  id:         number;      // id del catálogo o id local negativo para manuales
+  code:       string;      // vacío "" para items manuales
   name:       string;
   cantidad:   number;
   sale_price: number;
   tax_rate:   number;
   tax_value:  number;
+  is_manual?: boolean;     // true si fue añadido manualmente sin catálogo
 };
 
 interface Props {
@@ -51,6 +52,23 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [clienteNIT,     setNIT]     = useState("");
   const [clienteDir,     setDir]     = useState("");
 
+  // Buscar cliente existente
+  const [clientSearch, setClientSearch]       = useState("");
+  const [clientResults, setClientResults]     = useState<ClientResponse[]>([]);
+  const [clientLoading, setClientLoading]     = useState(false);
+  const [selectedClient, setSelectedClient]   = useState<ClientResponse | null>(null);
+  const [showClientSearch, setShowClientSearch] = useState(false);
+  const debounceC = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Buscar contacto previo (leads)
+  const [leadSearch, setLeadSearch]           = useState("");
+  const [leadResults, setLeadResults]         = useState<BotLeadResponse[]>([]);
+  const [leadLoading, setLeadLoading]         = useState(false);
+  const [showLeadSearch, setShowLeadSearch]   = useState(false);
+  // Guardar lead_id cuando se selecciona uno (para enviarlo al backend)
+  const [selectedLeadId, setSelectedLeadId]   = useState<number | null>(null);
+  const debounceL = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Extra emails
   const [extraEmails,     setExtraEmails]     = useState<string[]>([]);
   const [extraEmailInput, setExtraEmailInput] = useState("");
@@ -66,6 +84,42 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   // State
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState<ManualQuotationResponse | null>(null);
+
+  // Mini-form manual (ítem sin catálogo)
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualCode, setManualCode] = useState("");
+  const [manualQty, setManualQty] = useState(1);
+  const [manualPrice, setManualPrice] = useState(0);
+  const [manualIvaPct, setManualIvaPct] = useState(19);
+  const manualNameRef = useRef<HTMLInputElement>(null);
+
+  const resetManual = () => {
+    setManualOpen(false);
+    setManualName(""); setManualCode(""); setManualQty(1); setManualPrice(0); setManualIvaPct(19);
+  };
+
+  const addManualItem = () => {
+    const name = manualName.trim();
+    if (!name) { toast.error("Ingresa la descripción del repuesto"); manualNameRef.current?.focus(); return; }
+    if (manualPrice <= 0) { toast.error("Ingresa un precio válido"); return; }
+    const qty = Math.max(1, manualQty || 1);
+    const taxRate = (manualIvaPct || 0) / 100;
+    const taxValue = Math.round(manualPrice * taxRate);
+    // id local negativo (único) para no chocar con los del catálogo
+    const localId = -Date.now();
+    setItems(prev => [...prev, {
+      id: localId,
+      code: manualCode.trim(),
+      name,
+      cantidad: qty,
+      sale_price: manualPrice,
+      tax_rate: taxRate,
+      tax_value: taxValue,
+      is_manual: true,
+    }]);
+    resetManual();
+  };
 
   // Adjuntos
   const [attachments, setAttachments] = useState<Array<QuotationEmailAttachment & { size?: number }>>([]);
@@ -117,8 +171,73 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       setModo("email"); setSendToWa(true); setResult(null);
       setSuggestions([]); setSuggestionsLoading(false);
       setAttachments([]);
+      setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
+      setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false); setSelectedLeadId(null);
+      resetManual();
     }
   }, [open]);
+
+  // Buscar clientes con debounce
+  useEffect(() => {
+    if (!showClientSearch) return;
+    if (debounceC.current) clearTimeout(debounceC.current);
+    debounceC.current = setTimeout(async () => {
+      setClientLoading(true);
+      try {
+        const data = await api.clients.list({ search: clientSearch || undefined, is_active: true });
+        setClientResults(data.slice(0, 10));
+      } catch {
+        toast.error("No se pudo buscar clientes");
+      } finally {
+        setClientLoading(false);
+      }
+    }, 300);
+  }, [clientSearch, showClientSearch]);
+
+  // Buscar contactos previos (leads) con debounce
+  useEffect(() => {
+    if (!showLeadSearch) return;
+    if (debounceL.current) clearTimeout(debounceL.current);
+    debounceL.current = setTimeout(async () => {
+      setLeadLoading(true);
+      try {
+        const data = await api.bot.leads({ search: leadSearch || undefined, page_size: 10 });
+        setLeadResults(data.data);
+      } catch {
+        toast.error("No se pudo buscar contactos");
+      } finally {
+        setLeadLoading(false);
+      }
+    }, 300);
+  }, [leadSearch, showLeadSearch]);
+
+  const selectClient = (c: ClientResponse) => {
+    setSelectedClient(c);
+    setSelectedLeadId(null);
+    setEmpresa(c.name);
+    setEmail(c.billing_email ?? c.info_email ?? "");
+    setNombre(c.purchasing_contact ?? "");
+    setShowClientSearch(false);
+    setClientSearch("");
+  };
+
+  const selectLead = (l: BotLeadResponse) => {
+    setSelectedLeadId(l.id);
+    setSelectedClient(null);
+    if (l.name)          setNombre(l.name);
+    if (l.email)         setEmail(l.email);
+    if (l.company)       setEmpresa(l.company);
+    if (l.rut_nit)       setNIT(l.rut_nit);
+    if (l.rut_direccion) setDir(l.rut_direccion);
+    setShowLeadSearch(false);
+    setLeadSearch("");
+  };
+
+  const clearClient = () => {
+    setSelectedClient(null);
+    setSelectedLeadId(null);
+    setNombre(""); setEmail(""); setEmpresa(""); setNIT(""); setDir("");
+  };
 
   // Pre-fill when drawer opens with prefill data
   useEffect(() => {
@@ -213,19 +332,21 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
 
   const submit = async () => {
     if (!clienteNombre.trim()) return toast.error("Ingresa el nombre del contacto");
-    if (!fromLead && modoEntrega !== "chat" && !clienteEmail.trim()) return toast.error("Ingresa el email del cliente");
     if (items.length === 0) return toast.error("Agrega al menos un repuesto");
 
     setSubmitting(true);
     try {
       const hasEmail = !!clienteEmail.trim();
-      const entrega  = fromLead ? "chat" : modoEntrega;
+      // Auto-detección: si hay email -> email; si no -> chat (solo link)
+      const entrega  = fromLead ? "chat" : (hasEmail ? "email" : "chat");
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
         client_company: clienteEmpresa.trim() || undefined,
         items: items.map(i => ({
-          machine_code: i.code,
+          // Para items manuales enviamos machine_code vacío (opcional en backend).
+          // Si el usuario puso una "referencia" en el campo code lo mandamos igual.
+          machine_code: i.is_manual ? (i.code || undefined) : i.code,
           part_name:    i.name,
           quantity:     i.cantidad,
           sale_price:   i.sale_price,
@@ -238,6 +359,10 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
         // Extra fields forwarded to the API
         ...(prefill?.session_id        ? { session_id:              prefill.session_id }   : {}),
         ...(prefill?.request_id != null ? { spare_part_request_id: prefill.request_id }   : {}),
+        // Si se seleccionó un lead en el buscador, lo propagamos para no crear uno nuevo
+        ...(selectedLeadId != null && !prefill?.session_id ? { lead_id: selectedLeadId } : {}),
+        client_tax_id:  clienteNIT.trim() || undefined,
+        client_address: clienteDir.trim() || undefined,
         quotation_type: "repuestos",
       } as Parameters<typeof api.bot.createManualQuotation>[0]);
 
@@ -402,13 +527,91 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Repuestos</h3>
-                  {!showSearch && (
-                    <button type="button" onClick={() => setShowSearch(true)}
-                      className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
-                      <Plus size={12} /> Agregar repuesto
+                  <div className="flex items-center gap-3">
+                    {!showSearch && (
+                      <button type="button" onClick={() => setShowSearch(true)}
+                        className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
+                        <Plus size={12} /> Agregar del catálogo
+                      </button>
+                    )}
+                    <button type="button" onClick={() => { setManualOpen(true); setTimeout(() => manualNameRef.current?.focus(), 30); }}
+                      className="flex items-center gap-1 text-fg-3 text-xs hover:text-accent transition-colors border border-dashed border-fg-6 hover:border-accent px-2 py-1">
+                      <Plus size={12} /> Añadir manualmente
                     </button>
-                  )}
+                  </div>
                 </div>
+
+                {/* Mini-form: añadir repuesto manual (sin catálogo) */}
+                {manualOpen && (
+                  <div className="mb-3 border border-accent/40 bg-accent/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-accent text-[10px] uppercase tracking-wider font-semibold">Repuesto manual</span>
+                      <button type="button" onClick={resetManual} className="text-fg-6 hover:text-fg">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <input
+                      ref={manualNameRef}
+                      type="text"
+                      className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                      placeholder="Descripción del repuesto *"
+                      value={manualName}
+                      onChange={e => setManualName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addManualItem(); }}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                        placeholder="Código / referencia (opcional)"
+                        value={manualCode}
+                        onChange={e => setManualCode(e.target.value)}
+                      />
+                      <div className="flex items-center gap-1">
+                        <label className="text-fg-6 text-[10px] uppercase tracking-wider">Cant</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          value={manualQty}
+                          onChange={e => setManualQty(parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">Precio unit (COP) *</label>
+                        <input
+                          type="text"
+                          className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          value={fmtInput(manualPrice)}
+                          onChange={e => setManualPrice(parseCOP(e.target.value))}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">IVA %</label>
+                        <input
+                          type="number"
+                          min={0} max={100} step={1}
+                          className="w-full bg-surface-3 border border-border text-fg px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          value={manualIvaPct}
+                          onChange={e => setManualIvaPct(parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button type="button" onClick={resetManual}
+                        className="px-3 py-1.5 text-xs text-fg-5 border border-border hover:border-border-light">
+                        Cancelar
+                      </button>
+                      <button type="button" onClick={addManualItem}
+                        className="px-4 py-1.5 text-xs font-semibold bg-accent hover:bg-accent-light text-zinc-900">
+                        Añadir
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {showSearch && (
                   <div className="mb-3 border border-border bg-surface-3">
@@ -474,7 +677,14 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                         <div key={item.id} className="bg-surface-3 border border-border px-3 py-3 space-y-2.5">
                           <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="font-mono text-xs text-accent">{item.code}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {item.code && <p className="font-mono text-xs text-accent">{item.code}</p>}
+                                {item.is_manual && (
+                                  <span className="text-[9px] uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.5">
+                                    manual
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-fg text-sm truncate">{item.name}</p>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
@@ -548,7 +758,120 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
 
               {/* Client data */}
               <section>
-                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Datos del cliente</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Datos del cliente</h3>
+                  {!fromLead && (
+                    <div className="flex items-center gap-3">
+                      {!selectedClient && (
+                        <button type="button"
+                          onClick={() => { setShowLeadSearch(false); setShowClientSearch(s => !s); }}
+                          className="flex items-center gap-1 text-accent text-xs hover:text-accent/80 transition-colors">
+                          <UserCheck size={12} /> Buscar cliente
+                        </button>
+                      )}
+                      <button type="button"
+                        onClick={() => { setShowClientSearch(false); setSelectedClient(null); setShowLeadSearch(s => !s); }}
+                        className="flex items-center gap-1 text-fg-4 text-xs hover:text-fg transition-colors">
+                        <Clock size={12} /> Contacto previo
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Buscador de contactos previos (leads) */}
+                {showLeadSearch && (
+                  <div className="mb-3 border border-border bg-surface-3">
+                    <div className="relative border-b border-border">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-6 pointer-events-none" />
+                      <input autoFocus
+                        className="w-full bg-transparent text-fg pl-9 pr-4 py-2.5 text-sm placeholder:text-fg-6 outline-none"
+                        placeholder="Nombre, email, empresa o NIT..."
+                        value={leadSearch} onChange={e => setLeadSearch(e.target.value)} />
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {leadLoading && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm flex items-center justify-center gap-2">
+                          <Loader2 size={14} className="animate-spin" /> Buscando...
+                        </div>
+                      )}
+                      {!leadLoading && leadResults.length === 0 && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm">Sin resultados</div>
+                      )}
+                      {!leadLoading && leadResults.map(l => (
+                        <button key={l.id} type="button" onClick={() => selectLead(l)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-surface-4 border-b border-border last:border-0 transition-colors">
+                          <p className="text-fg text-sm font-medium">{l.name ?? "Sin nombre"}</p>
+                          <p className="text-fg-5 text-xs">{[l.email, l.company].filter(Boolean).join(" · ")}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2 border-t border-border">
+                      <button type="button" onClick={() => { setShowLeadSearch(false); setLeadSearch(""); }}
+                        className="text-fg-5 text-xs hover:text-fg transition-colors">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Buscador de clientes */}
+                {showClientSearch && !selectedClient && (
+                  <div className="mb-3 border border-border bg-surface-3">
+                    <div className="relative border-b border-border">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-6 pointer-events-none" />
+                      <input autoFocus
+                        className="w-full bg-transparent text-fg pl-9 pr-4 py-2.5 text-sm placeholder:text-fg-6 outline-none"
+                        placeholder="Nombre o documento..."
+                        value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {clientLoading && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm flex items-center justify-center gap-2">
+                          <Loader2 size={14} className="animate-spin" /> Buscando...
+                        </div>
+                      )}
+                      {!clientLoading && clientResults.length === 0 && (
+                        <div className="px-4 py-4 text-center text-fg-5 text-sm">Sin resultados</div>
+                      )}
+                      {!clientLoading && clientResults.map(c => (
+                        <button key={c.id} type="button" onClick={() => selectClient(c)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-surface-4 border-b border-border last:border-0 transition-colors">
+                          <p className="text-fg text-sm font-medium">{c.name}</p>
+                          <p className="text-fg-5 text-xs">{[c.document, c.billing_email ?? c.info_email].filter(Boolean).join(" · ")}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2 border-t border-border">
+                      <button type="button" onClick={() => { setShowClientSearch(false); setClientSearch(""); }}
+                        className="text-fg-5 text-xs hover:text-fg transition-colors">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cliente seleccionado */}
+                {selectedClient && (
+                  <div className="mb-3 flex items-center justify-between bg-accent/10 border border-accent/30 px-3 py-2">
+                    <div>
+                      <p className="text-fg text-sm font-medium">{selectedClient.name}</p>
+                      <p className="text-fg-5 text-xs">{selectedClient.document}</p>
+                    </div>
+                    <button type="button" onClick={clearClient} className="text-fg-5 hover:text-fg transition-colors ml-3 shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Lead seleccionado */}
+                {selectedLeadId != null && !selectedClient && (
+                  <div className="mb-3 flex items-center justify-between bg-sky-500/10 border border-sky-500/30 px-3 py-2">
+                    <div>
+                      <p className="text-fg text-sm font-medium">Contacto previo seleccionado</p>
+                      <p className="text-fg-5 text-xs">{[clienteNombre, clienteEmpresa].filter(Boolean).join(" · ")}</p>
+                    </div>
+                    <button type="button" onClick={clearClient} className="text-fg-5 hover:text-fg transition-colors ml-3 shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div>
                     <label className="text-fg-4 text-xs mb-1.5 block">Nombre contacto *</label>
@@ -561,7 +884,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                   </div>
                   <div>
                     <label className="text-fg-4 text-xs mb-1.5 block">
-                      Email {!fromLead && modoEntrega !== "chat" ? "*" : "(opcional)"}
+                      Email (opcional)
                     </label>
                     <input
                       type="email"
@@ -674,33 +997,38 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
               </section>
 
               {/* Delivery */}
-              {fromLead ? (
-                <section>
-                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={sendToWa}
-                      onChange={e => setSendToWa(e.target.checked)}
-                      className="w-4 h-4 accent-accent"
-                    />
-                    <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
-                  </label>
-                </section>
-              ) : (
-                <section>
-                  <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
-                  <select
-                    className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
-                    value={modoEntrega}
-                    onChange={e => setModo(e.target.value as "email" | "chat" | "ambas")}
-                  >
-                    <option value="email">Enviar por email</option>
-                    <option value="chat">Solo generar (link)</option>
-                    <option value="ambas">Email + link</option>
-                  </select>
-                </section>
-              )}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
+                {fromLead ? (
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={sendToWa}
+                        onChange={e => setSendToWa(e.target.checked)}
+                        className="w-4 h-4 accent-accent"
+                      />
+                      <span className="text-sm text-fg">Enviar cotización a la conversación de WhatsApp</span>
+                    </label>
+                    {clienteEmail.trim() && (
+                      <div className="flex items-center gap-2 text-xs text-fg-4">
+                        <span>✉</span>
+                        <span>También se enviará por correo a <span className="text-fg-3 font-medium">{clienteEmail.trim()}</span></span>
+                      </div>
+                    )}
+                  </div>
+                ) : clienteEmail.trim() ? (
+                  <div className="flex items-center gap-2 text-xs text-fg-3 bg-accent/5 border border-accent/20 px-3 py-2.5">
+                    <span>✉</span>
+                    <span>Se enviará por correo a <span className="font-medium">{clienteEmail.trim()}</span></span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-fg-5 bg-surface-3 border border-border px-3 py-2.5">
+                    <span>🔗</span>
+                    <span>Se generará solo el enlace de la cotización (sin email).</span>
+                  </div>
+                )}
+              </section>
             </div>
 
             {/* Footer */}

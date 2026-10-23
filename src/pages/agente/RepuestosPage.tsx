@@ -7,16 +7,16 @@ import DatePicker from "../../components/ui/DatePicker";
 import Select from "../../components/ui/Select";
 import { api, type SparePartRequest, type SparePartRequestsMetrics, SPARE_PART_STAGES } from "../../services/api";
 
-const STATUSES = ["solicitudes_recibidas", "cotizado", "esperando_respuesta", "negociacion", "venta_ganada", "venta_perdida"] as const;
+const STATUSES = ["solicitudes_recibidas", "cotizado", "venta_ganada", "venta_perdida"] as const;
 
 const STATUS_LABELS: Record<string, string> = {
   solicitudes_recibidas: "Solicitudes recibidas",
   cotizado:              "Cotizado",
-  esperando_respuesta:   "Esperando respuesta",
-  negociacion:           "Negociación",
   venta_ganada:          "Venta ganada",
   venta_perdida:         "Venta perdida",
   // legacy
+  esperando_respuesta: "Cotizado",
+  negociacion:         "Cotizado",
   pendiente:  "Pendiente",
   pedido:     "Pedido",
   entregado:  "Entregado",
@@ -26,11 +26,11 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_STYLES: Record<string, string> = {
   solicitudes_recibidas: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   cotizado:              "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  esperando_respuesta:   "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  negociacion:           "bg-violet-500/15 text-violet-300 border-violet-500/30",
   venta_ganada:          "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   venta_perdida:         "bg-red-500/15 text-red-300 border-red-500/30",
   // legacy
+  esperando_respuesta: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  negociacion:         "bg-blue-500/15 text-blue-300 border-blue-500/30",
   pendiente:  "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
   pedido:     "bg-purple-500/15 text-purple-400 border-purple-500/30",
   entregado:  "bg-green-500/15 text-green-400 border-green-500/30",

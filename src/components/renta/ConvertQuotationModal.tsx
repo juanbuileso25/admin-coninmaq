@@ -53,37 +53,45 @@ export default function ConvertQuotationModal({ quotation, onClose, onConverted 
     }))
   );
 
-  // Carga en paralelo las unidades disponibles de cada item que tenga catalog_machine_id
+  // Carga una sola vez TODAS las unidades físicas con disponibilidad, y por cada item
+  // las ordena con las del mismo modelo primero.
   useEffect(() => {
-    items.forEach(async (it, idx) => {
-      if (!it.catalog_machine_id) {
-        // Legacy: item con rental_machine_id directo. Pre-seleccionar esa unidad.
-        if (it.rental_machine_id) {
-          setItemStates(prev => prev.map((s, i) =>
-            i === idx ? { ...s, mode: "existing", rental_machine_id: it.rental_machine_id ?? null } : s
-          ));
-        }
-        return;
-      }
-      setItemStates(prev => prev.map((s, i) => i === idx ? { ...s, loading: true } : s));
+    (async () => {
+      setItemStates(prev => prev.map(s => ({ ...s, loading: true })));
       try {
-        const rows = await api.rental.listUnitsByCatalog(it.catalog_machine_id);
-        setItemStates(prev => prev.map((s, i) => {
-          if (i !== idx) return s;
-          // Preselecciona la primera disponible, o la primera a secas si no hay disponibles
-          const firstAvail = rows.find(r => r.is_available) ?? rows[0];
+        const allUnits = await api.rental.listAllUnitsAvailability();
+        setItemStates(prev => prev.map((s, idx) => {
+          const it = items[idx];
+          if (!it) return s;
+          const catalogId = it.catalog_machine_id ?? null;
+          const sorted = [...allUnits].sort((a, b) => {
+            const aMatch = catalogId && a.machine.catalog_machine_id === catalogId ? 0 : 1;
+            const bMatch = catalogId && b.machine.catalog_machine_id === catalogId ? 0 : 1;
+            if (aMatch !== bMatch) return aMatch - bMatch;
+            // Dentro del mismo bucket: disponibles primero, luego por placa
+            if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
+            return a.machine.plate.localeCompare(b.machine.plate);
+          });
+          // Preseleccionar: legacy rental_machine_id > primera del mismo modelo disponible > primera disponible
+          let preselected: string | null = s.rental_machine_id ?? null;
+          if (!preselected && it.rental_machine_id) preselected = it.rental_machine_id;
+          if (!preselected) {
+            const sameModelAvail = sorted.find(u => catalogId && u.machine.catalog_machine_id === catalogId && u.is_available);
+            const anyAvail = sorted.find(u => u.is_available);
+            preselected = sameModelAvail?.machine.id ?? anyAvail?.machine.id ?? null;
+          }
           return {
             ...s,
-            available: rows,
+            available: sorted,
             loading: false,
-            rental_machine_id: s.rental_machine_id ?? firstAvail?.machine.id ?? null,
-            mode: rows.length === 0 ? "new" : s.mode,
+            rental_machine_id: preselected,
+            mode: sorted.length === 0 ? "new" : s.mode,
           };
         }));
       } catch {
-        setItemStates(prev => prev.map((s, i) => i === idx ? { ...s, loading: false } : s));
+        setItemStates(prev => prev.map(s => ({ ...s, loading: false })));
       }
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotation.id]);
 
@@ -198,7 +206,6 @@ export default function ConvertQuotationModal({ quotation, onClose, onConverted 
             <div className="space-y-3">
               {items.map((it, idx) => {
                 const st = itemStates[idx];
-                const hasCatalog = !!it.catalog_machine_id;
                 return (
                   <div key={idx} className="bg-surface-3 border border-border p-3 space-y-2">
                     <div className="flex items-center gap-3">
@@ -211,15 +218,14 @@ export default function ConvertQuotationModal({ quotation, onClose, onConverted 
                           {[it.snapshot.brand, it.snapshot.model].filter(Boolean).join(" · ")}
                         </div>
                       </div>
-                      {!hasCatalog && it.rental_machine_id && (
+                      {!it.catalog_machine_id && it.rental_machine_id && (
                         <span className="text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.5">
                           Legacy: placa fija
                         </span>
                       )}
                     </div>
 
-                    {hasCatalog && (
-                      <>
+                    <>
                         {/* Tabs mode */}
                         <div className="flex gap-1 border-b border-border">
                           <TabBtn active={st.mode === "existing"} onClick={() => updateState(idx, { mode: "existing" })}
@@ -239,43 +245,54 @@ export default function ConvertQuotationModal({ quotation, onClose, onConverted 
                               </div>
                             ) : st.available.length === 0 ? (
                               <div className="text-fg-6 text-[11px] py-2 border border-dashed border-border px-3">
-                                No hay unidades físicas registradas de este modelo. Crea una nueva.
+                                No hay unidades físicas registradas. Crea una nueva.
                               </div>
                             ) : (
-                              <div className="space-y-1 max-h-48 overflow-y-auto">
-                                {st.available.map(av => (
-                                  <label key={av.machine.id}
-                                    className={`flex items-center gap-2 px-2 py-1.5 border cursor-pointer transition-colors ${
-                                      st.rental_machine_id === av.machine.id
-                                        ? "border-accent bg-accent/10"
-                                        : "border-border hover:border-border-light"
-                                    } ${!av.is_available ? "opacity-70" : ""}`}>
-                                    <input type="radio" name={`unit-${idx}`}
-                                      checked={st.rental_machine_id === av.machine.id}
-                                      onChange={() => updateState(idx, { rental_machine_id: av.machine.id })}
-                                      className="accent-accent" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-fg-2 text-xs font-mono">
-                                        {av.machine.plate}
-                                        {av.machine.nickname && <span className="text-fg-5 ml-1">({av.machine.nickname})</span>}
-                                      </div>
-                                      {!av.is_available && (
-                                        <div className="text-amber-400 text-[10px]">
-                                          Ocupada: {av.current_assignment_obra ?? ""} {av.current_assignment_client ? `· ${av.current_assignment_client}` : ""}
+                              <div className="space-y-1 max-h-56 overflow-y-auto">
+                                {st.available.map(av => {
+                                  const sameModel = !!it.catalog_machine_id && av.machine.catalog_machine_id === it.catalog_machine_id;
+                                  return (
+                                    <label key={av.machine.id}
+                                      className={`flex items-center gap-2 px-2 py-1.5 border cursor-pointer transition-colors ${
+                                        st.rental_machine_id === av.machine.id
+                                          ? "border-accent bg-accent/10"
+                                          : "border-border hover:border-border-light"
+                                      } ${!av.is_available ? "opacity-70" : ""}`}>
+                                      <input type="radio" name={`unit-${idx}`}
+                                        checked={st.rental_machine_id === av.machine.id}
+                                        onChange={() => updateState(idx, { rental_machine_id: av.machine.id })}
+                                        className="accent-accent" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-fg-2 text-xs font-mono flex items-center gap-1.5 flex-wrap">
+                                          <span>{av.machine.plate}</span>
+                                          {av.machine.nickname && <span className="text-fg-5">({av.machine.nickname})</span>}
+                                          {sameModel && (
+                                            <span className="text-[9px] uppercase tracking-wider text-sky-300 border border-sky-500/30 bg-sky-500/10 px-1 py-0.5">
+                                              mismo modelo
+                                            </span>
+                                          )}
                                         </div>
+                                        <div className="text-fg-6 text-[10px] truncate">
+                                          {av.machine.code} · {[av.machine.brand, av.machine.model].filter(Boolean).join(" ")}
+                                        </div>
+                                        {!av.is_available && (
+                                          <div className="text-amber-400 text-[10px]">
+                                            Ocupada: {av.current_assignment_obra ?? ""} {av.current_assignment_client ? `· ${av.current_assignment_client}` : ""}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {av.is_available ? (
+                                        <span className="text-[10px] uppercase tracking-wider text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5">
+                                          <Check size={9} className="inline mr-0.5" /> libre
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] uppercase tracking-wider text-amber-300 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5">
+                                          ocupada
+                                        </span>
                                       )}
-                                    </div>
-                                    {av.is_available ? (
-                                      <span className="text-[10px] uppercase tracking-wider text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5">
-                                        <Check size={9} className="inline mr-0.5" /> libre
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] uppercase tracking-wider text-amber-300 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5">
-                                        ocupada
-                                      </span>
-                                    )}
-                                  </label>
-                                ))}
+                                    </label>
+                                  );
+                                })}
                               </div>
                             )}
                           </>
@@ -310,13 +327,6 @@ export default function ConvertQuotationModal({ quotation, onClose, onConverted 
                           </div>
                         )}
                       </>
-                    )}
-
-                    {!hasCatalog && !it.rental_machine_id && (
-                      <div className="text-amber-300 text-[11px] py-2 border border-amber-500/30 bg-amber-500/10 px-3">
-                        Este item no tiene modelo del catálogo ni unidad asignada. No se podrá convertir.
-                      </div>
-                    )}
                   </div>
                 );
               })}

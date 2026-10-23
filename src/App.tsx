@@ -35,6 +35,7 @@ import QuotationPage       from "./pages/public/QuotationPage";
 import ProveedoresPage      from "./pages/ajustes/ProveedoresPage";
 import ModulosPage          from "./pages/ajustes/ModulosPage";
 import MenuPage             from "./pages/ajustes/MenuPage";
+import CanalesPage          from "./pages/ajustes/CanalesPage";
 import PedidosMaquinasPage  from "./pages/pedidos/PedidosMaquinasPage";
 import PedidoDetailPage     from "./pages/pedidos/PedidoDetailPage";
 import ProspectingPage          from "./pages/prospecting/ProspectingPage";
@@ -42,6 +43,8 @@ import RepuestosPage                from "./pages/agente/RepuestosPage";
 import RepuestoDetailPage           from "./pages/agente/RepuestoDetailPage";
 import RepuestosInventarioPage      from "./pages/inventario/RepuestosInventarioPage";
 import CotizacionesRepuestosPage    from "./pages/posventa/CotizacionesRepuestosPage";
+import ServicioTecnicoPage          from "./pages/posventa/ServicioTecnicoPage";
+import ServicioTecnicoDetailPage    from "./pages/posventa/ServicioTecnicoDetailPage";
 import VehiculosPage                from "./pages/documentos/VehiculosPage";
 import EmpleadosPage                from "./pages/documentos/EmpleadosPage";
 
@@ -107,6 +110,8 @@ export default function App() {
         <Route path="/posventa/leads"         element={<RepuestosPage />} />
         <Route path="/posventa/leads/:id"     element={<RepuestoDetailPage />} />
         <Route path="/posventa/cotizaciones"  element={<CotizacionesRepuestosPage />} />
+        <Route path="/posventa/servicio-tecnico"     element={<ServicioTecnicoPage />} />
+        <Route path="/posventa/servicio-tecnico/:id" element={<ServicioTecnicoDetailPage />} />
 
         {/* Redirects de rutas antiguas */}
         <Route path="/agente/leads"                element={<Navigate to="/comercial/leads" replace />} />
@@ -125,6 +130,7 @@ export default function App() {
         <Route path="/ajustes/proveedores" element={<ProveedoresPage />} />
         <Route path="/ajustes/modulos"     element={<ModulosPage />} />
         <Route path="/ajustes/menu"        element={<MenuPage />} />
+        <Route path="/ajustes/canales"     element={<CanalesPage />} />
 
         {/* Prospección */}
         <Route path="/comercial/prospectos" element={<ProspectingPage />} />

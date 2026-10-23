@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, Star, CheckCircle2, Percent } from "lucide-react";
+import { Search, UserCheck, TrendingUp, Hammer, DollarSign, LayoutList, Kanban, Star, CheckCircle2, Percent, UserPlus } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import KanbanBoard from "../../components/agente/KanbanBoard";
 import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
+import NuevoLeadModal from "../../components/comercial/NuevoLeadModal";
 import Select from "../../components/ui/Select";
 import DatePicker from "../../components/ui/DatePicker";
 import { api, type BotLeadResponse, type BotMetrics, type PipelineColumnResponse } from "../../services/api";
@@ -106,6 +107,7 @@ export default function LeadsPage() {
   const navigate = useNavigate();
 
   const [viewMode, setViewMode] = useState<ViewMode>("lista");
+  const [showNewLead, setShowNewLead] = useState(false);
 
   // ── Rango de fechas — fuente de verdad única ───────────────────────────────
   const [dateFrom, setDateFrom] = useState(() => monthStart(MONTH_OPTIONS[0].value));
@@ -231,25 +233,40 @@ export default function LeadsPage() {
             <h1 className="text-fg font-bold text-xl">Leads</h1>
             <p className="text-fg-5 text-sm mt-0.5">Todos los leads del pipeline comercial</p>
           </div>
-          <div className="flex bg-surface-2 border border-border p-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setViewMode("lista")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "lista" ? "bg-accent text-black" : "text-fg-4 hover:text-fg"
-              }`}
+              onClick={() => setShowNewLead(true)}
+              className="flex items-center gap-1.5 bg-accent hover:bg-accent-light text-zinc-900 font-semibold text-xs uppercase tracking-wider px-3 py-2 transition-all"
             >
-              <LayoutList size={13} /> Lista
+              <UserPlus size={13} /> Nuevo lead
             </button>
-            <button
-              onClick={() => setViewMode("kanban")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "kanban" ? "bg-accent text-black" : "text-fg-4 hover:text-fg"
-              }`}
-            >
-              <Kanban size={13} /> Pipeline
-            </button>
+            <div className="flex bg-surface-2 border border-border p-0.5">
+              <button
+                onClick={() => setViewMode("lista")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === "lista" ? "bg-accent text-black" : "text-fg-4 hover:text-fg"
+                }`}
+              >
+                <LayoutList size={13} /> Lista
+              </button>
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === "kanban" ? "bg-accent text-black" : "text-fg-4 hover:text-fg"
+                }`}
+              >
+                <Kanban size={13} /> Pipeline
+              </button>
+            </div>
           </div>
         </div>
+
+        {showNewLead && (
+          <NuevoLeadModal
+            onClose={() => setShowNewLead(false)}
+            onCreated={() => { setShowNewLead(false); loadLeads(); }}
+          />
+        )}
 
         {/* Selector de período — fuente de verdad única */}
         <div className="flex flex-wrap items-center justify-between gap-3">

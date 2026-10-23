@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { api, type BotLeadResponse, type BotMessageResponse, type LeadScoreDetail } from "../../services/api";
 import ChatViewer from "../../components/agente/ChatViewer";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
+import Select from "../../components/ui/Select";
+
+const CLIENT_ROLE_OPTIONS = [
+  { value: "dueño",   label: "Dueño" },
+  { value: "gerente", label: "Gerente" },
+  { value: "otro",    label: "Otro" },
+];
 
 function TierBadge({ tier, large }: { tier?: string | null; large?: boolean }) {
   if (!tier) return <span className="text-fg-6">Sin datos</span>;
@@ -33,10 +41,40 @@ export default function LeadScorePage() {
   const [tab, setTab]               = useState<Tab>("calificacion");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Calificación manual
+  const [qNumMachines, setQNumMachines] = useState("");
+  const [qRole, setQRole]               = useState("");
+  const [qualifying, setQualifying]     = useState(false);
+  const [editingScore, setEditingScore] = useState(false);
+
+  const qualifyReady = qNumMachines !== "" && qRole.trim() !== "";
+
+  const handleQualify = async () => {
+    if (!qualifyReady || !lead) return;
+    setQualifying(true);
+    try {
+      const updated = await api.bot.qualifyLead(lead.id, {
+        num_machines: parseInt(qNumMachines, 10),
+        role:         qRole.trim(),
+      });
+      setLead(updated);
+      setEditingScore(false);
+      toast.success(updated.score ? "Lead recalificado" : "Lead calificado");
+    } catch (e: any) {
+      toast.error(e?.detail ?? "No se pudo calificar el lead");
+    } finally {
+      setQualifying(false);
+    }
+  };
+
   useEffect(() => {
     if (!leadId) return;
     api.bot.leadScore(Number(leadId))
-      .then(setLead)
+      .then(l => {
+        setLead(l);
+        if (l?.num_machines != null) setQNumMachines(String(l.num_machines));
+        if (l?.role) setQRole(l.role);
+      })
       .catch(() => null)
       .finally(() => setLoading(false));
   }, [leadId]);
@@ -122,8 +160,20 @@ export default function LeadScorePage() {
           {loading && <p className="text-fg-5 text-sm">Cargando...</p>}
 
           {!loading && !score && (
-            <div className="bg-surface-2 border border-border p-5 text-fg-5 text-sm">
-              Este lead aún no tiene calificación. Se genera automáticamente al recomendar un equipo.
+            <div className="bg-surface-2 border border-border p-5 space-y-4">
+              <div>
+                <p className="text-amber-300 text-sm font-semibold mb-1">Lead sin calificar</p>
+                <p className="text-fg-5 text-xs leading-relaxed">
+                  Se genera automáticamente cuando el bot recomienda un equipo. También puedes calificarlo manualmente ingresando los datos abajo.
+                </p>
+              </div>
+              <QualifyForm
+                qNumMachines={qNumMachines} setQNumMachines={setQNumMachines}
+                qRole={qRole} setQRole={setQRole}
+                qualifyReady={qualifyReady} qualifying={qualifying}
+                onSubmit={handleQualify}
+                submitLabel="Calificar lead"
+              />
             </div>
           )}
 
@@ -134,7 +184,15 @@ export default function LeadScorePage() {
               <div className="space-y-3">
                 {/* Score card */}
                 <div className="bg-surface-2 border border-border p-5">
-                  <div className="text-fg-5 text-xs uppercase tracking-wider mb-3">Score final</div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-fg-5 text-xs uppercase tracking-wider">Score final</div>
+                    <button
+                      onClick={() => setEditingScore(v => !v)}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent border border-accent hover:bg-accent hover:text-black px-2.5 py-1 transition-colors"
+                    >
+                      <Sparkles size={12} /> {editingScore ? "Cancelar" : "Recalificar"}
+                    </button>
+                  </div>
                   <div className="flex items-end justify-between gap-3">
                     <div>
                       <span className="text-5xl font-bold text-fg">{score.final_score}</span>
@@ -145,6 +203,21 @@ export default function LeadScorePage() {
                   {score.raw_score !== score.final_score && (
                     <div className="text-xs text-fg-5 mt-3 pt-3 border-t border-border">
                       Score bruto: <span className="font-mono">{score.raw_score} pts</span> · multiplicador ×0.8 aplicado por forma de pago
+                    </div>
+                  )}
+
+                  {editingScore && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-fg-5 text-[11px] mb-3">
+                        Ajusta los datos del lead y vuelve a calcular el score.
+                      </p>
+                      <QualifyForm
+                        qNumMachines={qNumMachines} setQNumMachines={setQNumMachines}
+                        qRole={qRole} setQRole={setQRole}
+                        qualifyReady={qualifyReady} qualifying={qualifying}
+                        onSubmit={handleQualify}
+                        submitLabel="Recalcular score"
+                      />
                     </div>
                   )}
                 </div>
@@ -255,6 +328,55 @@ export default function LeadScorePage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function QualifyForm({
+  qNumMachines, setQNumMachines,
+  qRole, setQRole,
+  qualifyReady, qualifying,
+  onSubmit, submitLabel,
+}: {
+  qNumMachines: string; setQNumMachines: (v: string) => void;
+  qRole: string;        setQRole: (v: string) => void;
+  qualifyReady: boolean; qualifying: boolean;
+  onSubmit: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-[11px] font-medium text-fg-4 mb-1">Máquinas en su flota</label>
+        <input
+          type="number"
+          min="0"
+          value={qNumMachines}
+          onChange={e => setQNumMachines(e.target.value)}
+          placeholder="Ej: 3"
+          className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-xs placeholder:text-fg-6 outline-none focus:border-accent"
+        />
+      </div>
+      <div>
+        <label className="block text-[11px] font-medium text-fg-4 mb-1">Rol del contacto</label>
+        <Select
+          value={qRole}
+          onChange={setQRole}
+          placeholder="Seleccionar..."
+          options={CLIENT_ROLE_OPTIONS}
+          clearable
+          compact
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!qualifyReady || qualifying}
+        className="w-full px-3 py-2 bg-accent text-black text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+      >
+        {qualifying && <Loader2 size={12} className="animate-spin" />}
+        {qualifying ? "Calculando..." : submitLabel}
+      </button>
     </div>
   );
 }
