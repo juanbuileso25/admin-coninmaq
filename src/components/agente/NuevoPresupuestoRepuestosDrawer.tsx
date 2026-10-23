@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Plus, Trash2, Loader2, Search, Paperclip, Upload, UserCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
+import PhoneInput from "../ui/PhoneInput";
 import { api, type SparePart, type SparePartSuggestion, type ManualQuotationResponse, type QuotationEmailAttachment, type ClientResponse, type BotLeadResponse } from "../../services/api";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
@@ -16,6 +17,7 @@ type LineItem = {
   tax_rate:   number;
   tax_value:  number;
   is_manual?: boolean;     // true si fue añadido manualmente sin catálogo
+  image_url?: string;      // foto opcional del repuesto (manual o del catálogo)
 };
 
 interface Props {
@@ -75,6 +77,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
 
   // Delivery
   const [sendToWa, setSendToWa] = useState(true);
+  const [waPhone, setWaPhone]   = useState("");
 
   // Suggestions
   const [suggestions, setSuggestions]         = useState<SparePartSuggestion[]>([]);
@@ -91,11 +94,32 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [manualQty, setManualQty] = useState(1);
   const [manualPrice, setManualPrice] = useState(0);
   const [manualIvaPct, setManualIvaPct] = useState(19);
+  const [manualImageUrl, setManualImageUrl] = useState<string>("");
+  const [manualImageUploading, setManualImageUploading] = useState(false);
   const manualNameRef = useRef<HTMLInputElement>(null);
+  const manualPhotoRef = useRef<HTMLInputElement>(null);
 
   const resetManual = () => {
     setManualOpen(false);
     setManualName(""); setManualCode(""); setManualQty(1); setManualPrice(0); setManualIvaPct(19);
+    setManualImageUrl("");
+  };
+
+  const uploadManualPhoto = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen supera los 5 MB");
+      return;
+    }
+    setManualImageUploading(true);
+    try {
+      const uploaded = await api.bot.uploadQuotationAttachment(file);
+      setManualImageUrl(uploaded.url);
+    } catch (e: unknown) {
+      toast.error(`No se pudo subir la foto: ${e instanceof Error ? e.message : "error"}`);
+    } finally {
+      setManualImageUploading(false);
+      if (manualPhotoRef.current) manualPhotoRef.current.value = "";
+    }
   };
 
   const addManualItem = () => {
@@ -116,6 +140,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       tax_rate: taxRate,
       tax_value: taxValue,
       is_manual: true,
+      image_url: manualImageUrl || undefined,
     }]);
     resetManual();
   };
@@ -167,7 +192,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       setItems([]); setSpSearch(""); setSpResults([]); setShowSearch(true);
       setNombre(""); setEmail(""); setEmpresa(""); setNIT(""); setDir("");
       setExtraEmails([]); setExtraEmailInput("");
-      setSendToWa(true); setResult(null);
+      setSendToWa(true); setWaPhone(""); setResult(null);
       setSuggestions([]); setSuggestionsLoading(false);
       setAttachments([]);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
@@ -228,6 +253,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
     if (l.company)       setEmpresa(l.company);
     if (l.rut_nit)       setNIT(l.rut_nit);
     if (l.rut_direccion) setDir(l.rut_direccion);
+    if (l.phone_number)  setWaPhone(l.phone_number);
     setShowLeadSearch(false);
     setLeadSearch("");
   };
@@ -276,7 +302,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
     }, 300);
   }, [spSearch, open, showSearch]);
 
-  const addItem = (sp: { id: number; code: string; name: string; sale_price: number; tax_value: number }) => {
+  const addItem = (sp: { id: number; code: string; name: string; sale_price: number; tax_value: number; image_url?: string | null }) => {
     const existing = items.find(i => i.id === sp.id);
     if (existing) {
       setItems(prev => prev.map(i => i.id === sp.id ? { ...i, cantidad: i.cantidad + 1 } : i));
@@ -285,7 +311,11 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       const cantidad = (items.length === 0 && prefill?.quantity) ? prefill.quantity : 1;
       setItems(prev => [
         ...prev,
-        { id: sp.id, code: sp.code, name: sp.name, cantidad, sale_price: sp.sale_price, tax_rate: taxRate, tax_value: sp.tax_value },
+        {
+          id: sp.id, code: sp.code, name: sp.name, cantidad,
+          sale_price: sp.sale_price, tax_rate: taxRate, tax_value: sp.tax_value,
+          image_url: sp.image_url || undefined,
+        },
       ]);
     }
   };
@@ -338,9 +368,13 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       const hasEmail = !!clienteEmail.trim();
       // Auto-detección: si hay email -> email; si no -> chat (solo link)
       const entrega  = fromLead ? "chat" : (hasEmail ? "email" : "chat");
+      // WhatsApp: solo si el usuario marcó el check Y hay telefono (para flujo manual)
+      const phoneClean = waPhone.trim().replace(/\D/g, "");
+      const sendWaManual = !fromLead && sendToWa && !!phoneClean;
       const res = await api.bot.createManualQuotation({
         client_name:    clienteNombre.trim(),
         client_email:   clienteEmail.trim(),
+        client_phone:   phoneClean || undefined,
         client_company: clienteEmpresa.trim() || undefined,
         items: items.map(i => ({
           // Para items manuales enviamos machine_code vacío (opcional en backend).
@@ -350,9 +384,11 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
           quantity:     i.cantidad,
           sale_price:   i.sale_price,
           tax_value:    i.tax_value,
+          image_url:    i.image_url || undefined,
         })),
         delivery_mode: entrega,
         send_email:    hasEmail,
+        send_whatsapp: sendWaManual,
         extra_emails:  extraEmails.length > 0 ? extraEmails : undefined,
         attachments:   attachments.length > 0 ? attachments.map(a => ({ url: a.url, filename: a.filename, content_type: a.content_type })) : undefined,
         // Extra fields forwarded to the API
@@ -599,6 +635,33 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                         />
                       </div>
                     </div>
+                    {/* Foto opcional */}
+                    <div>
+                      <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">Foto (opcional)</label>
+                      <input
+                        ref={manualPhotoRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => e.target.files?.[0] && uploadManualPhoto(e.target.files[0])}
+                      />
+                      {manualImageUrl ? (
+                        <div className="flex items-center gap-2">
+                          <img src={manualImageUrl} alt="repuesto" className="w-14 h-14 object-cover border border-border bg-surface-3" />
+                          <button type="button" onClick={() => setManualImageUrl("")}
+                            className="text-xs text-fg-5 border border-border hover:border-red-400 hover:text-red-400 px-2 py-1">
+                            Quitar
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => manualPhotoRef.current?.click()} disabled={manualImageUploading}
+                          className="flex items-center gap-1.5 text-xs text-fg-3 border border-dashed border-fg-6 hover:border-accent hover:text-accent px-3 py-1.5 disabled:opacity-50">
+                          {manualImageUploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+                          {manualImageUploading ? "Subiendo..." : "Añadir foto del repuesto"}
+                        </button>
+                      )}
+                    </div>
+
                     <div className="flex gap-2 justify-end pt-1">
                       <button type="button" onClick={resetManual}
                         className="px-3 py-1.5 text-xs text-fg-5 border border-border hover:border-border-light">
@@ -675,6 +738,13 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                       return (
                         <div key={item.id} className="bg-surface-3 border border-border px-3 py-3 space-y-2.5">
                           <div className="flex items-center gap-3">
+                            {item.image_url && (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-12 h-12 object-cover border border-border bg-surface-2 shrink-0"
+                              />
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 {item.code && <p className="font-mono text-xs text-accent">{item.code}</p>}
@@ -999,6 +1069,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
               <section>
                 <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Entrega</h3>
                 {fromLead ? (
+                  // Flujo con lead activo: enviar al chat del bot
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                       <input
@@ -1016,15 +1087,38 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                       </div>
                     )}
                   </div>
-                ) : clienteEmail.trim() ? (
-                  <div className="flex items-center gap-2 text-xs text-fg-3 bg-accent/5 border border-accent/20 px-3 py-2.5">
-                    <span>✉</span>
-                    <span>Se enviará por correo a <span className="font-medium">{clienteEmail.trim()}</span></span>
-                  </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-xs text-fg-5 bg-surface-3 border border-border px-3 py-2.5">
-                    <span>🔗</span>
-                    <span>Se generará solo el enlace de la cotización (sin email).</span>
+                  // Flujo manual: checkbox opcional + telefono + aviso de correo
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={sendToWa}
+                        onChange={e => setSendToWa(e.target.checked)}
+                        className="w-4 h-4 accent-accent"
+                      />
+                      <span className="text-sm text-fg">Enviar notificación por WhatsApp</span>
+                    </label>
+                    {sendToWa && (
+                      <div className="pl-7">
+                        <PhoneInput
+                          value={waPhone}
+                          onChange={setWaPhone}
+                          placeholder="3012345678"
+                        />
+                      </div>
+                    )}
+                    {clienteEmail.trim() ? (
+                      <div className="flex items-center gap-2 text-xs text-fg-4">
+                        <span>✉</span>
+                        <span>También se enviará por correo a <span className="text-fg-3 font-medium">{clienteEmail.trim()}</span></span>
+                      </div>
+                    ) : !sendToWa && (
+                      <div className="flex items-center gap-2 text-xs text-fg-5 bg-surface-3 border border-border px-3 py-2.5">
+                        <span>🔗</span>
+                        <span>Se generará solo el enlace de la cotización (sin envío).</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </section>
