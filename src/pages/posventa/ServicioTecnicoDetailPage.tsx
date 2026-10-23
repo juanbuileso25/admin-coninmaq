@@ -9,12 +9,11 @@ import {
 import { toast } from "sonner";
 import {
   api,
-  SERVICE_TYPES, SERVICE_TYPE_LABELS,
+  SERVICE_TYPE_LABELS,
   SERVICE_STATUS_LABELS,
   type ChecklistTemplateInfo,
   type ServiceOrderDetail,
   type ServiceStatus,
-  type ServiceType,
 } from "../../services/api";
 
 const STATUS_COLORS: Record<ServiceStatus, string> = {
@@ -183,7 +182,7 @@ export default function ServicioTecnicoDetailPage() {
 
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 
-function InfoTab({ order, onUpdated }: { order: ServiceOrderDetail; onUpdated: (o: ServiceOrderDetail) => void }) {
+function InfoTab({ order }: { order: ServiceOrderDetail; onUpdated: (o: ServiceOrderDetail) => void }) {
   const mi = order.machine_info ?? {};
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -784,7 +783,6 @@ function StatusStepper({
         {STEPPER_FLOW.map((s, idx) => {
           const isPast    = idx < currentIdx && !isWaitingPart;
           const isCurrent = idx === currentIdx && !isWaitingPart;
-          const isFuture  = idx > currentIdx;
 
           const circleBase = "w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 shrink-0 transition-colors";
           const circleCls =

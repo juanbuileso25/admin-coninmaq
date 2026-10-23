@@ -759,6 +759,9 @@ export type BotLeadResponse = {
   close_value: number | null;
   close_is_used: boolean | null;
   num_units: number | null;
+  num_machines: number | null;
+  role: string | null;
+  payment_method: string | null;
   created_at: string;
   score?: LeadScoreResponse | null;
   latest_quotation?: BotQuotationSummary | null;
