@@ -71,6 +71,8 @@ export default function QuotationPage() {
         .topbar { position: sticky; top: 0; z-index: 100; background: rgba(250,250,249,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-4); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 60px; }
         .topbar__logo { height: 32px; width: auto; display: block; }
         .topbar__meta { font-size: 12px; color: var(--gray-2); }
+        .topbar__pdf { font-size: 12px; font-weight: 600; color: var(--black); border: 1px solid var(--gray-3); padding: 7px 14px; border-radius: 100px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: background .2s; }
+        .topbar__pdf:hover { background: var(--yellow); border-color: var(--yellow); }
 
         .hero { display: grid; grid-template-columns: 1fr 1fr; min-height: 88vh; max-height: 860px; }
         .hero__left { position: relative; overflow: hidden; background: var(--gray-4); }
@@ -292,6 +294,15 @@ export default function QuotationPage() {
           <img className="topbar__logo" src="/logo.png" alt="CONINMAQ" />
         </a>
         <span className="topbar__meta">{data.quotation_number} · Válida hasta {fmtDateShort(data.expires_at)}</span>
+        <a
+          href={`/quotations/${data.quotation_number}/pdf`}
+          target="_blank"
+          rel="noopener"
+          className="topbar__pdf"
+          title="Descargar cotización en PDF"
+        >
+          ⬇ Descargar PDF
+        </a>
       </nav>
 
 
