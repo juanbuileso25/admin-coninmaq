@@ -1,4 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "https://api.coninmaqsas.com";
+export const API_BASE_URL = BASE_URL;
 
 const TOKEN_KEY = "coninmaq_token";
 const REFRESH_KEY = "coninmaq_refresh";

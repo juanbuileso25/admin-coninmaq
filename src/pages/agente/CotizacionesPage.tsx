@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
-import { api, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
+import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
 import { toast } from "sonner";
 
@@ -311,16 +311,15 @@ export default function CotizacionesPage() {
                       {new Date(q.created_at).toLocaleDateString("es-CO")}
                     </td>
                     <td className="px-4 py-3">
-                      {q.pdf_url
-                        ? (
-                          <a href={q.pdf_url} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-accent hover:text-accent/80 text-xs transition-colors"
-                            title="Descargar PDF">
-                            <Download size={13} /> PDF
-                          </a>
-                        )
-                        : <span className="text-fg-6 text-xs">—</span>
-                      }
+                      <a
+                        href={q.pdf_url ?? `${API_BASE_URL}/quotations/${q.quotation_number}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-accent hover:text-accent/80 text-xs transition-colors"
+                        title="Descargar PDF"
+                      >
+                        <Download size={13} /> PDF
+                      </a>
                     </td>
                     <td className="px-4 py-3">
                       {q.page_url

@@ -64,6 +64,8 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [leadResults, setLeadResults]     = useState<BotLeadResponse[]>([]);
   const [leadLoading, setLeadLoading]     = useState(false);
   const [showLeadSearch, setShowLeadSearch] = useState(false);
+  const [selectedLead, setSelectedLead]   = useState<BotLeadResponse | null>(null);
+  const [forceRecalify, setForceRecalify] = useState(false);
   const debounceL = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Datos del cliente
@@ -171,6 +173,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
       setLeadSearch(""); setLeadResults([]); setShowLeadSearch(false);
       setShowQualify(true); setNumMachinesFleet(""); setClientRole("");
+      setSelectedLead(null); setForceRecalify(false);
       setChannelId("");
     } else if (prefill) {
       if (prefill.name)    setNombre(prefill.name);
@@ -234,21 +237,31 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   };
 
   const selectLead = (l: BotLeadResponse) => {
+    setSelectedLead(l);
+    setForceRecalify(false);
     if (l.name)           setNombre(l.name);
     if (l.email)          setEmail(l.email);
     if (l.company)        setEmpresa(l.company);
     if (l.rut_nit)        setTaxId(l.rut_nit);
     if (l.rut_direccion)  setAddress(l.rut_direccion);
     if (l.phone_number)   setWaPhone(l.phone_number);
+    // Pre-rellenar calificación con lo que ya tenga el lead
+    if (l.num_machines != null) setNumMachinesFleet(String(l.num_machines));
+    if (l.role)                 setClientRole(l.role);
     setShowLeadSearch(false);
     setLeadSearch("");
   };
 
   const qualifyReady = numMachinesFleet !== "" && clientRole.trim() !== "";
+  // Lead ya calificado = tiene score (viene del backend con tier calculado)
+  const leadAlreadyQualified = !!selectedLead?.score && !forceRecalify;
 
   const clearClient = () => {
     setSelectedClient(null);
+    setSelectedLead(null);
+    setForceRecalify(false);
     setNombre(""); setEmail(""); setEmpresa(""); setTaxId(""); setAddress("");
+    setNumMachinesFleet(""); setClientRole("");
   };
 
   const addExtraEmail = (raw: string) => {
@@ -342,8 +355,10 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         observations:   observations.trim() || undefined,
         extra_emails:   extraEmails.length > 0 ? extraEmails : undefined,
         attachments:    attachments.length > 0 ? attachments.map(a => ({ url: a.url, filename: a.filename, content_type: a.content_type })) : undefined,
-        num_machines_fleet: numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined,
-        client_role:        clientRole.trim() || undefined,
+        // Si el lead YA está calificado y no se forzó recalificar,
+        // no mandamos estos campos para que el backend no vuelva a correr scoring.
+        num_machines_fleet: leadAlreadyQualified ? undefined : (numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined),
+        client_role:        leadAlreadyQualified ? undefined : (clientRole.trim() || undefined),
         channel_id:         !prefill?.lead_id && channelId ? parseInt(channelId, 10) : undefined,
       });
 
@@ -779,50 +794,90 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                 </button>
               </section>
 
-              {/* Calificación del lead (opcional — dispara scoring si se completan) */}
+              {/* Calificación del lead */}
               <section>
-                <button
-                  type="button"
-                  onClick={() => setShowQualify(v => !v)}
-                  className="w-full flex items-center justify-between text-left group"
-                >
-                  <div>
-                    <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Calificación del lead</h3>
-                    <p className="text-fg-6 text-[11px] mt-0.5">
-                      {qualifyReady
-                        ? <span className="text-emerald-400">✓ Se calculará el tier automáticamente</span>
-                        : "Completa los 2 campos para calificar el lead"}
+                {leadAlreadyQualified && selectedLead?.score ? (
+                  // El lead ya está calificado → mostrar el tier actual
+                  <div className="bg-surface-3 border border-emerald-500/30 px-3.5 py-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 text-sm">✓</span>
+                        <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Lead ya calificado</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForceRecalify(true)}
+                        className="text-[11px] text-accent hover:text-accent/80 border border-accent/30 hover:border-accent px-2 py-1 transition-colors"
+                      >
+                        Recalcular
+                      </button>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 text-[11px] font-bold border rounded-sm ${
+                        selectedLead.score.tier_final === "A" ? "bg-green-500/15 text-green-400 border-green-500/30"
+                        : selectedLead.score.tier_final === "B" ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                        : "bg-red-500/15 text-red-400 border-red-500/30"
+                      }`}>
+                        {selectedLead.score.tier_final === "no_fit" ? "No fit" : `Tier ${selectedLead.score.tier_final}`}
+                      </span>
+                      <span className="text-fg text-sm font-semibold">{selectedLead.score.final_score.toFixed(1)} pts</span>
+                      <span className="text-fg-5 text-xs">
+                        · {selectedLead.num_machines ?? "?"} máq. · {selectedLead.role ?? "sin rol"}
+                      </span>
+                    </div>
+                    <p className="text-fg-6 text-[11px] mt-1.5">
+                      No se solicitará calificar de nuevo. Si quieres recalcular con nuevos datos, haz clic en "Recalcular".
                     </p>
                   </div>
-                  <span className={`text-fg-5 group-hover:text-fg transition-transform ${showQualify ? "rotate-180" : ""}`}>▾</span>
-                </button>
-                {showQualify && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-fg-4 mb-1.5">
-                        Máquinas en su flota
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={numMachinesFleet}
-                        onChange={e => setNumMachinesFleet(e.target.value)}
-                        placeholder="Ej: 3"
-                        className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-fg-4 mb-1.5">Rol del contacto</label>
-                      <Select
-                        value={clientRole}
-                        onChange={setClientRole}
-                        placeholder="Seleccionar..."
-                        options={CLIENT_ROLE_OPTIONS}
-                        clearable
-                        compact
-                      />
-                    </div>
-                  </div>
+                ) : (
+                  // Flujo original: pedir calificar
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowQualify(v => !v)}
+                      className="w-full flex items-center justify-between text-left group"
+                    >
+                      <div>
+                        <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider">
+                          {forceRecalify ? "Recalcular calificación" : "Calificación del lead"}
+                        </h3>
+                        <p className="text-fg-6 text-[11px] mt-0.5">
+                          {qualifyReady
+                            ? <span className="text-emerald-400">✓ Se calculará el tier automáticamente</span>
+                            : "Completa los 2 campos para calificar el lead"}
+                        </p>
+                      </div>
+                      <span className={`text-fg-5 group-hover:text-fg transition-transform ${showQualify ? "rotate-180" : ""}`}>▾</span>
+                    </button>
+                    {showQualify && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-fg-4 mb-1.5">
+                            Máquinas en su flota
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={numMachinesFleet}
+                            onChange={e => setNumMachinesFleet(e.target.value)}
+                            placeholder="Ej: 3"
+                            className="w-full bg-surface-3 border border-border text-fg px-3 py-2 text-sm placeholder:text-fg-6 outline-none focus:border-accent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-fg-4 mb-1.5">Rol del contacto</label>
+                          <Select
+                            value={clientRole}
+                            onChange={setClientRole}
+                            placeholder="Seleccionar..."
+                            options={CLIENT_ROLE_OPTIONS}
+                            clearable
+                            compact
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </section>
 
