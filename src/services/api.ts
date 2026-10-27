@@ -892,7 +892,6 @@ export type BotMetrics = {
   quotations_period: number;
   revenue_period: number;
   leads_period: number;
-  active_leads_period?: number;   // leads con actividad en el periodo (nuevos + con cotización reciente)
   leads_tier_a_period: number;
   email_sent_period: number;
   // Distribuciones período
