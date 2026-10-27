@@ -287,13 +287,14 @@ export default function LeadsPage() {
 
         {/* Stat cards */}
         {metrics && (
-          <div className={`grid gap-3 ${viewMode === "kanban" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-4"}`}>
+          <div className={`grid gap-3 ${viewMode === "kanban" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-5"}`}>
             {viewMode === "lista" ? (
               <>
-                <StatCard label="Total leads"    value={String(metrics.total_leads)}                                    icon={UserCheck}  accent delay={0}   />
-                <StatCard label="Leads período"  value={String(metrics.leads_period)}                                   icon={TrendingUp}        delay={50}  />
-                <StatCard label="Top equipo"     value={metrics.top_equipment_interest[0]?.equipment ?? "—"}            icon={Hammer}            delay={100} />
-                <StatCard label="Top industria"  value={metrics.top_industries[0]?.industry          ?? "—"}            icon={UserCheck}         delay={150} />
+                <StatCard label="Total leads"       value={String(metrics.total_leads)}                                    icon={UserCheck}  accent delay={0}   />
+                <StatCard label="Nuevos período"    value={String(metrics.leads_period)}                                   icon={TrendingUp}        delay={50}  />
+                <StatCard label="Activos período"   value={String(metrics.active_leads_period ?? metrics.leads_period)}    icon={TrendingUp}        delay={75}  />
+                <StatCard label="Top equipo"        value={metrics.top_equipment_interest[0]?.equipment ?? "—"}            icon={Hammer}            delay={100} />
+                <StatCard label="Top industria"     value={metrics.top_industries[0]?.industry          ?? "—"}            icon={UserCheck}         delay={150} />
               </>
             ) : (
               <>
