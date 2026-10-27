@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, type QuotationPageData } from "../../services/api";
+import { api, API_BASE_URL, type QuotationPageData } from "../../services/api";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -295,7 +295,7 @@ export default function QuotationPage() {
         </a>
         <span className="topbar__meta">{data.quotation_number} · Válida hasta {fmtDateShort(data.expires_at)}</span>
         <a
-          href={`/quotations/${data.quotation_number}/pdf`}
+          href={`${API_BASE_URL}/quotations/${data.quotation_number}/pdf`}
           target="_blank"
           rel="noopener"
           className="topbar__pdf"
