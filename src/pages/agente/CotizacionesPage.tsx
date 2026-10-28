@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
 import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
@@ -52,6 +52,7 @@ export default function CotizacionesPage() {
 
   // Modal reenvío de email
   const [sendModal,       setSendModal]       = useState<BotQuotationResponse | null>(null);
+  const [attachmentsModal, setAttachmentsModal] = useState<BotQuotationResponse | null>(null);
   const [sendEmails,      setSendEmails]      = useState<string[]>([]);
   const [sendInput,       setSendInput]       = useState("");
   const [sending,         setSending]         = useState(false);
@@ -344,6 +345,18 @@ export default function CotizacionesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {q.email_attachments && q.email_attachments.length > 0 && (
+                          <button
+                            onClick={() => setAttachmentsModal(q)}
+                            title={`Ver ${q.email_attachments.length} adjunto${q.email_attachments.length !== 1 ? "s" : ""} enviado${q.email_attachments.length !== 1 ? "s" : ""} por email`}
+                            className="relative p-2 sm:p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors"
+                          >
+                            <Paperclip size={13} />
+                            <span className="absolute -top-0.5 -right-0.5 bg-accent text-black text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              {q.email_attachments.length}
+                            </span>
+                          </button>
+                        )}
                         <button
                           onClick={() => openSendModal(q)}
                           title="Reenviar por correo (misma cotización)"
@@ -441,6 +454,72 @@ export default function CotizacionesPage() {
             {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
             {sending ? "Enviando..." : `Enviar a ${sendEmails.length} correo${sendEmails.length !== 1 ? "s" : ""}`}
           </button>
+        </div>
+      </div>
+    )}
+
+    {attachmentsModal && (
+      <div
+        className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+        onClick={() => setAttachmentsModal(null)}
+      >
+        <div
+          className="bg-surface-2 border border-border max-w-xl w-full max-h-[80vh] flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between shrink-0">
+            <div>
+              <h3 className="text-fg text-sm font-semibold flex items-center gap-2">
+                <Paperclip size={14} /> Adjuntos enviados por correo
+              </h3>
+              <p className="text-fg-5 text-xs mt-0.5 font-mono">
+                {attachmentsModal.quotation_number}
+              </p>
+            </div>
+            <button className="text-fg-5 hover:text-fg p-1" onClick={() => setAttachmentsModal(null)}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-5 overflow-y-auto">
+            {(!attachmentsModal.email_attachments || attachmentsModal.email_attachments.length === 0) ? (
+              <p className="text-fg-5 text-sm text-center py-6">Sin adjuntos registrados.</p>
+            ) : (
+              <ul className="space-y-2">
+                {attachmentsModal.email_attachments.map((att, i) => (
+                  <li key={att.url + i} className="bg-surface-3 border border-border px-3 py-2.5 flex items-center gap-3">
+                    <Paperclip size={14} className="text-fg-5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-fg-2 hover:text-accent text-sm truncate block"
+                      >
+                        {att.filename}
+                      </a>
+                      <div className="text-fg-6 text-[11px] mt-0.5 flex items-center gap-2">
+                        {att.content_type && <span>{att.content_type}</span>}
+                        {att.size && <span>· {(att.size / 1024).toFixed(0)} KB</span>}
+                        {att.attached_at && (
+                          <span>· Enviado {new Date(att.attached_at).toLocaleString("es-CO")}</span>
+                        )}
+                      </div>
+                    </div>
+                    <a
+                      href={att.url}
+                      download={att.filename}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-fg-5 hover:text-accent"
+                      title="Descargar"
+                    >
+                      <Download size={14} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     )}

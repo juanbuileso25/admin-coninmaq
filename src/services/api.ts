@@ -796,6 +796,13 @@ export type BotQuotationResponse = {
   created_at: string;
   currency?: string;                      // "COP" o "USD"
   exchange_rate_applied?: number | null;  // TRM aplicada cuando currency = USD
+  email_attachments?: Array<{
+    url: string;
+    filename: string;
+    content_type?: string | null;
+    size?: number | null;
+    attached_at?: string;
+  }> | null;
 };
 
 export type ManualQuotationItem = {
