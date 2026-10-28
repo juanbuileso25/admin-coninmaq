@@ -5,6 +5,7 @@ import { api, API_BASE_URL, type QuotationPageData } from "../../services/api";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
+const USD = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const MESES = ["","enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
@@ -474,12 +475,17 @@ export default function QuotationPage() {
               <h2 className="section-header__title">Inversión</h2>
             </div>
           </div>
+          {(() => {
+            const isUsd = data.currency === "USD" && data.exchange_rate_applied && data.exchange_rate_applied > 0;
+            const trm = data.exchange_rate_applied || 1;
+            const fmt = (n: number) => isUsd ? USD(n / trm) : COP(n);
+            return (
           <div className="s-investment__card">
             <div>
               {data.items.map((item, i) => (
                 <div key={i} className="s-investment__row">
                   <span>{item.producto} · Und. {item.cantidad}</span>
-                  <span>{COP(item.sale_price)}</span>
+                  <span>{fmt(item.sale_price)}</span>
                 </div>
               ))}
               {data.iva_total > 0 && (
@@ -487,20 +493,25 @@ export default function QuotationPage() {
                   <span>IVA {(() => {
                     const rates = [...new Set(data.items.filter(i => i.tax_value > 0).map(i => Math.round(i.tax_rate * 100)))];
                     return rates.length === 1 ? `${rates[0]}%` : "mixto";
-                  })()}</span><span>{COP(data.iva_total)}</span>
+                  })()}</span><span>{fmt(data.iva_total)}</span>
                 </div>
               )}
               {data.discount_total > 0 && (
                 <div className="s-investment__row">
-                  <span>Descuento</span><span>-{COP(data.discount_total)}</span>
+                  <span>Descuento</span><span>-{fmt(data.discount_total)}</span>
                 </div>
               )}
               <div className="s-investment__total">
                 <div>
                   <p className="s-investment__total-label">Total inversión</p>
                   <p className="s-investment__total-amount">
-                    {COP(data.total)}<span className="s-investment__total-currency">COP</span>
+                    {fmt(data.total)}<span className="s-investment__total-currency">{isUsd ? "USD" : "COP"}</span>
                   </p>
+                  {isUsd && (
+                    <p style={{ fontSize: 11, color: "var(--gray-3)", marginTop: 6 }}>
+                      TRM aplicada: ${Math.round(trm).toLocaleString("es-CO")} COP · Promedio año {new Date().getFullYear()}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -515,6 +526,8 @@ export default function QuotationPage() {
               </a>
             </div>
           </div>
+            );
+          })()}
         </div>
       </section>
 

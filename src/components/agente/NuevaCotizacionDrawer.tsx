@@ -136,6 +136,21 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [channels, setChannels] = useState<LeadChannelResponse[]>([]);
   const [channelId, setChannelId] = useState<string>("");
 
+  // Moneda de presentación: COP (default) o USD (congela TRM del año en curso)
+  const [currency, setCurrency] = useState<"COP" | "USD">("COP");
+  const [trm, setTrm] = useState<{ year: number; average: number } | null>(null);
+  const [trmLoading, setTrmLoading] = useState(false);
+
+  // Carga TRM promedio del año al abrir el drawer (una sola vez)
+  useEffect(() => {
+    if (!open || trm) return;
+    setTrmLoading(true);
+    api.bot.getTrmAverage()
+      .then(d => setTrm({ year: d.year, average: d.average }))
+      .catch(() => {/* opcional, el backend intenta recomputar al generar */})
+      .finally(() => setTrmLoading(false));
+  }, [open, trm]);
+
   useEffect(() => {
     if (!open) return;
     setLM(true);
@@ -360,6 +375,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         num_machines_fleet: leadAlreadyQualified ? undefined : (numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined),
         client_role:        leadAlreadyQualified ? undefined : (clientRole.trim() || undefined),
         channel_id:         !prefill?.lead_id && channelId ? parseInt(channelId, 10) : undefined,
+        currency,
       });
 
       // Si viene de una sesión activa de WA, también enviar por el chat
@@ -731,6 +747,57 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                       value={clienteAddress} onChange={e => setAddress(e.target.value)} />
                   </div>
                 </div>
+              </section>
+
+              {/* Moneda de la cotización */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Moneda de la cotización</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("COP")}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
+                      currency === "COP"
+                        ? "bg-accent text-black border-accent"
+                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
+                    }`}
+                  >
+                    COP (Pesos)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("USD")}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
+                      currency === "USD"
+                        ? "bg-accent text-black border-accent"
+                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
+                    }`}
+                  >
+                    USD (Dólares)
+                  </button>
+                </div>
+                {currency === "USD" && (
+                  <div className="mt-2 text-[11px] text-fg-5 bg-surface-3 border border-border px-3 py-2">
+                    {trmLoading && <span>Cargando TRM promedio del año...</span>}
+                    {trm && !trmLoading && (
+                      <>
+                        <span>TRM promedio {trm.year}: </span>
+                        <strong className="text-fg-2">${trm.average.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP</strong>
+                        {items.length > 0 && (
+                          <>
+                            {" · "}
+                            Total aprox.: <strong className="text-accent">
+                              ${(items.reduce((s, i) => s + (i.sale_price + i.tax_value) * i.cantidad, 0) / trm.average).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                            </strong>
+                          </>
+                        )}
+                      </>
+                    )}
+                    {!trm && !trmLoading && (
+                      <span className="text-amber-400">No se pudo cargar la TRM. El backend intentará recomputarla al generar.</span>
+                    )}
+                  </div>
+                )}
               </section>
 
               {/* Observaciones */}

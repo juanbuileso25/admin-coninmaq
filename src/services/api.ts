@@ -794,6 +794,8 @@ export type BotQuotationResponse = {
   status: string;
   expires_at: string | null;
   created_at: string;
+  currency?: string;                      // "COP" o "USD"
+  exchange_rate_applied?: number | null;  // TRM aplicada cuando currency = USD
 };
 
 export type ManualQuotationItem = {
@@ -828,6 +830,8 @@ export type QuotationPageData = {
   delivery_mode: string; status: string; pdf_url: string | null; page_url: string | null;
   items: QuotationItem[]; client: QuotationClient | null; advisor: QuotationAdvisor | null;
   observations: string | null;
+  currency?: string;                      // "COP" o "USD"
+  exchange_rate_applied?: number | null;  // TRM aplicada cuando currency = USD
 };
 export type QuotationEmailAttachment = {
   url: string;
@@ -862,6 +866,8 @@ export type ManualQuotationRequest = {
   client_role?: string;
   // Canal de origen (solo si se crea un lead implícito, no para leads existentes)
   channel_id?: number;
+  // Moneda de presentación. Default COP. Si "USD", backend congela TRM del año.
+  currency?: "COP" | "USD";
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
@@ -2295,6 +2301,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    getTrmAverage: () =>
+      request<{ year: number; average: number; sample_size: number; computed_at: string; is_fallback: boolean }>(
+        "/exchange-rates/trm",
+      ),
     sendQuotationEmail: (
       quotationNumber: string,
       emails: string[],
