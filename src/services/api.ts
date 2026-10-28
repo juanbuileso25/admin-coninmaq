@@ -2018,6 +2018,8 @@ export const api = {
     remove: (id: string) => request<void>(`/machines/${id}`, { method: "DELETE" }),
     toggleVisibility: (id: string) => request<MachineResponse>(`/machines/${id}/toggle-visibility`, { method: "PATCH" }),
     toggleFeatured:   (id: string) => request<MachineResponse>(`/machines/${id}/toggle-featured`,   { method: "PATCH" }),
+    cloneTo:          (id: string, targetType: string) =>
+      request<MachineResponse>(`/machines/${id}/clone-to?target_type=${encodeURIComponent(targetType)}`, { method: "POST" }),
     uploadImage: (id: string, file: File) => {
       const form = new FormData();
       form.append("file", file);
