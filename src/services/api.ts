@@ -2305,6 +2305,20 @@ export const api = {
       request<{ year: number; average: number; sample_size: number; computed_at: string; is_fallback: boolean }>(
         "/exchange-rates/trm",
       ),
+    getTrmDetail: () =>
+      request<{
+        year: number;
+        average: number;
+        sample_size: number;
+        computed_at: string;
+        is_fallback: boolean;
+        min_value: number | null;
+        max_value: number | null;
+        amplitude: number | null;
+        first_date: string | null;
+        last_date: string | null;
+        quarters: Record<string, number> | null;
+      }>("/exchange-rates/trm/detail"),
     sendQuotationEmail: (
       quotationNumber: string,
       emails: string[],
