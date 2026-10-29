@@ -7,6 +7,16 @@ import { api, type BotLeadResponse, type ClientResponse, type LeadChannelRespons
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 const parseCOP = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
+// USD con hasta 2 decimales. Acepta "1,234.56", "1234.56", etc.
+const parseUSD = (s: string) => {
+  const clean = s.replace(/[^0-9.]/g, "");
+  const n = parseFloat(clean);
+  return isNaN(n) ? 0 : n;
+};
+const USD = (n: number) =>
+  `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+const fmtUsdInput = (n: number) =>
+  n > 0 ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 const fmtInput = (n: number) => n > 0 ? n.toLocaleString("es-CO") : "";
 
 const CLIENT_ROLE_OPTIONS = [
@@ -336,7 +346,10 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   };
 
   const updateSalePrice = (codigo: string, raw: string) => {
-    const sp = parseCOP(raw);
+    const sp =
+      currency === "USD" && trm?.average
+        ? Math.round(parseUSD(raw) * trm.average)
+        : parseCOP(raw);
     setItems(prev => prev.map(i =>
       i.codigo === codigo
         ? { ...i, sale_price: sp, tax_value: Math.round(sp * i.tax_rate) }
@@ -345,10 +358,13 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   };
 
   const updateTotal = (codigo: string, raw: string) => {
-    const total = parseCOP(raw);
+    const totalCop =
+      currency === "USD" && trm?.average
+        ? Math.round(parseUSD(raw) * trm.average)
+        : parseCOP(raw);
     setItems(prev => prev.map(i => {
       if (i.codigo !== codigo) return i;
-      const sp = Math.round(total / i.cantidad / (1 + i.tax_rate));
+      const sp = Math.round(totalCop / i.cantidad / (1 + i.tax_rate));
       return { ...i, sale_price: sp, tax_value: Math.round(sp * i.tax_rate) };
     }));
   };
@@ -546,10 +562,16 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             <div>
-                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">Valor venta</label>
+                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">
+                                Valor venta {currency === "USD" ? "(USD)" : ""}
+                              </label>
                               <input
                                 className="w-full bg-surface-2 border border-border text-fg text-xs px-2 py-1.5 outline-none focus:border-accent"
-                                value={fmtInput(item.sale_price)}
+                                value={
+                                  currency === "USD" && trm?.average
+                                    ? fmtUsdInput(item.sale_price / trm.average)
+                                    : fmtInput(item.sale_price)
+                                }
                                 onChange={e => updateSalePrice(item.codigo, e.target.value)}
                                 placeholder="0"
                               />
@@ -559,14 +581,22 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                                 IVA {Math.round(item.tax_rate * 100)}%
                               </label>
                               <div className="w-full bg-surface-2 border border-border text-fg-4 text-xs px-2 py-1.5 select-none">
-                                {COP(item.tax_value)}
+                                {currency === "USD" && trm?.average
+                                  ? `$${fmtUsdInput(item.tax_value / trm.average)}`
+                                  : COP(item.tax_value)}
                               </div>
                             </div>
                             <div>
-                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">A pagar</label>
+                              <label className="text-fg-6 text-[10px] uppercase tracking-wider block mb-1">
+                                A pagar {currency === "USD" ? "(USD)" : ""}
+                              </label>
                               <input
                                 className="w-full bg-surface-2 border border-border text-accent text-xs px-2 py-1.5 font-semibold outline-none focus:border-accent"
-                                value={fmtInput(itemTotal)}
+                                value={
+                                  currency === "USD" && trm?.average
+                                    ? fmtUsdInput(itemTotal / trm.average)
+                                    : fmtInput(itemTotal)
+                                }
                                 onChange={e => updateTotal(item.codigo, e.target.value)}
                                 placeholder="0"
                               />
@@ -577,15 +607,76 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                     })}
                     <div className="border border-border bg-surface-3 px-3 py-2.5 space-y-1.5">
                       <div className="flex justify-between text-xs text-fg-4">
-                        <span>Subtotal</span><span>{COP(subtotal)}</span>
+                        <span>Subtotal</span>
+                        <span>{currency === "USD" && trm?.average ? USD(subtotal / trm.average) : COP(subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-fg-4">
                         <span>IVA ({items.length === 1 ? `${Math.round(items[0].tax_rate * 100)}%` : "mixto"})</span>
-                        <span>{COP(iva)}</span>
+                        <span>{currency === "USD" && trm?.average ? USD(iva / trm.average) : COP(iva)}</span>
                       </div>
                       <div className="flex justify-between text-sm text-fg font-semibold border-t border-border pt-1.5 mt-1.5">
-                        <span>Total</span><span>{COP(total)}</span>
+                        <span>Total</span>
+                        <span>{currency === "USD" && trm?.average ? USD(total / trm.average) : COP(total)}</span>
                       </div>
+                      {currency === "USD" && trm?.average && (
+                        <div className="flex justify-between text-[10px] text-fg-6 pt-1 border-t border-border/50">
+                          <span>Equivalente en pesos</span>
+                          <span>{COP(total)} COP</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Toggle Moneda — bajo los precios */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <span className="text-fg-5 text-[11px] uppercase tracking-wider">Moneda</span>
+                        <div className="inline-flex border border-border overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setCurrency("COP")}
+                            className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              currency === "COP" ? "bg-accent text-black" : "bg-surface-3 text-fg-4 hover:bg-surface-4"
+                            }`}
+                          >
+                            COP
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCurrency("USD")}
+                            className={`px-3 py-1.5 text-xs font-semibold border-l border-border transition-colors ${
+                              currency === "USD" ? "bg-accent text-black" : "bg-surface-3 text-fg-4 hover:bg-surface-4"
+                            }`}
+                          >
+                            USD
+                          </button>
+                        </div>
+                      </div>
+                      {currency === "USD" && (
+                        <div className="text-[11px] text-fg-5 bg-surface-3 border border-border px-3 py-2 space-y-1">
+                          {trmLoading && <span>Cargando TRM promedio del año...</span>}
+                          {trm && !trmLoading && (
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span>TRM promedio {trm.year}:</span>
+                              <strong className="text-fg-2">${trm.average.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP</strong>
+                              <button
+                                type="button"
+                                onClick={() => setShowTrmDetail(true)}
+                                className="ml-auto text-accent hover:underline"
+                              >
+                                Validar TRM
+                              </button>
+                            </div>
+                          )}
+                          {!trm && !trmLoading && (
+                            <span className="text-amber-400">
+                              No se pudo cargar la TRM. El backend intentará recomputarla al generar.
+                            </span>
+                          )}
+                          <p className="text-fg-6 text-[10px]">
+                            Podés escribir los precios directamente en USD. Se convertirán a pesos usando la TRM del año.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : !showCatalog && (
@@ -772,65 +863,6 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                       value={clienteAddress} onChange={e => setAddress(e.target.value)} />
                   </div>
                 </div>
-              </section>
-
-              {/* Moneda de la cotización */}
-              <section>
-                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Moneda de la cotización</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrency("COP")}
-                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
-                      currency === "COP"
-                        ? "bg-accent text-black border-accent"
-                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
-                    }`}
-                  >
-                    COP (Pesos)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrency("USD")}
-                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
-                      currency === "USD"
-                        ? "bg-accent text-black border-accent"
-                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
-                    }`}
-                  >
-                    USD (Dólares)
-                  </button>
-                </div>
-                {currency === "USD" && (
-                  <div className="mt-2 text-[11px] text-fg-5 bg-surface-3 border border-border px-3 py-2">
-                    {trmLoading && <span>Cargando TRM promedio del año...</span>}
-                    {trm && !trmLoading && (
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span>TRM promedio {trm.year}: </span>
-                        <strong className="text-fg-2">${trm.average.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP</strong>
-                        {items.length > 0 && (
-                          <>
-                            <span>·</span>
-                            <span>Total aprox.:</span>
-                            <strong className="text-accent">
-                              ${(items.reduce((s, i) => s + (i.sale_price + i.tax_value) * i.cantidad, 0) / trm.average).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-                            </strong>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setShowTrmDetail(true)}
-                          className="ml-auto text-accent hover:underline"
-                        >
-                          Validar TRM
-                        </button>
-                      </div>
-                    )}
-                    {!trm && !trmLoading && (
-                      <span className="text-amber-400">No se pudo cargar la TRM. El backend intentará recomputarla al generar.</span>
-                    )}
-                  </div>
-                )}
               </section>
 
               {/* Observaciones */}
