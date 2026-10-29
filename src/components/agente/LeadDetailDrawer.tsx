@@ -303,41 +303,46 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
             </Section>
 
             {/* ── Gestión de etapa ────────────────────────────────────────── */}
-            <Section title="Etapa del pipeline">
+            <Section title="Mover a otra etapa">
               <div className="space-y-3">
                 <div>
-                  <label className="text-fg-5 text-xs mb-1.5 block">Mover a etapa</label>
-                  <select
-                    className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 outline-none focus:border-accent"
-                    value={selectedStage}
-                    onChange={e => setSelStage(e.target.value as PipelineStage)}
-                  >
-                    {PIPELINE_STAGES.map(s => (
-                      <option key={s} value={s}>{PIPELINE_STAGE_LABELS[s]}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-fg-5 text-xs mb-1.5 block">Nota (opcional)</label>
-                  <textarea
-                    rows={2}
-                    className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 placeholder:text-fg-6 outline-none focus:border-accent resize-none"
-                    placeholder="Ej: Cliente solicitó revisión de precio..."
-                    value={note}
-                    onChange={e => setNote(e.target.value)}
+                  <label className="text-fg-5 text-xs mb-1.5 block">Nueva etapa</label>
+                  <Select
+                    value={selectedStage || ""}
+                    onChange={v => setSelStage(v as PipelineStage)}
+                    options={PIPELINE_STAGES.map(s => ({ value: s, label: PIPELINE_STAGE_LABELS[s] }))}
+                    placeholder="— Elegí una etapa —"
                   />
+                  <p className="text-fg-6 text-[10px] mt-1">
+                    Etapa actual: <span className="text-fg-4">{PIPELINE_STAGE_LABELS[lead.pipeline_stage]}</span>
+                  </p>
                 </div>
 
                 {stageChanged && (
-                  <button
-                    type="button"
-                    disabled={stageChanging}
-                    onClick={handleStageChange}
-                    className="w-full py-2.5 bg-accent text-black text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                  >
-                    {stageChanging ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : <>Guardar cambio de etapa</>}
-                  </button>
+                  <>
+                    <div>
+                      <label className="text-fg-5 text-xs mb-1.5 block">Nota del cambio (opcional)</label>
+                      <textarea
+                        rows={2}
+                        className="w-full bg-surface-3 border border-border text-fg text-sm px-3 py-2.5 placeholder:text-fg-6 outline-none focus:border-accent resize-none"
+                        placeholder="Ej: Cliente solicitó revisión de precio..."
+                        value={note}
+                        onChange={e => setNote(e.target.value)}
+                      />
+                      <p className="text-fg-6 text-[10px] mt-1">
+                        Se guarda en el historial del lead junto con el cambio de etapa.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={stageChanging}
+                      onClick={handleStageChange}
+                      className="w-full py-2.5 bg-accent text-black text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                      {stageChanging ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : <>Guardar cambio de etapa</>}
+                    </button>
+                  </>
                 )}
               </div>
             </Section>
@@ -595,7 +600,10 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                               ${(q.total / trm).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               <span className="ml-1 text-[10px] text-fg-6 font-normal">USD</span>
                             </p>
-                            <p className="text-fg-6 text-[10px] mt-0.5">Equivalente {COP(q.total)}</p>
+                            <p className="text-fg-3 text-xs font-semibold mt-1 inline-flex items-center gap-1 bg-accent/10 border border-accent/30 px-2 py-0.5">
+                              <span className="text-fg-6 text-[10px] font-normal uppercase tracking-wider">Equivalente</span>
+                              <span>{COP(q.total)}</span>
+                            </p>
                           </>
                         ) : (
                           <p className="text-fg text-sm font-semibold mt-0.5">{COP(q.total)}</p>
