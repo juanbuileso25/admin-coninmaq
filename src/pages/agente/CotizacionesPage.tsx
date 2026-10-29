@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip, Wrench } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
 import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
@@ -253,7 +253,7 @@ export default function CotizacionesPage() {
             <table className="w-full text-sm min-w-[1400px]">
               <thead>
                 <tr className="border-b border-border">
-                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Email env.", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
+                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -265,28 +265,34 @@ export default function CotizacionesPage() {
                   const clickEvent = clicks.get(q.quotation_number);
                   return (
                   <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="font-mono text-xs text-accent">{q.quotation_number}</div>
-                      {q.items && q.items.length > 0 && (() => {
-                        const its = q.items as Array<{ codigo?: string; producto?: string; cantidad?: number }>;
-                        const first = its[0];
-                        const extra = its.length - 1;
-                        const label = first?.codigo || first?.producto || "—";
-                        const tooltip = its.map(i => `${i.codigo ?? ""} ${i.producto ?? ""}${i.cantidad && i.cantidad > 1 ? ` ×${i.cantidad}` : ""}`.trim()).join("\n");
-                        return (
-                          <div className="text-fg-4 text-[11px] mt-0.5" title={tooltip}>
-                            {label}
-                            {extra > 0 && <span className="text-fg-6 ml-1">+{extra}</span>}
-                          </div>
-                        );
-                      })()}
-                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
                     <td className="px-4 py-3">
                       {q.lead_name
                         ? <span className="text-fg text-xs">{q.lead_name}</span>
                         : <span className="text-fg-6 text-xs">—</span>
                       }
                       {q.lead_email && <p className="text-fg-5 text-[11px]">{q.lead_email}</p>}
+                      {q.items && q.items.length > 0 && (() => {
+                        const its = q.items as Array<{ codigo?: string; producto?: string; cantidad?: number }>;
+                        const first = its[0];
+                        const extra = its.length - 1;
+                        const code = first?.codigo || "";
+                        const name = first?.producto || "";
+                        const label = code && name ? `${code} · ${name}` : (code || name || "—");
+                        const tooltip = its.map(i => `${i.codigo ?? ""} ${i.producto ?? ""}${i.cantidad && i.cantidad > 1 ? ` ×${i.cantidad}` : ""}`.trim()).join("\n");
+                        return (
+                          <div
+                            className="flex items-center gap-1 text-fg-4 text-[11px] mt-1 pt-1 border-t border-border/40"
+                            title={tooltip}
+                          >
+                            <Wrench size={10} className="shrink-0 text-fg-6" />
+                            <span className="truncate max-w-[220px]">{label}</span>
+                            {extra > 0 && (
+                              <span className="text-fg-6 shrink-0">+{extra} {extra === 1 ? "equipo más" : "equipos más"}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-fg-4">{COP(q.subtotal)}</td>
                     <td className="px-4 py-3 text-fg-4">{q.iva_total > 0 ? COP(q.iva_total) : <span className="text-fg-6">—</span>}</td>
@@ -301,12 +307,6 @@ export default function CotizacionesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-fg-4">{DELIVERY_LABELS[q.delivery_mode] ?? q.delivery_mode}</td>
-                    <td className="px-4 py-3 text-center">
-                      {q.email_sent
-                        ? <span className="text-emerald-400 text-xs">✓</span>
-                        : <span className="text-fg-6 text-xs">—</span>
-                      }
-                    </td>
                     <td className="px-4 py-3">
                       {clickEvent ? (
                         <div
