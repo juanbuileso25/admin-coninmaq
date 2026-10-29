@@ -806,6 +806,8 @@ export type BotQuotationResponse = {
     attached_at?: string;
   }> | null;
   payment_terms?: string | null;
+  spare_part_request_id?: number | null;
+  spare_part_request_status?: string | null;
 };
 
 export type ManualQuotationItem = {
