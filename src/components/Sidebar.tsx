@@ -41,16 +41,21 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     api.menuItems.myMenu()
       .then((items) => {
         setMenuItems(items);
-        // Auto-abrir el grupo activo
+        // Auto-abrir TODOS los ancestros del path activo (soporta 3 niveles)
         const initial: Record<string, boolean> = {};
-        for (const item of items) {
-          if (item.children.some((c) => location.pathname.startsWith(c.path ?? "__"))) {
-            initial[item.id] = true;
+        const activate = (nodes: MenuItemResponse[]): boolean => {
+          let anyMatch = false;
+          for (const n of nodes) {
+            const selfMatch = n.path ? location.pathname.startsWith(n.path) : false;
+            const childMatch = n.children?.length ? activate(n.children) : false;
+            if (selfMatch || childMatch) {
+              initial[n.id] = true;
+              anyMatch = true;
+            }
           }
-          if (item.path && location.pathname.startsWith(item.path)) {
-            initial[item.id] = true;
-          }
-        }
+          return anyMatch;
+        };
+        activate(items);
         setOpenMenus(initial);
       })
       .catch(() => setMenuItems([]))
@@ -108,9 +113,12 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <ul className="space-y-0.5">
                 {groups[groupName].map((item) => {
                   const isOpen      = !!openMenus[item.id];
-                  const isSubActive = item.children.some((c) =>
-                    c.path ? location.pathname.startsWith(c.path) : false
-                  );
+                  const isDescendantActive = (nodes: MenuItemResponse[]): boolean =>
+                    nodes.some((n) =>
+                      (n.path ? location.pathname.startsWith(n.path) : false)
+                      || (n.children?.length ? isDescendantActive(n.children) : false)
+                    );
+                  const isSubActive = isDescendantActive(item.children);
 
                   /* ── Ítem con hijos ── */
                   if (item.children.length > 0) {
@@ -147,40 +155,111 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                           )}
                         </button>
 
-                        {/* Submenú */}
+                        {/* Submenú (nivel 2) */}
                         {!collapsed && (
                           <div
                             className={`overflow-hidden transition-all duration-250 ${
-                              isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                              isOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
                             }`}
                           >
                             <ul className="border-l border-border ml-7 pl-0 py-1 space-y-0.5">
-                              {item.children.map((child) => (
-                                <li key={child.id}>
-                                  <NavLink
-                                    to={child.path ?? "#"}
-                                    className={({ isActive }) =>
-                                      `flex items-center gap-2.5 pl-3 pr-4 py-2 text-xs font-medium
-                                       transition-all duration-150 border-l-2 -ml-px
-                                       ${isActive
-                                         ? "text-accent border-accent bg-accent-muted"
-                                         : "text-fg-5 border-transparent hover:text-fg-2 hover:border-fg-6"
-                                       }`
-                                    }
-                                  >
-                                    {({ isActive }) => (
-                                      <>
+                              {item.children.map((child) => {
+                                const hasGrandchildren = (child.children?.length ?? 0) > 0;
+                                const childIsOpen = !!openMenus[child.id];
+                                const childSubActive = hasGrandchildren
+                                  ? child.children.some((gc) => gc.path ? location.pathname.startsWith(gc.path) : false)
+                                  : false;
+
+                                if (hasGrandchildren) {
+                                  return (
+                                    <li key={child.id}>
+                                      <button
+                                        onClick={() => toggleMenu(child.id)}
+                                        className={`w-full flex items-center gap-2.5 pl-3 pr-4 py-2 text-xs font-medium
+                                                   transition-all duration-150 border-l-2 -ml-px
+                                                   ${childSubActive
+                                                     ? "text-accent border-accent"
+                                                     : "text-fg-5 border-transparent hover:text-fg-2 hover:border-fg-6"
+                                                   }`}
+                                      >
                                         <NavIcon
                                           name={child.icon}
                                           size={13}
-                                          className={isActive ? "text-accent" : "text-fg-6"}
+                                          className={childSubActive ? "text-accent" : "text-fg-6"}
                                         />
-                                        <span className="truncate">{child.label}</span>
-                                      </>
-                                    )}
-                                  </NavLink>
-                                </li>
-                              ))}
+                                        <span className="truncate flex-1 text-left">{child.label}</span>
+                                        <ChevronDown
+                                          size={11}
+                                          className={`flex-shrink-0 transition-transform duration-200 ${
+                                            childIsOpen ? "rotate-180 text-accent" : "text-fg-6"
+                                          }`}
+                                        />
+                                      </button>
+                                      <div
+                                        className={`overflow-hidden transition-all duration-250 ${
+                                          childIsOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                                        }`}
+                                      >
+                                        <ul className="border-l border-border ml-4 py-0.5 space-y-0.5">
+                                          {child.children.map((grand) => (
+                                            <li key={grand.id}>
+                                              <NavLink
+                                                to={grand.path ?? "#"}
+                                                className={({ isActive }) =>
+                                                  `flex items-center gap-2 pl-3 pr-4 py-1.5 text-[11px] font-medium
+                                                   transition-all duration-150 border-l-2 -ml-px
+                                                   ${isActive
+                                                     ? "text-accent border-accent bg-accent-muted"
+                                                     : "text-fg-5 border-transparent hover:text-fg-2 hover:border-fg-6"
+                                                   }`
+                                                }
+                                              >
+                                                {({ isActive }) => (
+                                                  <>
+                                                    <NavIcon
+                                                      name={grand.icon}
+                                                      size={11}
+                                                      className={isActive ? "text-accent" : "text-fg-6"}
+                                                    />
+                                                    <span className="truncate">{grand.label}</span>
+                                                  </>
+                                                )}
+                                              </NavLink>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </li>
+                                  );
+                                }
+
+                                return (
+                                  <li key={child.id}>
+                                    <NavLink
+                                      to={child.path ?? "#"}
+                                      className={({ isActive }) =>
+                                        `flex items-center gap-2.5 pl-3 pr-4 py-2 text-xs font-medium
+                                         transition-all duration-150 border-l-2 -ml-px
+                                         ${isActive
+                                           ? "text-accent border-accent bg-accent-muted"
+                                           : "text-fg-5 border-transparent hover:text-fg-2 hover:border-fg-6"
+                                         }`
+                                      }
+                                    >
+                                      {({ isActive }) => (
+                                        <>
+                                          <NavIcon
+                                            name={child.icon}
+                                            size={13}
+                                            className={isActive ? "text-accent" : "text-fg-6"}
+                                          />
+                                          <span className="truncate">{child.label}</span>
+                                        </>
+                                      )}
+                                    </NavLink>
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         )}
