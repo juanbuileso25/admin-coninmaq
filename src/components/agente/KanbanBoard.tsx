@@ -380,30 +380,33 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
               )}
 
               {/* Pastilla de cotización (número + total) */}
-              <div className={`text-[11px] px-2 py-1 border
+              <div className={`px-2 py-1 border
                 ${missingCloseValue
                   ? "text-amber-300 bg-amber-950/20 border-amber-900/40"
                   : "text-accent bg-accent/5 border-accent/20"}`}>
-                <div className="flex items-center gap-1.5">
-                  <FileText size={10} />
-                  <span className="font-mono">{q.quotation_number}</span>
-                  <span
-                    className="ml-auto font-semibold"
-                    title={
-                      hasCloseValue
-                        ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(q.total)})`
-                        : missingCloseValue
-                          ? `Sin valor de cierre — usando cotización ${fmt(q.total)}. Edítalo desde el detalle.`
-                          : undefined
-                    }
-                  >
-                    {fmt(displayValue)}
-                    {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
-                    {missingCloseValue && <span className="ml-1">⚠</span>}
-                  </span>
+                {/* Línea 1: número de cotización */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <FileText size={10} className="shrink-0" />
+                  <span className="font-mono text-[10px] truncate">{q.quotation_number}</span>
                 </div>
+                {/* Línea 2: total */}
+                <div
+                  className="text-right text-[12px] font-semibold leading-tight mt-0.5"
+                  title={
+                    hasCloseValue
+                      ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(q.total)})`
+                      : missingCloseValue
+                        ? `Sin valor de cierre — usando cotización ${fmt(q.total)}. Edítalo desde el detalle.`
+                        : undefined
+                  }
+                >
+                  {fmt(displayValue)}
+                  {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
+                  {missingCloseValue && <span className="ml-1">⚠</span>}
+                </div>
+                {/* Línea 3 (solo USD): equivalente en pesos */}
                 {isUsd && (
-                  <div className="text-[9px] text-fg-6 text-right mt-0.5">
+                  <div className="text-[9px] text-fg-6 text-right leading-tight">
                     ≈ {fmtCop(displayValue)}
                   </div>
                 )}
