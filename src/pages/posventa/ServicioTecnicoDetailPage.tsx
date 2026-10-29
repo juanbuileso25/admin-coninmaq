@@ -741,12 +741,12 @@ function EnviarReporteModal({
 
 // Flujo principal (sin esperando_repuesto que es una pausa paralela)
 const STEPPER_FLOW: ServiceStatus[] = [
-  "solicitado", "programado", "en_camino", "en_ejecucion", "finalizado", "cerrado",
+  "solicitado", "programado", "en_camino", "en_ejecucion", "finalizado",
 ];
 const STATUS_ORDER: Record<ServiceStatus, number> = {
   solicitado: 0, programado: 1, en_camino: 2, en_ejecucion: 3,
   esperando_repuesto: 3,   // misma posición que en_ejecucion (es una pausa)
-  finalizado: 4, cerrado: 5,
+  finalizado: 4, cerrado: 4, // tratamos "cerrado" como "finalizado" si llegara a venir del backend
 };
 
 function StatusStepper({
