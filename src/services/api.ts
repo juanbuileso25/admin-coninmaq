@@ -667,6 +667,8 @@ export interface BotQuotationSummary {
   created_at: string;
   machines_preview: BotQuotationMachinePreview[];
   items_count: number;
+  currency?: string;
+  exchange_rate_applied?: number | null;
 }
 
 export type PipelineStage =
@@ -2366,6 +2368,8 @@ export const api = {
       request<BotLeadResponse>(`/bot/leads/${leadId}/stage`, { method: "PATCH", body: JSON.stringify(data) }),
     deactivateLead: (leadId: number) =>
       request<void>(`/bot/leads/${leadId}`, { method: "DELETE" }),
+    getLead: (leadId: number) =>
+      request<BotLeadResponse>(`/bot/leads/${leadId}`),
     leadStageHistory: (leadId: number) =>
       request<LeadStageHistoryResponse[]>(`/bot/leads/${leadId}/stage-history`),
     qualifyLead: (leadId: number, data: { num_machines?: number; payment_method?: string; role?: string; product_code?: string }) =>

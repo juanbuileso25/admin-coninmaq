@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, Wrench } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, Wrench, User, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
-import { api, type BotQuotationResponse, type BotMetrics } from "../../services/api";
+import { api, type BotQuotationResponse, type BotMetrics, type BotLeadResponse } from "../../services/api";
 import NuevoPresupuestoRepuestosDrawer from "../../components/agente/NuevoPresupuestoRepuestosDrawer";
+import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
@@ -46,6 +48,26 @@ export default function CotizacionesRepuestosPage() {
   const [statusFilter, setStatus] = useState("");
   const [drawerOpen, setDrawer]   = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
+
+  // Detalle de lead
+  const [selectedLead, setSelectedLead]   = useState<BotLeadResponse | null>(null);
+  const [loadingLeadId, setLoadingLeadId] = useState<number | null>(null);
+
+  const openLeadDetail = async (leadId: number | null) => {
+    if (!leadId) {
+      toast.error("Esta cotización no está vinculada a un lead");
+      return;
+    }
+    try {
+      setLoadingLeadId(leadId);
+      const lead = await api.bot.getLead(leadId);
+      setSelectedLead(lead);
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo cargar el lead");
+    } finally {
+      setLoadingLeadId(null);
+    }
+  };
 
   const PAGE_SIZE = 20;
 
@@ -99,6 +121,11 @@ export default function CotizacionesRepuestosPage() {
         open={drawerOpen}
         onClose={() => setDrawer(false)}
         onCreated={() => { setPage(1); load(); loadMetrics(selectedMonth); }}
+      />
+      <LeadDetailDrawer
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onStageChanged={() => { load(); setSelectedLead(null); }}
       />
       <div className="space-y-5">
 
@@ -165,14 +192,14 @@ export default function CotizacionesRepuestosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Estado", "Vence", "Fecha", "PDF", "Web"].map(h => (
+                {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
-              {!loading && filtered.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones de repuestos</td></tr>}
+              {loading && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={12} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones de repuestos</td></tr>}
               {!loading && filtered.map(q => (
                 <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
@@ -230,6 +257,16 @@ export default function CotizacionesRepuestosPage() {
                       ? <a href={q.page_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs transition-colors"><ExternalLink size={13} /> Ver</a>
                       : <span className="text-fg-6 text-xs">—</span>
                     }
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => openLeadDetail(q.lead_id)}
+                      disabled={!q.lead_id || loadingLeadId === q.lead_id}
+                      title={q.lead_id ? "Ver detalle del lead" : "Sin lead vinculado"}
+                      className="p-2 sm:p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {loadingLeadId === q.lead_id ? <Loader2 size={13} className="animate-spin" /> : <User size={13} />}
+                    </button>
                   </td>
                 </tr>
               ))}
