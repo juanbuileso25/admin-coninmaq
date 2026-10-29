@@ -322,14 +322,20 @@ export default function CotizacionesPage() {
                     </td>
                     <td className="px-4 py-3 text-fg-4">{COP(q.subtotal)}</td>
                     <td className="px-4 py-3 text-fg-4">{q.iva_total > 0 ? COP(q.iva_total) : <span className="text-fg-6">—</span>}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-fg font-semibold">{COP(q.total)}</div>
                       {q.currency === "USD" && q.exchange_rate_applied && (
-                        <div className="text-[10px] text-accent mt-0.5 flex items-center gap-1">
-                          <span className="px-1 bg-accent/15 border border-accent/40 rounded-sm">USD</span>
-                          <span>${(q.total / q.exchange_rate_applied).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                          <span className="text-fg-6" title={`TRM aplicada: $${q.exchange_rate_applied.toLocaleString("es-CO")} COP`}>· TRM ${Math.round(q.exchange_rate_applied).toLocaleString("es-CO")}</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="px-1 py-[1px] text-[9px] font-bold bg-accent/15 border border-accent/40 text-accent rounded-sm">USD</span>
+                            <span className="text-accent text-[11px] font-medium">
+                              ${(q.total / q.exchange_rate_applied).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="text-fg-6 text-[10px] mt-0.5">
+                            TRM ${Math.round(q.exchange_rate_applied).toLocaleString("es-CO")}
+                          </div>
+                        </>
                       )}
                     </td>
                     <td className="px-4 py-3 text-fg-4">{DELIVERY_LABELS[q.delivery_mode] ?? q.delivery_mode}</td>
