@@ -265,7 +265,22 @@ export default function CotizacionesPage() {
                   const clickEvent = clicks.get(q.quotation_number);
                   return (
                   <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="font-mono text-xs text-accent">{q.quotation_number}</div>
+                      {q.items && q.items.length > 0 && (() => {
+                        const its = q.items as Array<{ codigo?: string; producto?: string; cantidad?: number }>;
+                        const first = its[0];
+                        const extra = its.length - 1;
+                        const label = first?.codigo || first?.producto || "—";
+                        const tooltip = its.map(i => `${i.codigo ?? ""} ${i.producto ?? ""}${i.cantidad && i.cantidad > 1 ? ` ×${i.cantidad}` : ""}`.trim()).join("\n");
+                        return (
+                          <div className="text-fg-4 text-[11px] mt-0.5" title={tooltip}>
+                            {label}
+                            {extra > 0 && <span className="text-fg-6 ml-1">+{extra}</span>}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       {q.lead_name
                         ? <span className="text-fg text-xs">{q.lead_name}</span>

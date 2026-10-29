@@ -803,6 +803,7 @@ export type BotQuotationResponse = {
     size?: number | null;
     attached_at?: string;
   }> | null;
+  payment_terms?: string | null;
 };
 
 export type ManualQuotationItem = {
@@ -875,6 +876,8 @@ export type ManualQuotationRequest = {
   channel_id?: number;
   // Moneda de presentación. Default COP. Si "USD", backend congela TRM del año.
   currency?: "COP" | "USD";
+  // Forma de pago mostrada al cliente en el PDF (solo repuestos).
+  payment_terms?: "contado" | "credito";
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
