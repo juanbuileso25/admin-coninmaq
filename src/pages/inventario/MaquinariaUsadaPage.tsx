@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Clock, Calendar, Copy, Images,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Clock, Calendar, Copy, Images, Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
@@ -9,6 +9,7 @@ import MachineDrawer from "../../components/inventario/MachineDrawer";
 import MachineMediaModal from "../../components/inventario/MachineMediaModal";
 import type { Machine } from "../../types/machine";
 import { CATEGORIES } from "../../types/machine";
+import { api } from "../../services/api";
 
 /* ── Category badge colors ── */
 const CAT_COLORS: Record<string, string> = {
@@ -53,6 +54,7 @@ export default function MaquinariaUsadaPage() {
   const [duplicating,  setDuplicating]  = useState<Machine | null>(null);
   const [deletingId,   setDeletingId]   = useState<string | null>(null);
   const [mediaMachine, setMediaMachine] = useState<Machine | null>(null);
+  const [cloningToRentalId, setCloningToRentalId] = useState<string | null>(null);
 
   /* Filtered list */
   const filtered = useMemo(() => {
@@ -74,6 +76,21 @@ export default function MaquinariaUsadaPage() {
   const openEdit      = (m: Machine) => { setEditing(m); setDuplicating(null); setDrawerOpen(true); };
   const openDuplicate = (m: Machine) => { setEditing(null); setDuplicating(m); setDrawerOpen(true); };
   const closeDrawer   = (changed: boolean) => { setDrawerOpen(false); setEditing(null); setDuplicating(null); if (changed) refresh(); };
+
+  const handleCloneToRental = async (m: Machine) => {
+    if (!confirm(`¿Crear "${m.code} - ${m.model}" también en el catálogo de Renta?\n\nSe copiarán specs, imágenes, highlights y recursos.`)) return;
+    try {
+      setCloningToRentalId(m.id);
+      await api.machines.cloneTo(m.id, "rental");
+      toast.success(`"${m.code}" disponible en Renta`, {
+        action: { label: "Ver en Renta", onClick: () => { window.location.href = "/inventario/renta"; } },
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo clonar a renta");
+    } finally {
+      setCloningToRentalId(null);
+    }
+  };
 
   const handleSave = async (data: Omit<Machine, "id" | "created_at" | "updated_at">): Promise<Machine | undefined> => {
     try {
@@ -336,6 +353,14 @@ export default function MaquinariaUsadaPage() {
                           title="Duplicar"
                         >
                           <Copy size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleCloneToRental(m)}
+                          disabled={cloningToRentalId === m.id}
+                          className="w-8 h-8 flex items-center justify-center text-fg-5 hover:text-amber-400 hover:bg-amber-950/20 transition-all disabled:opacity-50"
+                          title="Crear también en Renta"
+                        >
+                          {cloningToRentalId === m.id ? <Loader2 size={14} className="animate-spin" /> : <Truck size={14} />}
                         </button>
                         <button
                           onClick={() => setDeletingId(m.id)}

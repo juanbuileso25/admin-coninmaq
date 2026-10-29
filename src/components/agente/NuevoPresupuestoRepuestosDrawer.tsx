@@ -79,6 +79,9 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
   const [sendToWa, setSendToWa] = useState(true);
   const [waPhone, setWaPhone]   = useState("");
 
+  // Forma de pago (solo repuestos)
+  const [paymentTerms, setPaymentTerms] = useState<"contado" | "credito">("contado");
+
   // Suggestions
   const [suggestions, setSuggestions]         = useState<SparePartSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -193,6 +196,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
       setNombre(""); setEmail(""); setEmpresa(""); setNIT(""); setDir("");
       setExtraEmails([]); setExtraEmailInput("");
       setSendToWa(true); setWaPhone(""); setResult(null);
+      setPaymentTerms("contado");
       setSuggestions([]); setSuggestionsLoading(false);
       setAttachments([]);
       setClientSearch(""); setClientResults([]); setSelectedClient(null); setShowClientSearch(false);
@@ -399,6 +403,7 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
         client_tax_id:  clienteNIT.trim() || undefined,
         client_address: clienteDir.trim() || undefined,
         quotation_type: "repuestos",
+        payment_terms:  paymentTerms,
       } as Parameters<typeof api.bot.createManualQuotation>[0]);
 
       // Send to WhatsApp conversation if applicable
@@ -1063,6 +1068,38 @@ export default function NuevoPresupuestoRepuestosDrawer({ open, onClose, onCreat
                   {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                   {uploading ? "Subiendo..." : "Añadir archivos"}
                 </button>
+              </section>
+
+              {/* Forma de pago */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Forma de Pago</h3>
+                <div className="inline-flex border border-border bg-surface-3 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTerms("contado")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      paymentTerms === "contado"
+                        ? "bg-accent text-black"
+                        : "text-fg-4 hover:text-fg hover:bg-surface-4"
+                    }`}
+                  >
+                    Contado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTerms("credito")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-l border-border ${
+                      paymentTerms === "credito"
+                        ? "bg-accent text-black"
+                        : "text-fg-4 hover:text-fg hover:bg-surface-4"
+                    }`}
+                  >
+                    Crédito
+                  </button>
+                </div>
+                <p className="text-[11px] text-fg-5 mt-2">
+                  Se mostrará en el PDF enviado al cliente.
+                </p>
               </section>
 
               {/* Delivery */}

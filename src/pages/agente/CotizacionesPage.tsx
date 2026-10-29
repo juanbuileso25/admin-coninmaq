@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
 import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
@@ -52,6 +52,7 @@ export default function CotizacionesPage() {
 
   // Modal reenvío de email
   const [sendModal,       setSendModal]       = useState<BotQuotationResponse | null>(null);
+  const [attachmentsModal, setAttachmentsModal] = useState<BotQuotationResponse | null>(null);
   const [sendEmails,      setSendEmails]      = useState<string[]>([]);
   const [sendInput,       setSendInput]       = useState("");
   const [sending,         setSending]         = useState(false);
@@ -264,7 +265,22 @@ export default function CotizacionesPage() {
                   const clickEvent = clicks.get(q.quotation_number);
                   return (
                   <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="font-mono text-xs text-accent">{q.quotation_number}</div>
+                      {q.items && q.items.length > 0 && (() => {
+                        const its = q.items as Array<{ codigo?: string; producto?: string; cantidad?: number }>;
+                        const first = its[0];
+                        const extra = its.length - 1;
+                        const label = first?.codigo || first?.producto || "—";
+                        const tooltip = its.map(i => `${i.codigo ?? ""} ${i.producto ?? ""}${i.cantidad && i.cantidad > 1 ? ` ×${i.cantidad}` : ""}`.trim()).join("\n");
+                        return (
+                          <div className="text-fg-4 text-[11px] mt-0.5" title={tooltip}>
+                            {label}
+                            {extra > 0 && <span className="text-fg-6 ml-1">+{extra}</span>}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       {q.lead_name
                         ? <span className="text-fg text-xs">{q.lead_name}</span>
@@ -274,7 +290,16 @@ export default function CotizacionesPage() {
                     </td>
                     <td className="px-4 py-3 text-fg-4">{COP(q.subtotal)}</td>
                     <td className="px-4 py-3 text-fg-4">{q.iva_total > 0 ? COP(q.iva_total) : <span className="text-fg-6">—</span>}</td>
-                    <td className="px-4 py-3 text-fg font-semibold">{COP(q.total)}</td>
+                    <td className="px-4 py-3">
+                      <div className="text-fg font-semibold">{COP(q.total)}</div>
+                      {q.currency === "USD" && q.exchange_rate_applied && (
+                        <div className="text-[10px] text-accent mt-0.5 flex items-center gap-1">
+                          <span className="px-1 bg-accent/15 border border-accent/40 rounded-sm">USD</span>
+                          <span>${(q.total / q.exchange_rate_applied).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+                          <span className="text-fg-6" title={`TRM aplicada: $${q.exchange_rate_applied.toLocaleString("es-CO")} COP`}>· TRM ${Math.round(q.exchange_rate_applied).toLocaleString("es-CO")}</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-fg-4">{DELIVERY_LABELS[q.delivery_mode] ?? q.delivery_mode}</td>
                     <td className="px-4 py-3 text-center">
                       {q.email_sent
@@ -335,6 +360,18 @@ export default function CotizacionesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {q.email_attachments && q.email_attachments.length > 0 && (
+                          <button
+                            onClick={() => setAttachmentsModal(q)}
+                            title={`Ver ${q.email_attachments.length} adjunto${q.email_attachments.length !== 1 ? "s" : ""} enviado${q.email_attachments.length !== 1 ? "s" : ""} por email`}
+                            className="relative p-2 sm:p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors"
+                          >
+                            <Paperclip size={13} />
+                            <span className="absolute -top-0.5 -right-0.5 bg-accent text-black text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              {q.email_attachments.length}
+                            </span>
+                          </button>
+                        )}
                         <button
                           onClick={() => openSendModal(q)}
                           title="Reenviar por correo (misma cotización)"
@@ -432,6 +469,72 @@ export default function CotizacionesPage() {
             {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
             {sending ? "Enviando..." : `Enviar a ${sendEmails.length} correo${sendEmails.length !== 1 ? "s" : ""}`}
           </button>
+        </div>
+      </div>
+    )}
+
+    {attachmentsModal && (
+      <div
+        className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+        onClick={() => setAttachmentsModal(null)}
+      >
+        <div
+          className="bg-surface-2 border border-border max-w-xl w-full max-h-[80vh] flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between shrink-0">
+            <div>
+              <h3 className="text-fg text-sm font-semibold flex items-center gap-2">
+                <Paperclip size={14} /> Adjuntos enviados por correo
+              </h3>
+              <p className="text-fg-5 text-xs mt-0.5 font-mono">
+                {attachmentsModal.quotation_number}
+              </p>
+            </div>
+            <button className="text-fg-5 hover:text-fg p-1" onClick={() => setAttachmentsModal(null)}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-5 overflow-y-auto">
+            {(!attachmentsModal.email_attachments || attachmentsModal.email_attachments.length === 0) ? (
+              <p className="text-fg-5 text-sm text-center py-6">Sin adjuntos registrados.</p>
+            ) : (
+              <ul className="space-y-2">
+                {attachmentsModal.email_attachments.map((att, i) => (
+                  <li key={att.url + i} className="bg-surface-3 border border-border px-3 py-2.5 flex items-center gap-3">
+                    <Paperclip size={14} className="text-fg-5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-fg-2 hover:text-accent text-sm truncate block"
+                      >
+                        {att.filename}
+                      </a>
+                      <div className="text-fg-6 text-[11px] mt-0.5 flex items-center gap-2">
+                        {att.content_type && <span>{att.content_type}</span>}
+                        {att.size && <span>· {(att.size / 1024).toFixed(0)} KB</span>}
+                        {att.attached_at && (
+                          <span>· Enviado {new Date(att.attached_at).toLocaleString("es-CO")}</span>
+                        )}
+                      </div>
+                    </div>
+                    <a
+                      href={att.url}
+                      download={att.filename}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-fg-5 hover:text-accent"
+                      title="Descargar"
+                    >
+                      <Download size={14} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     )}

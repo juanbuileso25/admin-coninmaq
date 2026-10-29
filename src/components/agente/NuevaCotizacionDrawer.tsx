@@ -136,6 +136,46 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
   const [channels, setChannels] = useState<LeadChannelResponse[]>([]);
   const [channelId, setChannelId] = useState<string>("");
 
+  // Moneda de presentación: COP (default) o USD (congela TRM del año en curso)
+  const [currency, setCurrency] = useState<"COP" | "USD">("COP");
+  const [trm, setTrm] = useState<{ year: number; average: number } | null>(null);
+  const [trmLoading, setTrmLoading] = useState(false);
+  const [showTrmDetail, setShowTrmDetail] = useState(false);
+  type TrmDetail = {
+    year: number;
+    average: number;
+    sample_size: number;
+    computed_at: string;
+    is_fallback: boolean;
+    min_value: number | null;
+    max_value: number | null;
+    amplitude: number | null;
+    first_date: string | null;
+    last_date: string | null;
+    quarters: Record<string, number> | null;
+  };
+  const [trmDetail, setTrmDetail] = useState<TrmDetail | null>(null);
+  const [trmDetailLoading, setTrmDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (!showTrmDetail || trmDetail) return;
+    setTrmDetailLoading(true);
+    api.bot.getTrmDetail()
+      .then(setTrmDetail)
+      .catch(() => toast.error("No se pudo cargar el detalle de la TRM"))
+      .finally(() => setTrmDetailLoading(false));
+  }, [showTrmDetail, trmDetail]);
+
+  // Carga TRM promedio del año al abrir el drawer (una sola vez)
+  useEffect(() => {
+    if (!open || trm) return;
+    setTrmLoading(true);
+    api.bot.getTrmAverage()
+      .then(d => setTrm({ year: d.year, average: d.average }))
+      .catch(() => {/* opcional, el backend intenta recomputar al generar */})
+      .finally(() => setTrmLoading(false));
+  }, [open, trm]);
+
   useEffect(() => {
     if (!open) return;
     setLM(true);
@@ -360,6 +400,7 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         num_machines_fleet: leadAlreadyQualified ? undefined : (numMachinesFleet !== "" ? parseInt(numMachinesFleet, 10) : undefined),
         client_role:        leadAlreadyQualified ? undefined : (clientRole.trim() || undefined),
         channel_id:         !prefill?.lead_id && channelId ? parseInt(channelId, 10) : undefined,
+        currency,
       });
 
       // Si viene de una sesión activa de WA, también enviar por el chat
@@ -733,6 +774,65 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
                 </div>
               </section>
 
+              {/* Moneda de la cotización */}
+              <section>
+                <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Moneda de la cotización</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("COP")}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
+                      currency === "COP"
+                        ? "bg-accent text-black border-accent"
+                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
+                    }`}
+                  >
+                    COP (Pesos)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("USD")}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold border transition-colors ${
+                      currency === "USD"
+                        ? "bg-accent text-black border-accent"
+                        : "bg-surface-3 text-fg-3 border-border hover:bg-surface-4"
+                    }`}
+                  >
+                    USD (Dólares)
+                  </button>
+                </div>
+                {currency === "USD" && (
+                  <div className="mt-2 text-[11px] text-fg-5 bg-surface-3 border border-border px-3 py-2">
+                    {trmLoading && <span>Cargando TRM promedio del año...</span>}
+                    {trm && !trmLoading && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span>TRM promedio {trm.year}: </span>
+                        <strong className="text-fg-2">${trm.average.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP</strong>
+                        {items.length > 0 && (
+                          <>
+                            <span>·</span>
+                            <span>Total aprox.:</span>
+                            <strong className="text-accent">
+                              ${(items.reduce((s, i) => s + (i.sale_price + i.tax_value) * i.cantidad, 0) / trm.average).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                            </strong>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowTrmDetail(true)}
+                          className="ml-auto text-accent hover:underline"
+                        >
+                          Validar TRM
+                        </button>
+                      </div>
+                    )}
+                    {!trm && !trmLoading && (
+                      <span className="text-amber-400">No se pudo cargar la TRM. El backend intentará recomputarla al generar.</span>
+                    )}
+                  </div>
+                )}
+              </section>
+
               {/* Observaciones */}
               <section>
                 <h3 className="text-fg-4 text-xs font-semibold uppercase tracking-wider mb-3">Observaciones (opcional)</h3>
@@ -929,6 +1029,82 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
           </>
         )}
       </div>
+
+      {/* Modal detalle TRM */}
+      {showTrmDetail && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowTrmDetail(false)}
+        >
+          <div
+            className="bg-surface-2 border border-border max-w-md w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-fg text-sm font-semibold">Validación de la TRM</h3>
+              <button className="text-fg-5 hover:text-fg" onClick={() => setShowTrmDetail(false)}>×</button>
+            </div>
+            <div className="p-5 space-y-3 text-sm">
+              {trmDetailLoading && <p className="text-fg-5">Cargando detalle...</p>}
+              {trmDetail && (
+                <>
+                  <p className="text-fg-5 text-xs">
+                    Datos consultados desde el dataset oficial del gobierno (datos.gov.co · Superfinanciera).
+                    Compara estos valores con los que publica el Banco de la República para auditar.
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 bg-surface-3 border border-border p-3">
+                    <div className="text-fg-5 text-xs">Año</div>
+                    <div className="text-fg text-xs text-right font-mono">{trmDetail.year}</div>
+                    <div className="text-fg-5 text-xs">Promedio aritmético</div>
+                    <div className="text-accent text-xs text-right font-mono font-semibold">
+                      ${trmDetail.average.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-fg-5 text-xs">Días en muestra</div>
+                    <div className="text-fg text-xs text-right font-mono">{trmDetail.sample_size}</div>
+                    <div className="text-fg-5 text-xs">Mínima del año</div>
+                    <div className="text-fg text-xs text-right font-mono">
+                      {trmDetail.min_value !== null ? `$${trmDetail.min_value.toLocaleString("es-CO", { maximumFractionDigits: 2 })}` : "—"}
+                    </div>
+                    <div className="text-fg-5 text-xs">Máxima del año</div>
+                    <div className="text-fg text-xs text-right font-mono">
+                      {trmDetail.max_value !== null ? `$${trmDetail.max_value.toLocaleString("es-CO", { maximumFractionDigits: 2 })}` : "—"}
+                    </div>
+                    <div className="text-fg-5 text-xs">Amplitud</div>
+                    <div className="text-fg text-xs text-right font-mono">
+                      {trmDetail.amplitude !== null ? `$${trmDetail.amplitude.toLocaleString("es-CO", { maximumFractionDigits: 2 })}` : "—"}
+                    </div>
+                    <div className="text-fg-5 text-xs">Primera fecha</div>
+                    <div className="text-fg text-xs text-right font-mono">{trmDetail.first_date ?? "—"}</div>
+                    <div className="text-fg-5 text-xs">Última fecha</div>
+                    <div className="text-fg text-xs text-right font-mono">{trmDetail.last_date ?? "—"}</div>
+                  </div>
+                  {trmDetail.quarters && (
+                    <div className="bg-surface-3 border border-border p-3">
+                      <div className="text-fg-5 text-xs uppercase tracking-wide mb-2">Promedio por trimestre</div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {Object.entries(trmDetail.quarters).map(([q, val]) => (
+                          <div key={q} className="text-center">
+                            <div className="text-fg-5 text-[10px]">Q{q}</div>
+                            <div className="text-fg text-xs font-mono">${val.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {trmDetail.is_fallback && (
+                    <p className="text-amber-400 text-xs">
+                      ⚠ El valor viene de cache stale (la API falló en la última consulta).
+                    </p>
+                  )}
+                  <p className="text-fg-6 text-[10px]">
+                    Calculado el {new Date(trmDetail.computed_at).toLocaleString("es-CO")}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

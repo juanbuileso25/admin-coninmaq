@@ -794,6 +794,16 @@ export type BotQuotationResponse = {
   status: string;
   expires_at: string | null;
   created_at: string;
+  currency?: string;                      // "COP" o "USD"
+  exchange_rate_applied?: number | null;  // TRM aplicada cuando currency = USD
+  email_attachments?: Array<{
+    url: string;
+    filename: string;
+    content_type?: string | null;
+    size?: number | null;
+    attached_at?: string;
+  }> | null;
+  payment_terms?: string | null;
 };
 
 export type ManualQuotationItem = {
@@ -828,6 +838,8 @@ export type QuotationPageData = {
   delivery_mode: string; status: string; pdf_url: string | null; page_url: string | null;
   items: QuotationItem[]; client: QuotationClient | null; advisor: QuotationAdvisor | null;
   observations: string | null;
+  currency?: string;                      // "COP" o "USD"
+  exchange_rate_applied?: number | null;  // TRM aplicada cuando currency = USD
 };
 export type QuotationEmailAttachment = {
   url: string;
@@ -862,6 +874,10 @@ export type ManualQuotationRequest = {
   client_role?: string;
   // Canal de origen (solo si se crea un lead implícito, no para leads existentes)
   channel_id?: number;
+  // Moneda de presentación. Default COP. Si "USD", backend congela TRM del año.
+  currency?: "COP" | "USD";
+  // Forma de pago mostrada al cliente en el PDF (solo repuestos).
+  payment_terms?: "contado" | "credito";
 };
 export type ManualQuotationResponse = {
   quotation_number: string;
@@ -2005,6 +2021,8 @@ export const api = {
     remove: (id: string) => request<void>(`/machines/${id}`, { method: "DELETE" }),
     toggleVisibility: (id: string) => request<MachineResponse>(`/machines/${id}/toggle-visibility`, { method: "PATCH" }),
     toggleFeatured:   (id: string) => request<MachineResponse>(`/machines/${id}/toggle-featured`,   { method: "PATCH" }),
+    cloneTo:          (id: string, targetType: string) =>
+      request<MachineResponse>(`/machines/${id}/clone-to?target_type=${encodeURIComponent(targetType)}`, { method: "POST" }),
     uploadImage: (id: string, file: File) => {
       const form = new FormData();
       form.append("file", file);
@@ -2295,6 +2313,24 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    getTrmAverage: () =>
+      request<{ year: number; average: number; sample_size: number; computed_at: string; is_fallback: boolean }>(
+        "/exchange-rates/trm",
+      ),
+    getTrmDetail: () =>
+      request<{
+        year: number;
+        average: number;
+        sample_size: number;
+        computed_at: string;
+        is_fallback: boolean;
+        min_value: number | null;
+        max_value: number | null;
+        amplitude: number | null;
+        first_date: string | null;
+        last_date: string | null;
+        quarters: Record<string, number> | null;
+      }>("/exchange-rates/trm/detail"),
     sendQuotationEmail: (
       quotationNumber: string,
       emails: string[],
