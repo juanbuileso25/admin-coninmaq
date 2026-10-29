@@ -507,11 +507,6 @@ export default function QuotationPage() {
                   <p className="s-investment__total-amount">
                     {fmt(data.total)}<span className="s-investment__total-currency">{isUsd ? "USD" : "COP"}</span>
                   </p>
-                  {isUsd && (
-                    <p style={{ fontSize: 11, color: "var(--gray-3)", marginTop: 6 }}>
-                      TRM aplicada: ${Math.round(trm).toLocaleString("es-CO")} COP · Promedio año {new Date().getFullYear()}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

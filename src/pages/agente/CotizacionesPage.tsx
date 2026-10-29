@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip, Wrench } from "lucide-react";
+import { Search, ReceiptText, Mail, DollarSign, Download, Plus, ExternalLink, MousePointerClick, X, Loader2, Send, RefreshCw, Paperclip, Wrench, User } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import Select from "../../components/ui/Select";
-import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, PIPELINE_STAGE_LABELS } from "../../services/api";
+import { api, API_BASE_URL, type BotQuotationResponse, type BotMetrics, type EmailClickEvent, type BotLeadResponse, PIPELINE_STAGE_LABELS } from "../../services/api";
 import NuevaCotizacionDrawer from "../../components/agente/NuevaCotizacionDrawer";
+import LeadDetailDrawer from "../../components/agente/LeadDetailDrawer";
 import { toast } from "sonner";
 
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
@@ -57,6 +58,26 @@ export default function CotizacionesPage() {
   const [sendInput,       setSendInput]       = useState("");
   const [sending,         setSending]         = useState(false);
   const [regenerating,    setRegenerating]    = useState<string | null>(null);
+
+  // Detalle de lead
+  const [selectedLead,  setSelectedLead]  = useState<BotLeadResponse | null>(null);
+  const [loadingLeadId, setLoadingLeadId] = useState<number | null>(null);
+
+  const openLeadDetail = async (leadId: number | null) => {
+    if (!leadId) {
+      toast.error("Esta cotización no está vinculada a un lead");
+      return;
+    }
+    try {
+      setLoadingLeadId(leadId);
+      const lead = await api.bot.getLead(leadId);
+      setSelectedLead(lead);
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo cargar el lead");
+    } finally {
+      setLoadingLeadId(null);
+    }
+  };
   const sendInputRef = useRef<HTMLInputElement>(null);
 
   const openSendModal = (q: BotQuotationResponse) => {
@@ -166,6 +187,11 @@ export default function CotizacionesPage() {
       open={drawerOpen}
       onClose={() => setDrawer(false)}
       onCreated={() => { loadQuotations(); loadMetrics(selectedMonth); }}
+    />
+    <LeadDetailDrawer
+      lead={selectedLead}
+      onClose={() => setSelectedLead(null)}
+      onStageChanged={() => { loadQuotations(); setSelectedLead(null); }}
     />
     <div className="space-y-5">
 
@@ -360,6 +386,14 @@ export default function CotizacionesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openLeadDetail(q.lead_id)}
+                          disabled={!q.lead_id || loadingLeadId === q.lead_id}
+                          title={q.lead_id ? "Ver detalle del lead" : "Sin lead vinculado"}
+                          className="p-2 sm:p-1.5 text-fg-5 hover:text-accent hover:bg-accent/10 rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {loadingLeadId === q.lead_id ? <Loader2 size={13} className="animate-spin" /> : <User size={13} />}
+                        </button>
                         {q.email_attachments && q.email_attachments.length > 0 && (
                           <button
                             onClick={() => setAttachmentsModal(q)}

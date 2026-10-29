@@ -582,11 +582,24 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {quotations.map(q => (
+                  {quotations.map(q => {
+                    const isUsd = q.currency === "USD" && !!q.exchange_rate_applied && q.exchange_rate_applied > 0;
+                    const trm = q.exchange_rate_applied || 1;
+                    return (
                     <div key={q.quotation_number} className="bg-surface-3 border border-border px-3 py-2.5 flex items-center justify-between gap-3">
                       <div>
                         <p className="font-mono text-xs text-accent">{q.quotation_number}</p>
-                        <p className="text-fg text-sm font-semibold mt-0.5">{COP(q.total)}</p>
+                        {isUsd ? (
+                          <>
+                            <p className="text-fg text-sm font-semibold mt-0.5">
+                              ${(q.total / trm).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className="ml-1 text-[10px] text-fg-6 font-normal">USD</span>
+                            </p>
+                            <p className="text-fg-6 text-[10px] mt-0.5">Equivalente {COP(q.total)}</p>
+                          </>
+                        ) : (
+                          <p className="text-fg text-sm font-semibold mt-0.5">{COP(q.total)}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {q.email_sent && (
@@ -608,7 +621,8 @@ export default function LeadDetailDrawer({ lead, onClose, onStageChanged }: Prop
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

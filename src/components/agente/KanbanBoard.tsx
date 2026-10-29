@@ -338,13 +338,18 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
         </div>
 
         {lead.latest_quotation && (() => {
-          const fmt = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+          const q = lead.latest_quotation;
+          const isUsd = q.currency === "USD" && !!q.exchange_rate_applied && q.exchange_rate_applied > 0;
+          const trm = q.exchange_rate_applied || 1;
+          const fmtCop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+          const fmtUsd = (n: number) => `$${(n / trm).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+          const fmt = (n: number) => isUsd ? fmtUsd(n) : fmtCop(n);
           const hasCloseValue = lead.close_value != null;
           const isClosedStage = lead.pipeline_stage === "cerrado";
-          const displayValue = lead.close_value ?? lead.latest_quotation.total;
+          const displayValue = lead.close_value ?? q.total;
           const missingCloseValue = isClosedStage && !hasCloseValue;
-          const preview = lead.latest_quotation.machines_preview ?? [];
-          const itemsCount = lead.latest_quotation.items_count ?? preview.length;
+          const preview = q.machines_preview ?? [];
+          const itemsCount = q.items_count ?? preview.length;
           return (
             <div className="space-y-1">
               {/* Mini preview de productos cotizados (sin valor — ya se muestra en la pastilla de abajo) */}
@@ -380,18 +385,21 @@ function KanbanCard({ lead, onMoveStage, onDragStart, onTouchOver, onClick, onDe
                   ? "text-amber-300 bg-amber-950/20 border-amber-900/40"
                   : "text-accent bg-accent/5 border-accent/20"}`}>
                 <FileText size={10} />
-                <span className="font-mono">{lead.latest_quotation.quotation_number}</span>
+                <span className="font-mono">{q.quotation_number}</span>
                 <span
                   className="ml-auto"
                   title={
                     hasCloseValue
-                      ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(lead.latest_quotation.total)})`
+                      ? `Cerrado en ${fmt(displayValue)} (cotización: ${fmt(q.total)})`
                       : missingCloseValue
-                        ? `Sin valor de cierre — usando cotización ${fmt(lead.latest_quotation.total)}. Edítalo desde el detalle.`
-                        : undefined
+                        ? `Sin valor de cierre — usando cotización ${fmt(q.total)}. Edítalo desde el detalle.`
+                        : isUsd
+                          ? `Equivalente ${fmtCop(displayValue)}`
+                          : undefined
                   }
                 >
                   {fmt(displayValue)}
+                  {isUsd && <span className="ml-1 text-[9px] text-fg-6">USD</span>}
                   {hasCloseValue && <span className="ml-1 text-emerald-400">✓</span>}
                   {missingCloseValue && <span className="ml-1">⚠</span>}
                 </span>
