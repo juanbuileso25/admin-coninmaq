@@ -43,6 +43,7 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
   const [projectName, setProjectName] = useState("");
   const [notes, setNotes] = useState("");
   const [validDays, setValidDays] = useState(15);
+  const [includesOperator, setIncludesOperator] = useState(false);
   const [issuedDate, setIssuedDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -92,6 +93,7 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
       setProjectName(q.project_name ?? "");
       setNotes(q.notes ?? "");
       setValidDays(q.valid_days);
+      setIncludesOperator(!!q.includes_operator);
       setIssuedDate(q.issued_date);
       setItems((q.items ?? []).map(it => ({ ...it, _localId: newLocalId() })));
       setExtraItems((q.extra_items ?? []).map(e => ({ ...e, _localId: newLocalId() })));
@@ -125,8 +127,9 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
     notes: notes || null,
     valid_days: validDays,
     issued_date: issuedDate,
+    includes_operator: includesOperator,
   }), [clientId, clientName, clientDoc, contactName, contactEmail, contactPhone, projectName,
-      items, extraItems, conditions, notes, validDays, issuedDate]);
+      items, extraItems, conditions, notes, validDays, issuedDate, includesOperator]);
 
   const currentSig = JSON.stringify({
     cli: clientName, cnt: contactName, prj: projectName,
@@ -389,6 +392,32 @@ export default function RentalQuotationModal({ quotationId, onClose, onSaved }: 
                       <input type="number" value={validDays} onChange={e => setValidDays(Number(e.target.value) || 15)}
                         className="w-full bg-surface-3 border border-border px-2 py-2 text-xs text-fg-2 outline-none focus:border-accent" />
                     </div>
+                  </div>
+                  <div>
+                    <Label>¿Incluye operador?</Label>
+                    <div className="inline-flex border border-border overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setIncludesOperator(false)}
+                        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                          !includesOperator ? "bg-accent text-black" : "bg-surface-3 text-fg-4 hover:bg-surface-4"
+                        }`}
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIncludesOperator(true)}
+                        className={`px-3 py-1.5 text-xs font-medium border-l border-border transition-colors ${
+                          includesOperator ? "bg-accent text-black" : "bg-surface-3 text-fg-4 hover:bg-surface-4"
+                        }`}
+                      >
+                        Sí
+                      </button>
+                    </div>
+                    <p className="text-fg-6 text-[10px] mt-1">
+                      Se muestra como badge y nota de precio en el PDF que recibe el cliente.
+                    </p>
                   </div>
                 </div>
               </Section>
