@@ -1792,6 +1792,7 @@ export type RentalQuotationResponse = {
   extra_items: RentalQuotationExtraItem[];
   conditions: RentalQuotationConditions;
   notes: string | null;
+  includes_operator?: boolean;
   status: RentalQuotationStatus;
   valid_days: number;
   valid_until: string | null;
@@ -1863,6 +1864,7 @@ export type RentalQuotationCreate = {
   notes?: string | null;
   valid_days?: number;
   issued_date?: string | null;
+  includes_operator?: boolean;
 };
 
 export type RentalQuotationUpdate = Partial<RentalQuotationCreate>;
