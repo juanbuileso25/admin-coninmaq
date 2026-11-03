@@ -187,6 +187,91 @@ function ConfirmCloseModal({
   );
 }
 
+function ConfirmLostModal({
+  lead,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  lead: BotLeadResponse;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [reason, setReason] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { textareaRef.current?.focus(); }, []);
+
+  const trimmed = reason.trim();
+  const canSubmit = trimmed.length > 0;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    onConfirm(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+              <AlertTriangle size={18} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-fg font-semibold text-sm">Marcar como perdido</h3>
+              <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                Registra el motivo por el que se perdió{" "}
+                <span className="text-fg font-medium">{lead.name ?? "este lead"}</span>.
+                Queda guardado en el historial.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-fg-4 mb-1.5">
+                Motivo de la pérdida *
+              </label>
+              <textarea
+                ref={textareaRef}
+                rows={3}
+                placeholder="Ej: precio por encima del presupuesto, el cliente eligió a la competencia, no respondió..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full bg-surface-3 border border-border text-fg px-3 py-2.5 text-sm placeholder:text-fg-6 outline-none focus:border-accent resize-none"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={loading}
+                className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !canSubmit}
+                className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <AlertTriangle size={12} />
+                {loading ? "Guardando..." : "Marcar perdido"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 interface KanbanCardProps {
   lead: BotLeadResponse;
   onMoveStage: (lead: BotLeadResponse, stage: PipelineStage) => void;
@@ -484,6 +569,8 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
   const [confirmLead, setConfirmLead]   = useState<BotLeadResponse | null>(null);
   const [deleting, setDeleting]         = useState(false);
   const [closingLead, setClosingLead]   = useState<BotLeadResponse | null>(null);
+  const [losingLead, setLosingLead]     = useState<BotLeadResponse | null>(null);
+  const [losing, setLosing]             = useState(false);
   const [closing, setClosing]           = useState(false);
 
   // Synchronized dual scrollbar (top + bottom)
@@ -544,12 +631,34 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
       setClosingLead(lead);
       return;
     }
+    if (stage === "perdido") {
+      setLosingLead(lead);
+      return;
+    }
     try {
       await api.bot.patchLeadStage(lead.id, { stage });
       toast.success(`${lead.name ?? "Lead"} movido a "${PIPELINE_STAGE_LABELS[stage]}"`);
       onRefresh();
     } catch {
       toast.error("No se pudo mover el lead");
+    }
+  };
+
+  const confirmLost = async (reason: string) => {
+    if (!losingLead) return;
+    setLosing(true);
+    try {
+      await api.bot.patchLeadStage(losingLead.id, {
+        stage: "perdido",
+        note: reason,
+      });
+      toast.success(`${losingLead.name ?? "Lead"} marcado como perdido`);
+      setLosingLead(null);
+      onRefresh();
+    } catch {
+      toast.error("No se pudo marcar como perdido");
+    } finally {
+      setLosing(false);
     }
   };
 
@@ -612,6 +721,14 @@ export default function KanbanBoard({ columns, onLeadClick, onRefresh }: Props) 
           onConfirm={confirmClose}
           onCancel={() => setClosingLead(null)}
           loading={closing}
+        />
+      )}
+      {losingLead && (
+        <ConfirmLostModal
+          lead={losingLead}
+          onConfirm={confirmLost}
+          onCancel={() => setLosingLead(null)}
+          loading={losing}
         />
       )}
       {/* Stage filter chips */}
