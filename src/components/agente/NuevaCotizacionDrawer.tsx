@@ -364,8 +364,13 @@ export default function NuevaCotizacionDrawer({ open, onClose, onCreated, prefil
         : parseCOP(raw);
     setItems(prev => prev.map(i => {
       if (i.codigo !== codigo) return i;
-      const sp = Math.round(totalCop / i.cantidad / (1 + i.tax_rate));
-      return { ...i, sale_price: sp, tax_value: Math.round(sp * i.tax_rate) };
+      const perUnit = Math.round(totalCop / i.cantidad);
+      const sp = Math.round(perUnit / (1 + i.tax_rate));
+      // Derivar el IVA como la diferencia para que sp + tax === perUnit sin
+      // redondeos encadenados; si no, el input "A pagar" se desalinea con
+      // cada tecla y los valores explotan al escribir montos grandes.
+      const tax = perUnit - sp;
+      return { ...i, sale_price: sp, tax_value: tax };
     }));
   };
 
