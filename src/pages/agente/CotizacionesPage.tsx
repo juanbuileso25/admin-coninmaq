@@ -279,7 +279,7 @@ export default function CotizacionesPage() {
             <table className="w-full text-sm min-w-[1400px]">
               <thead>
                 <tr className="border-b border-border">
-                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Link visto", "Estado", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
+                  {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Entrega", "Link visto", "Estado", "Creado por", "Vence", "Fecha", "PDF", "Web", ""].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -360,6 +360,9 @@ export default function CotizacionesPage() {
                       ) : (
                         <span className="text-fg-6 text-xs">—</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-fg-4 text-xs whitespace-nowrap">
+                      {q.created_by_name || <span className="text-fg-6">—</span>}
                     </td>
                     <td className="px-4 py-3 text-fg-5 text-xs whitespace-nowrap">
                       {q.expires_at ? new Date(q.expires_at).toLocaleDateString("es-CO") : "—"}

@@ -32,6 +32,74 @@ function Checkbox({ checked, onChange }: { checked: boolean; onChange: () => voi
   );
 }
 
+/* ── Nodo de menu recursivo (soporta cualquier profundidad) ── */
+function MenuNode({
+  node, depth, selected, toggleOne, toggleSubtree, collectIds,
+}: {
+  node: MenuItemResponse;
+  depth: number;
+  selected: Set<string>;
+  toggleOne: (id: string) => void;
+  toggleSubtree: (node: MenuItemResponse) => void;
+  collectIds: (node: MenuItemResponse) => string[];
+}) {
+  const hasChildren = (node.children?.length ?? 0) > 0;
+  const subtreeIds = collectIds(node);
+  const allSel = subtreeIds.every((id) => selected.has(id));
+  const someSel = subtreeIds.some((id) => selected.has(id));
+
+  if (hasChildren) {
+    return (
+      <div className={depth === 0 ? "px-3 py-2.5" : "px-0 py-1"}>
+        <button
+          type="button"
+          onClick={() => toggleSubtree(node)}
+          className="flex items-center gap-2 group mb-1"
+        >
+          <div className={`w-3.5 h-3.5 border flex items-center justify-center flex-shrink-0 transition-colors ${
+            allSel ? "bg-accent border-accent"
+                   : someSel ? "bg-accent/40 border-accent/60"
+                             : "border-border-light bg-surface-3"
+          }`}>
+            {(allSel || someSel) && (
+              <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
+                <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+          <span className={`text-fg-3 text-xs font-medium group-hover:text-fg transition-colors ${depth > 0 ? "text-[11px]" : ""}`}>
+            {node.label}
+          </span>
+          {node.icon && <span className="text-fg-6 text-[10px] font-mono">{node.icon}</span>}
+        </button>
+        <div className="pl-5 flex flex-col gap-1">
+          {node.children.map((child) => (
+            <MenuNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              selected={selected}
+              toggleOne={toggleOne}
+              toggleSubtree={toggleSubtree}
+              collectIds={collectIds}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Hoja: checkbox simple
+  return (
+    <label className="flex items-center gap-1.5 cursor-pointer group">
+      <Checkbox checked={selected.has(node.id)} onChange={() => toggleOne(node.id)} />
+      <span className="text-fg-5 text-[11px] group-hover:text-fg-3 transition-colors select-none">{node.label}</span>
+      {node.path && <span className="text-fg-6 text-[10px] font-mono">{node.path}</span>}
+    </label>
+  );
+}
+
+
 /* ── Modal ── */
 type ModalProps = {
   user: UserResponse | null;
@@ -86,8 +154,15 @@ function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSa
   const toggleMenuItem = (id: string) =>
     setSelectedMenuItemIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // Recolecta recursivamente todos los ids del subarbol (self + descendientes)
+  const collectIds = (item: MenuItemResponse): string[] => {
+    const own = [item.id];
+    for (const c of item.children ?? []) own.push(...collectIds(c));
+    return own;
+  };
+
   const toggleParentMenu = (item: MenuItemResponse) => {
-    const ids = [item.id, ...item.children.map((c) => c.id)];
+    const ids = collectIds(item);
     const allSel = ids.every((id) => selectedMenuItemIds.has(id));
     setSelectedMenuItemIds((prev) => {
       const n = new Set(prev);
@@ -311,40 +386,17 @@ function UserModal({ user, roles, areas, allModules, allMenuItems, onClose, onSa
                   <p className="text-fg-6 text-xs italic py-4 text-center">No hay ítems de menú. Crea el menú en Ajustes → Menú.</p>
                 ) : (
                   <div className="border border-border divide-y divide-border">
-                    {allMenuItems.map((item) => {
-                      const childIds = item.children.map((c) => c.id);
-                      const allIds = [item.id, ...childIds];
-                      const allSel  = allIds.every((id) => selectedMenuItemIds.has(id));
-                      const someSel = allIds.some((id) => selectedMenuItemIds.has(id));
-                      return (
-                        <div key={item.id} className="px-3 py-2.5">
-                          <button type="button" onClick={() => toggleParentMenu(item)} className="flex items-center gap-2 group mb-1">
-                            <div className={`w-3.5 h-3.5 border flex items-center justify-center flex-shrink-0 transition-colors ${
-                              allSel ? "bg-accent border-accent" : someSel ? "bg-accent/40 border-accent/60" : "border-border-light bg-surface-3"
-                            }`}>
-                              {(allSel || someSel) && (
-                                <svg className="w-2 h-2 text-zinc-900" viewBox="0 0 10 8" fill="none">
-                                  <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </div>
-                            <span className="text-fg-3 text-xs font-medium group-hover:text-fg transition-colors">{item.label}</span>
-                            {item.icon && <span className="text-fg-6 text-[10px] font-mono">{item.icon}</span>}
-                          </button>
-                          {item.children.length > 0 && (
-                            <div className="pl-5 flex flex-col gap-1">
-                              {item.children.map((child) => (
-                                <label key={child.id} className="flex items-center gap-1.5 cursor-pointer group">
-                                  <Checkbox checked={selectedMenuItemIds.has(child.id)} onChange={() => toggleMenuItem(child.id)} />
-                                  <span className="text-fg-5 text-[11px] group-hover:text-fg-3 transition-colors select-none">{child.label}</span>
-                                  {child.path && <span className="text-fg-6 text-[10px] font-mono">{child.path}</span>}
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {allMenuItems.map((item) => (
+                      <MenuNode
+                        key={item.id}
+                        node={item}
+                        depth={0}
+                        selected={selectedMenuItemIds}
+                        toggleOne={toggleMenuItem}
+                        toggleSubtree={toggleParentMenu}
+                        collectIds={collectIds}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

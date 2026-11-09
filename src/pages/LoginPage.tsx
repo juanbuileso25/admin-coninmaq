@@ -42,8 +42,21 @@ export default function LoginPage() {
     if (ok) {
       try {
         const items = await api.menuItems.myMenu();
-        const first = items.find((i) => i.path) ?? items.flatMap((i) => i.children).find((c) => c.path);
-        navigate(first?.path ?? "/dashboard");
+        // Busca recursivamente el primer menu con path en cualquier nivel (padre / hijo / nieto)
+        // preservando el orden de aparicion. Si el usuario solo tiene permiso a un item
+        // nivel 3 (ej. Posventa > Repuestos > Solicitudes), lo redirige ahi.
+        const findFirstPath = (nodes: Array<{ path: string | null; children?: any[] }>): string | null => {
+          for (const n of nodes) {
+            if (n.path) return n.path;
+            if (n.children?.length) {
+              const nested = findFirstPath(n.children);
+              if (nested) return nested;
+            }
+          }
+          return null;
+        };
+        const target = findFirstPath(items);
+        navigate(target ?? "/dashboard");
       } catch {
         navigate("/dashboard");
       }
