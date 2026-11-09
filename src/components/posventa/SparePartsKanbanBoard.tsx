@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Clock, Phone, Wrench, FileText, GripVertical, ChevronDown, Package, Trash2 } from "lucide-react";
+import { Clock, Phone, Wrench, FileText, GripVertical, ChevronDown, Package, Trash2, AlertTriangle } from "lucide-react";
 import {
   api,
   type SparePartRequest,
@@ -228,11 +228,64 @@ interface Props {
   onRefresh: () => void;
 }
 
+function ConfirmDeleteModal({
+  req, onConfirm, onCancel, loading,
+}: {
+  req: SparePartRequest;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+              <AlertTriangle size={18} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-fg font-semibold text-sm">Eliminar solicitud</h3>
+              <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                La solicitud <span className="text-fg font-medium">{req.request_number}</span> quedará
+                inactiva y no aparecerá en el pipeline. Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={12} />
+              {loading ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function SparePartsKanbanBoard({ grouped, onRefresh }: Props) {
   const navigate = useNavigate();
   const draggingReq = useRef<SparePartRequest | null>(null);
   const [draggingOver, setDraggingOver]   = useState<SparePartStage | null>(null);
   const [hiddenStages, setHiddenStages]   = useState<Set<SparePartStage>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<SparePartRequest | null>(null);
+  const [deleting, setDeleting]           = useState(false);
 
   const boardRef  = useRef<HTMLDivElement>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
@@ -277,14 +330,20 @@ export default function SparePartsKanbanBoard({ grouped, onRefresh }: Props) {
     }
   };
 
-  const handleDelete = async (req: SparePartRequest) => {
-    if (!confirm(`¿Eliminar la solicitud ${req.request_number}?`)) return;
+  const handleDelete = (req: SparePartRequest) => setConfirmDelete(req);
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await api.spareParts.deleteRequest(req.id);
+      await api.spareParts.deleteRequest(confirmDelete.id);
       toast.success("Solicitud eliminada");
+      setConfirmDelete(null);
       onRefresh();
     } catch (err: any) {
       toast.error(err?.detail ?? "No se pudo eliminar");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -318,6 +377,14 @@ export default function SparePartsKanbanBoard({ grouped, onRefresh }: Props) {
 
   return (
     <div>
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          req={confirmDelete}
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDelete(null)}
+          loading={deleting}
+        />
+      )}
       {/* Stage chips */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {SPARE_PART_STAGES.map(stage => {
