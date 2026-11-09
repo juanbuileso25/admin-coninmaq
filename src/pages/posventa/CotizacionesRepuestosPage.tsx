@@ -162,14 +162,14 @@ export default function CotizacionesRepuestosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Etapa", "Vence", "Fecha", "PDF", ""].map(h => (
+                {["N° Cotización", "Cliente", "Subtotal", "IVA", "Total", "Etapa", "Creado por", "Vence", "Fecha", "PDF", ""].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-fg-5 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={10} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
-              {!loading && filtered.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones de repuestos</td></tr>}
+              {loading && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Cargando...</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-fg-5">Sin cotizaciones de repuestos</td></tr>}
               {!loading && filtered.map(q => (
                 <tr key={q.id} className="border-b border-border hover:bg-surface-3 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-accent">{q.quotation_number}</td>
@@ -212,6 +212,9 @@ export default function CotizacionesRepuestosPage() {
                     ) : (
                       <span className="text-fg-6 text-xs">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-fg-4 text-xs whitespace-nowrap">
+                    {q.created_by_name || <span className="text-fg-6">—</span>}
                   </td>
                   <td className="px-4 py-3 text-fg-5 text-xs whitespace-nowrap">
                     {q.expires_at ? new Date(q.expires_at).toLocaleDateString("es-CO") : "—"}

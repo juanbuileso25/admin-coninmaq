@@ -549,18 +549,19 @@ export default function RentalQuotationsPage() {
                 <th className="text-left px-3 py-2 font-medium">Equipos</th>
                 <th className="text-right px-3 py-2 font-medium">Valor mensual</th>
                 <th className="text-center px-3 py-2 font-medium">Estado</th>
+                <th className="text-left px-3 py-2 font-medium">Creado por</th>
                 <th className="text-left px-3 py-2 font-medium">Enviada / válida</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading && (
-                <tr><td colSpan={8} className="text-center py-10 text-fg-6 text-sm">
+                <tr><td colSpan={9} className="text-center py-10 text-fg-6 text-sm">
                   <Loader2 size={14} className="inline animate-spin mr-2" /> Cargando...
                 </td></tr>
               )}
               {!loading && items.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-12 text-fg-6 text-sm">
+                <tr><td colSpan={9} className="text-center py-12 text-fg-6 text-sm">
                   {hasDateFilter ? (
                     <>
                       No hay cotizaciones en el período seleccionado.
@@ -601,6 +602,9 @@ export default function RentalQuotationsPage() {
                       <span className={`inline-flex items-center gap-1 border text-[10px] font-bold px-2 py-0.5 rounded-sm ${meta.color}`}>
                         <StatusIcon size={10} /> {meta.label}
                       </span>
+                    </td>
+                    <td className="px-3 py-3 text-fg-4 text-xs whitespace-nowrap">
+                      {it.created_by_name || <span className="text-fg-6">—</span>}
                     </td>
                     <td className="px-3 py-3">
                       {it.sent_at ? (

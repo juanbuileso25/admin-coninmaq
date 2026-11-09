@@ -20,6 +20,7 @@ export default function InspeccionesTab({ vehicle }: Props) {
   const [showNew, setShowNew] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState<string | null>(null);
   const [dateTo, setDateTo] = useState<string | null>(null);
 
@@ -164,17 +165,24 @@ export default function InspeccionesTab({ vehicle }: Props) {
                   </button>
                   <button
                     onClick={async () => {
+                      if (downloadingId === insp.id) return;
+                      setDownloadingId(insp.id);
+                      const tId = toast.loading("Generando PDF...");
                       try {
                         if (isMoto) await api.motoInspections.downloadPdf(insp.id);
                         else await api.vehicleInspections.downloadPdf(insp.id);
+                        toast.success("PDF listo", { id: tId });
                       } catch (e: any) {
-                        toast.error(e.detail ?? "No se pudo abrir el PDF");
+                        toast.error(e.detail ?? "No se pudo abrir el PDF", { id: tId });
+                      } finally {
+                        setDownloadingId(null);
                       }
                     }}
-                    className="p-1.5 text-fg-5 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                    title="Descargar PDF"
+                    disabled={downloadingId === insp.id}
+                    className="p-1.5 text-fg-5 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={downloadingId === insp.id ? "Generando PDF..." : "Descargar PDF"}
                   >
-                    <Download size={13} />
+                    {downloadingId === insp.id ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
                   </button>
                   <button
                     onClick={() => handleDelete(insp.id)}

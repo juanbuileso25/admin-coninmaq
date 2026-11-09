@@ -808,6 +808,8 @@ export type BotQuotationResponse = {
   payment_terms?: string | null;
   spare_part_request_id?: number | null;
   spare_part_request_status?: string | null;
+  created_by_id?: string | null;
+  created_by_name?: string | null;
 };
 
 export type ManualQuotationItem = {
@@ -1848,6 +1850,8 @@ export type RentalQuotationListItem = {
   total_estimated: number | null;
   created_at: string;
   is_expired: boolean;
+  created_by_id?: string | null;
+  created_by_name?: string | null;
 };
 
 export type RentalQuotationCreate = {
