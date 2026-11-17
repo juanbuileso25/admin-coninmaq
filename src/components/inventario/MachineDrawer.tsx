@@ -19,6 +19,8 @@ const schema = yup.object({
   description:   yup.string().required("Campo obligatorio"),
   sale_price:     yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
   cost_price:     yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).default(0),
+  cost_currency:  yup.string().oneOf(["COP", "USD"]).default("COP"),
+  cost_price_usd: yup.number().nullable().transform((_v, o) => (o === "" || o === null ? null : Number(o))).optional(),
   tax_percentage: yup.number().transform((v, o) => (o === "" ? 0 : v)).min(0).max(100).default(0),
   show_price:    yup.boolean().default(false),
   warranty:      yup.string().default(""),
@@ -139,6 +141,8 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
         description:    source.description,
         sale_price:     source.sale_price,
         cost_price:     source.cost_price,
+        cost_currency:  source.cost_currency ?? "COP",
+        cost_price_usd: source.cost_price_usd ?? null,
         tax_percentage: source.tax_percentage,
         show_price:     source.show_price,
         warranty:      source.warranty,
@@ -157,7 +161,7 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
       setPdfName(isDuplicating ? "" : (source.pdf_url ? source.pdf_url.split("/").pop() ?? "" : ""));
     } else if (open && !source) {
       const defaultId = machineTypes.find((t) => t.slug === defaultMachineTypeSlug)?.id;
-      reset({ specs: [], highlights: [], visible_web: true, featured: false, sale_price: 0, cost_price: 0, tax_percentage: 0, machine_type_id: defaultId });
+      reset({ specs: [], highlights: [], visible_web: true, featured: false, sale_price: 0, cost_price: 0, cost_currency: "COP", cost_price_usd: null, tax_percentage: 0, machine_type_id: defaultId });
       setImages([]);
       setPdfName("");
     }
@@ -251,6 +255,10 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
         category:       data.category as Machine["category"],
         sale_price:     data.sale_price ?? 0,
         cost_price:     data.cost_price ?? 0,
+        cost_currency:  (data.cost_currency as "COP" | "USD") ?? "COP",
+        cost_price_usd: data.cost_currency === "USD" ? (data.cost_price_usd ?? null) : null,
+        cost_trm_used:  machine?.cost_trm_used ?? null,
+        cost_last_refresh_at: machine?.cost_last_refresh_at ?? null,
         tax_percentage: data.tax_percentage ?? 0,
         tax_value,
         specs:          data.specs ?? [],
@@ -537,23 +545,84 @@ export default function MachineDrawer({ open, machine, duplicateFrom, defaultMac
           {/* ── COMERCIAL ── */}
           <SectionTitle>Comercial</SectionTitle>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Precio Costo (COP)</Label>
-              <input
-                type="number" {...register("cost_price")} placeholder="0"
-                className={`${FIELD_CLASS} ${errors.cost_price ? ERROR_CLASS : ""}`}
-              />
-              {errors.cost_price && <p className="text-red-400 text-[10px] mt-1">{errors.cost_price.message}</p>}
+          {/* Precio Costo: toggle COP/USD */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label>Precio Costo</Label>
+              <div className="inline-flex bg-surface-3 border border-border-light overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setValue("cost_currency", "COP", { shouldDirty: true })}
+                  className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                    watch("cost_currency") === "COP" ? "bg-accent text-zinc-900" : "text-fg-5 hover:text-fg-2"
+                  }`}
+                >
+                  COP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValue("cost_currency", "USD", { shouldDirty: true })}
+                  className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                    watch("cost_currency") === "USD" ? "bg-accent text-zinc-900" : "text-fg-5 hover:text-fg-2"
+                  }`}
+                >
+                  USD
+                </button>
+              </div>
             </div>
-            <div>
-              <Label>Precio Venta (COP)</Label>
-              <input
-                type="number" {...register("sale_price")} placeholder="0"
-                className={`${FIELD_CLASS} ${errors.sale_price ? ERROR_CLASS : ""}`}
-              />
-              {errors.sale_price && <p className="text-red-400 text-[10px] mt-1">{errors.sale_price.message}</p>}
-            </div>
+
+            {watch("cost_currency") === "USD" ? (
+              <>
+                <input
+                  type="number" step="0.01" {...register("cost_price_usd")} placeholder="0.00"
+                  className={`${FIELD_CLASS} ${errors.cost_price_usd ? ERROR_CLASS : ""}`}
+                />
+                <p className="text-fg-6 text-[10px] mt-1.5 leading-relaxed">
+                  El costo en COP se recalcula automáticamente cada semana usando la TRM promedio de los últimos 7 días.
+                </p>
+                {machine?.cost_price_usd && machine?.cost_trm_used && (
+                  <div className="mt-2 bg-surface-3 border border-border-light px-3 py-2 text-[11px] text-fg-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-fg-5">COP calculado</span>
+                      <span className="font-semibold text-fg">
+                        {new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(machine.cost_price)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-fg-6">TRM aplicada</span>
+                      <span className="text-fg-4">
+                        $ {Number(machine.cost_trm_used).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {machine.cost_last_refresh_at && (
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-fg-6">Último refresh</span>
+                        <span className="text-fg-4">
+                          {new Date(machine.cost_last_refresh_at).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <input
+                  type="number" {...register("cost_price")} placeholder="0"
+                  className={`${FIELD_CLASS} ${errors.cost_price ? ERROR_CLASS : ""}`}
+                />
+                {errors.cost_price && <p className="text-red-400 text-[10px] mt-1">{errors.cost_price.message}</p>}
+              </>
+            )}
+          </div>
+
+          <div>
+            <Label>Precio Venta (COP)</Label>
+            <input
+              type="number" {...register("sale_price")} placeholder="0"
+              className={`${FIELD_CLASS} ${errors.sale_price ? ERROR_CLASS : ""}`}
+            />
+            {errors.sale_price && <p className="text-red-400 text-[10px] mt-1">{errors.sale_price.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Wrench, TrendingUp, AlertTriangle, ImageOff, Send } from "lucide-react";
+import { Plus, Search, Wrench, TrendingUp, AlertTriangle, ImageOff, Send, MoreVertical, Ban, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { api, type RentalMachineOverview } from "../../services/api";
 import NewMachineModal from "../../components/renta/NewMachineModal";
 
@@ -43,6 +44,37 @@ export default function RentalOverviewPage() {
   const [search, setSearch] = useState("");
   const [onlyActive, setOnlyActive] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<RentalMachineOverview | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpenId]);
+
+  async function handleDeactivate() {
+    if (!confirmDeactivate) return;
+    setDeactivating(true);
+    try {
+      await api.rental.deleteMachine(confirmDeactivate.machine.id);
+      toast.success(`Máquina ${confirmDeactivate.machine.code} inactivada`);
+      setConfirmDeactivate(null);
+      await load();
+    } catch (e: unknown) {
+      const err = e as { detail?: string };
+      toast.error(err.detail ?? "No se pudo inactivar la máquina");
+    } finally {
+      setDeactivating(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -151,14 +183,15 @@ export default function RentalOverviewPage() {
                 <th className="text-right px-3 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-semibold">Proyección</th>
                 <th className="text-center px-3 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-semibold">% Cumpl.</th>
                 <th className="text-right px-3 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-semibold">Próx. mant.</th>
+                <th className="text-center px-3 py-3 text-fg-5 text-[11px] uppercase tracking-wider font-semibold w-12">Opciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading && (
-                <tr><td colSpan={8 + monthHeaders.length} className="text-center py-12 text-fg-6 text-sm">Cargando...</td></tr>
+                <tr><td colSpan={9 + monthHeaders.length} className="text-center py-12 text-fg-6 text-sm">Cargando...</td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={8 + monthHeaders.length} className="text-center py-12 text-fg-6 text-sm">Sin máquinas</td></tr>
+                <tr><td colSpan={9 + monthHeaders.length} className="text-center py-12 text-fg-6 text-sm">Sin máquinas</td></tr>
               )}
               {!loading && filtered.map((r, idx) => {
                 const compliance = complianceStyle(r.compliance_pct);
@@ -226,6 +259,36 @@ export default function RentalOverviewPage() {
                         {nextMnt.label}
                       </span>
                     </td>
+                    <td
+                      className="px-3 py-3 text-center relative"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setMenuOpenId(menuOpenId === r.machine.id ? null : r.machine.id)}
+                        className="w-7 h-7 flex items-center justify-center text-fg-5 hover:text-fg hover:bg-surface-4 transition-colors"
+                        aria-label="Opciones"
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+                      {menuOpenId === r.machine.id && (
+                        <div
+                          ref={menuRef}
+                          className="absolute right-3 top-10 z-20 bg-surface-2 border border-border shadow-xl min-w-[150px] py-1"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuOpenId(null);
+                              setConfirmDeactivate(r);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-fg-3 hover:bg-surface-3 hover:text-red-300 transition-colors"
+                          >
+                            <Ban size={12} /> Inactivar
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -240,7 +303,7 @@ export default function RentalOverviewPage() {
                     </td>
                   ))}
                   <td className="px-3 py-3 text-right text-accent text-sm font-mono font-semibold">{formatShortCOP(totals.projection)}</td>
-                  <td colSpan={2} />
+                  <td colSpan={3} />
                 </tr>
               </tfoot>
             )}
@@ -266,6 +329,55 @@ export default function RentalOverviewPage() {
           onClose={() => setShowNewModal(false)}
           onCreated={() => { setShowNewModal(false); load(); }}
         />
+      )}
+
+      {confirmDeactivate && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !deactivating && setConfirmDeactivate(null)}
+          />
+          <div className="relative bg-surface-2 border border-border w-full max-w-sm shadow-2xl">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-9 h-9 flex items-center justify-center bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle size={18} className="text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-fg font-semibold text-sm">Inactivar máquina</h3>
+                  <p className="text-fg-5 text-xs mt-1 leading-relaxed">
+                    La máquina{" "}
+                    <span className="text-fg font-medium">
+                      {confirmDeactivate.machine.code} · {confirmDeactivate.machine.plate}
+                    </span>{" "}
+                    dejará de aparecer en el cuadro general y ya no se podrán crear asignaciones nuevas.
+                    Esta acción no elimina la información histórica.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeactivate(null)}
+                  disabled={deactivating}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-fg-4 bg-surface-3 border border-border hover:bg-surface-4 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeactivate}
+                  disabled={deactivating}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {deactivating
+                    ? <><Loader2 size={12} className="animate-spin" /> Inactivando...</>
+                    : <><Ban size={12} /> Inactivar</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

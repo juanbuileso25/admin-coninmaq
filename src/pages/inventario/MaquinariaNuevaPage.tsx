@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Eye, EyeOff, Star, StarOff,
-  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Copy, Images, Truck,
+  Pencil, Trash2, AlertTriangle, Filter, ImageOff, Loader2, Copy, Images, Truck, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMachines } from "../../hooks/useMachines";
@@ -49,6 +49,7 @@ export default function MaquinariaNuevaPage() {
   const [deletingId,   setDeletingId]   = useState<string | null>(null);
   const [mediaMachine, setMediaMachine] = useState<Machine | null>(null);
   const [cloningToRentalId, setCloningToRentalId] = useState<string | null>(null);
+  const [refreshingCosts, setRefreshingCosts] = useState(false);
 
   /* Filtered list */
   const filtered = useMemo(() => {
@@ -103,6 +104,22 @@ export default function MaquinariaNuevaPage() {
     }
   };
 
+  const handleRefreshCosts = async () => {
+    setRefreshingCosts(true);
+    const toastId = toast.loading("Refrescando costos USD...");
+    try {
+      const summary = await api.machines.refreshCosts();
+      const msg = `TRM aplicada $${Number(summary.trm_used).toLocaleString("es-CO", { maximumFractionDigits: 2 })} · ${summary.updated} actualizadas de ${summary.checked}`;
+      toast.success(msg, { id: toastId });
+      await refresh();
+    } catch (e: unknown) {
+      const err = e as { detail?: string };
+      toast.error(err.detail ?? "No se pudo refrescar los costos", { id: toastId });
+    } finally {
+      setRefreshingCosts(false);
+    }
+  };
+
   const confirmDelete = async (id: string) => {
     try {
       await removeMachine(id);
@@ -133,13 +150,27 @@ export default function MaquinariaNuevaPage() {
           <p className="text-fg-6 text-xs uppercase tracking-wider mb-1">Inventario</p>
           <h1 className="text-fg text-xl font-semibold">Maquinaria Nueva</h1>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-accent hover:bg-accent-light text-zinc-900 font-semibold
-                     text-xs uppercase tracking-wider px-4 py-2.5 transition-all hover:shadow-glow hover:-translate-y-px flex-shrink-0"
-        >
-          <Plus size={15} /> Nuevo producto
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleRefreshCosts}
+            disabled={refreshingCosts}
+            title="Recalcular COP de máquinas en USD con la TRM actual"
+            className="flex items-center gap-2 bg-surface-3 hover:bg-surface-4 text-fg-3 hover:text-fg
+                       text-xs uppercase tracking-wider px-3 py-2.5 border border-border-light transition-all disabled:opacity-50"
+          >
+            {refreshingCosts
+              ? <Loader2 size={13} className="animate-spin" />
+              : <RefreshCw size={13} />}
+            Refrescar USD
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-accent hover:bg-accent-light text-zinc-900 font-semibold
+                       text-xs uppercase tracking-wider px-4 py-2.5 transition-all hover:shadow-glow hover:-translate-y-px"
+          >
+            <Plus size={15} /> Nuevo producto
+          </button>
+        </div>
       </div>
 
       {/* Error de carga inicial */}
