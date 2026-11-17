@@ -60,6 +60,10 @@ export interface Machine {
   description:   string;
   sale_price:     number;
   cost_price:     number;
+  cost_currency:  "COP" | "USD";
+  cost_price_usd: number | null;
+  cost_trm_used:  number | null;
+  cost_last_refresh_at: string | null;
   tax_percentage: number;
   tax_value:      number;
   show_price:     boolean;

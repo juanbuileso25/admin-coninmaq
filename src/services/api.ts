@@ -2028,6 +2028,11 @@ export const api = {
     get: (id: string) => request<MachineResponse>(`/machines/${id}`),
     create: (data: object) => request<MachineResponse>("/machines/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: object) => request<MachineResponse>(`/machines/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    refreshCosts: () => request<{
+      checked: number; updated: number; skipped: number;
+      trm_used: number; trm_policy: string;
+      details: Array<{ machine_id: string; code: string; status: string; previous_cop?: number; new_cop?: number; delta?: number; reason?: string }>;
+    }>("/machines/refresh-costs", { method: "POST" }),
     remove: (id: string) => request<void>(`/machines/${id}`, { method: "DELETE" }),
     toggleVisibility: (id: string) => request<MachineResponse>(`/machines/${id}/toggle-visibility`, { method: "PATCH" }),
     toggleFeatured:   (id: string) => request<MachineResponse>(`/machines/${id}/toggle-featured`,   { method: "PATCH" }),
