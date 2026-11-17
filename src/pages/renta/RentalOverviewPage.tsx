@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Wrench, TrendingUp, AlertTriangle, ImageOff, Send, MoreVertical, Ban, Loader2 } from "lucide-react";
+import { Plus, Search, Wrench, TrendingUp, AlertTriangle, ImageOff, Send, MoreVertical, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type RentalMachineOverview } from "../../services/api";
 import NewMachineModal from "../../components/renta/NewMachineModal";
@@ -65,12 +65,12 @@ export default function RentalOverviewPage() {
     setDeactivating(true);
     try {
       await api.rental.deleteMachine(confirmDeactivate.machine.id);
-      toast.success(`Máquina ${confirmDeactivate.machine.code} inactivada`);
+      toast.success(`Máquina ${confirmDeactivate.machine.code} eliminada`);
       setConfirmDeactivate(null);
       await load();
     } catch (e: unknown) {
       const err = e as { detail?: string };
-      toast.error(err.detail ?? "No se pudo inactivar la máquina");
+      toast.error(err.detail ?? "No se pudo eliminar la máquina");
     } finally {
       setDeactivating(false);
     }
@@ -284,7 +284,7 @@ export default function RentalOverviewPage() {
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-fg-3 hover:bg-surface-3 hover:text-red-300 transition-colors"
                           >
-                            <Ban size={12} /> Inactivar
+                            <Trash2 size={12} /> Eliminar
                           </button>
                         </div>
                       )}
@@ -344,14 +344,13 @@ export default function RentalOverviewPage() {
                   <AlertTriangle size={18} className="text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-fg font-semibold text-sm">Inactivar máquina</h3>
+                  <h3 className="text-fg font-semibold text-sm">Eliminar máquina</h3>
                   <p className="text-fg-5 text-xs mt-1 leading-relaxed">
                     La máquina{" "}
                     <span className="text-fg font-medium">
                       {confirmDeactivate.machine.code} · {confirmDeactivate.machine.plate}
                     </span>{" "}
                     dejará de aparecer en el cuadro general y ya no se podrán crear asignaciones nuevas.
-                    Esta acción no elimina la información histórica.
                   </p>
                 </div>
               </div>
@@ -371,8 +370,8 @@ export default function RentalOverviewPage() {
                   className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {deactivating
-                    ? <><Loader2 size={12} className="animate-spin" /> Inactivando...</>
-                    : <><Ban size={12} /> Inactivar</>}
+                    ? <><Loader2 size={12} className="animate-spin" /> Eliminando...</>
+                    : <><Trash2 size={12} /> Eliminar</>}
                 </button>
               </div>
             </div>
