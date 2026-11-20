@@ -46,6 +46,8 @@ import RepuestosInventarioPage      from "./pages/inventario/RepuestosInventario
 import CotizacionesRepuestosPage    from "./pages/posventa/CotizacionesRepuestosPage";
 import ServicioTecnicoPage          from "./pages/posventa/ServicioTecnicoPage";
 import ServicioTecnicoDetailPage    from "./pages/posventa/ServicioTecnicoDetailPage";
+import PqrsPage                     from "./pages/posventa/PqrsPage";
+import PqrsDetailPage               from "./pages/posventa/PqrsDetailPage";
 import VehiculosPage                from "./pages/documentos/VehiculosPage";
 import EmpleadosPage                from "./pages/documentos/EmpleadosPage";
 
@@ -113,6 +115,8 @@ export default function App() {
         <Route path="/posventa/cotizaciones"  element={<CotizacionesRepuestosPage />} />
         <Route path="/posventa/servicio-tecnico"     element={<ServicioTecnicoPage />} />
         <Route path="/posventa/servicio-tecnico/:id" element={<ServicioTecnicoDetailPage />} />
+        <Route path="/posventa/pqrs"                 element={<PqrsPage />} />
+        <Route path="/posventa/pqrs/:id"             element={<PqrsDetailPage />} />
 
         {/* Redirects de rutas antiguas */}
         <Route path="/agente/leads"                element={<Navigate to="/comercial/leads" replace />} />
