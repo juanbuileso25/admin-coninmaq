@@ -36,6 +36,7 @@ import ProveedoresPage      from "./pages/ajustes/ProveedoresPage";
 import ModulosPage          from "./pages/ajustes/ModulosPage";
 import MenuPage             from "./pages/ajustes/MenuPage";
 import CanalesPage          from "./pages/ajustes/CanalesPage";
+import AsesoresPage         from "./pages/ajustes/AsesoresPage";
 import PedidosMaquinasPage  from "./pages/pedidos/PedidosMaquinasPage";
 import PedidoDetailPage     from "./pages/pedidos/PedidoDetailPage";
 import ProspectingPage          from "./pages/prospecting/ProspectingPage";
@@ -131,6 +132,7 @@ export default function App() {
         <Route path="/ajustes/modulos"     element={<ModulosPage />} />
         <Route path="/ajustes/menu"        element={<MenuPage />} />
         <Route path="/ajustes/canales"     element={<CanalesPage />} />
+        <Route path="/ajustes/asesores"    element={<AsesoresPage />} />
 
         {/* Prospección */}
         <Route path="/comercial/prospectos" element={<ProspectingPage />} />
