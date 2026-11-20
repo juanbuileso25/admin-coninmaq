@@ -740,6 +740,50 @@ export type LeadChannelCreate = {
 
 export type LeadChannelUpdate = Partial<Omit<LeadChannelCreate, "code">>;
 
+// ─── Advisor profiles (Ivonne handoff routing) ────────────────────────────
+
+export const ADVISOR_TEAMS = ["comercial", "repuestos", "tecnico", "garantias", "pqrs"] as const;
+export type AdvisorTeam = (typeof ADVISOR_TEAMS)[number];
+
+export const ADVISOR_TEAM_LABELS: Record<AdvisorTeam, string> = {
+  comercial: "Comercial",
+  repuestos: "Repuestos",
+  tecnico:   "Servicio técnico",
+  garantias: "Garantías",
+  pqrs:      "PQRS",
+};
+
+export type AdvisorProfileResponse = {
+  id: number;
+  name: string;
+  phone: string;
+  email: string | null;
+  teams: AdvisorTeam[];
+  is_active: boolean;
+  current_load: number;
+  max_capacity: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdvisorProfileCreate = {
+  name: string;
+  phone: string;
+  email?: string | null;
+  teams: AdvisorTeam[];
+  is_active?: boolean;
+  max_capacity?: number;
+  notes?: string | null;
+};
+
+export type AdvisorProfileUpdate = Partial<AdvisorProfileCreate>;
+
+export type ReleaseAdvisorResponse = {
+  advisor_id: number;
+  current_load: number;
+};
+
 export type BotLeadResponse = {
   id: number;
   session_id: string | null;
@@ -2412,6 +2456,24 @@ export const api = {
       request<LeadChannelResponse>(`/lead-channels/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     remove: (id: number) =>
       request<void>(`/lead-channels/${id}`, { method: "DELETE" }),
+  },
+
+  advisors: {
+    list: (params?: { team?: string; is_active?: boolean }) => {
+      const qs = new URLSearchParams();
+      if (params?.team) qs.set("team", params.team);
+      if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<AdvisorProfileResponse[]>(`/advisors${suffix}`);
+    },
+    create: (data: AdvisorProfileCreate) =>
+      request<AdvisorProfileResponse>(`/advisors`, { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: AdvisorProfileUpdate) =>
+      request<AdvisorProfileResponse>(`/advisors/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    remove: (id: number) =>
+      request<AdvisorProfileResponse>(`/advisors/${id}`, { method: "DELETE" }),
+    release: (id: number) =>
+      request<ReleaseAdvisorResponse>(`/advisors/${id}/release`, { method: "POST" }),
   },
   quotations: {
     getPage: (quotationNumber: string) =>
