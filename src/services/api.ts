@@ -784,6 +784,93 @@ export type ReleaseAdvisorResponse = {
   current_load: number;
 };
 
+// ─── PQRS (queja / reclamo / sugerencia) ──────────────────────────────────
+
+export const PQRS_TYPES = ["queja", "reclamo", "sugerencia"] as const;
+export type PqrsType = (typeof PQRS_TYPES)[number];
+
+export const PQRS_TYPE_LABELS: Record<PqrsType, string> = {
+  queja:      "Queja",
+  reclamo:    "Reclamo",
+  sugerencia: "Sugerencia",
+};
+
+export const PQRS_STATUSES = ["recibida", "en_revision", "respondida", "cerrada"] as const;
+export type PqrsStatus = (typeof PQRS_STATUSES)[number];
+
+export const PQRS_STATUS_LABELS: Record<PqrsStatus, string> = {
+  recibida:    "Recibida",
+  en_revision: "En revisión",
+  respondida:  "Respondida",
+  cerrada:     "Cerrada",
+};
+
+// Los motivos los puede ampliar el admin al editar la PQRS. Son los que
+// Ivonne envía como preset — no están hardcoded en el backend.
+export const PQRS_MOTIVOS = [
+  "maquinaria",
+  "repuestos",
+  "servicio técnico",
+  "garantías",
+  "pagos y facturación",
+  "atención al cliente",
+  "entregas y despachos",
+  "otro motivo",
+] as const;
+
+export type PqrsAttachmentResponse = {
+  id: number;
+  url: string;
+  mime_type: string | null;
+  created_at: string;
+};
+
+export type PqrsListItem = {
+  id: number;
+  pqrs_number: string;
+  type: PqrsType;
+  motivo: string;
+  status: PqrsStatus;
+  description_preview: string;
+  occurred_at: string | null;
+  channel: string;
+  attachments_count: number;
+  created_at: string;
+};
+
+export type PqrsDetail = {
+  id: number;
+  pqrs_number: string;
+  type: PqrsType;
+  motivo: string;
+  description: string;
+  occurred_at: string | null;
+  status: PqrsStatus;
+  source_session_id: string | null;
+  source_lead_id: number | null;
+  channel: string;
+  response: string | null;
+  internal_notes: string | null;
+  responded_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  attachments: PqrsAttachmentResponse[];
+};
+
+export type PqrsUpdate = {
+  status?: PqrsStatus;
+  response?: string | null;
+  internal_notes?: string | null;
+};
+
+export type PqrsMetrics = {
+  total: number;
+  by_status: Record<string, number>;
+  by_type: Record<string, number>;
+  by_motivo: Record<string, number>;
+};
+
 export type BotLeadResponse = {
   id: number;
   session_id: string | null;
@@ -2474,6 +2561,41 @@ export const api = {
       request<AdvisorProfileResponse>(`/advisors/${id}`, { method: "DELETE" }),
     release: (id: number) =>
       request<ReleaseAdvisorResponse>(`/advisors/${id}/release`, { method: "POST" }),
+  },
+
+  pqrs: {
+    list: (params?: {
+      status?: PqrsStatus;
+      type?: PqrsType;
+      motivo?: string;
+      search?: string;
+      date_from?: string;
+      date_to?: string;
+      limit?: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.status)    qs.set("status",    params.status);
+      if (params?.type)      qs.set("type",      params.type);
+      if (params?.motivo)    qs.set("motivo",    params.motivo);
+      if (params?.search)    qs.set("search",    params.search);
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      if (params?.limit)     qs.set("limit",     String(params.limit));
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<PqrsListItem[]>(`/pqrs${suffix}`);
+    },
+    metrics: (params?: { date_from?: string; date_to?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.date_from) qs.set("date_from", params.date_from);
+      if (params?.date_to)   qs.set("date_to",   params.date_to);
+      const suffix = qs.toString() ? `?${qs}` : "";
+      return request<PqrsMetrics>(`/pqrs/metrics${suffix}`);
+    },
+    get: (id: number) => request<PqrsDetail>(`/pqrs/${id}`),
+    update: (id: number, data: PqrsUpdate) =>
+      request<PqrsDetail>(`/pqrs/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    remove: (id: number) =>
+      request<void>(`/pqrs/${id}`, { method: "DELETE" }),
   },
   quotations: {
     getPage: (quotationNumber: string) =>
